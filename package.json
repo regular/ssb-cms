@@ -1,0 +1,25 @@
+{
+  "name": "ssb-cms",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Jan Bölsche <jan@lagomorph.de> (http://regular.codes)",
+  "license": "MIT",
+  "dependencies": {
+    "beefy": "^2.1.8",
+    "browserify": "^14.4.0",
+    "hyperobj": "^1.0.2",
+    "hyperscript": "^2.0.2",
+    "ssb-client": "^4.5.0",
+    "ssb-keys": "^7.0.10",
+    "ssb-ref": "^2.7.1",
+    "wzrd": "^1.5.0"
+  },
+  "devDependencies": {
+    "brfs": "^1.4.3"
+  }
+}
