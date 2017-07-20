@@ -15,11 +15,11 @@ const ref = require('ssb-ref')
 
 const render =ho(
   tree(),
-  array(),
   source(),
+  array(),
   properties(),
   kv(),
-  filter(tag(8), ref.type),
+  filter( (value) => tag(8)(value.substr(0,8)), ref.type),
   ho.basic()
 )
 
@@ -38,16 +38,17 @@ function branches(ssb, root) {
         keys: true,
         values: true
       }),
-      pull.through( (msg)=>{
-        msg.branches = branches(ssb, msg.key)
-      })
+      pull.map( (msg) => node(ssb, msg) )
     )
   }
 }
 
+function node(ssb, msg) {
+  return { type: 'key-value', key: msg.key, value: branches(ssb, msg.key) }
+}
+
 function renderMessage(ssb, msg) {
-  msg.branches = branches(ssb, msg.key)
-  return render(msg)
+  return render(node(ssb, msg))
 }
 
 ssbClient(keys, {
