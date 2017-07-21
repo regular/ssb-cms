@@ -65,6 +65,7 @@ var keys = ssbKeys.loadOrCreateSync('mykeys')
 // run `sbot ws.getAddress` to get this
 const sbotAddress = "ws://localhost:8989~shs:nti4TWBH/WNZnfwEoSleF3bgagd63Z5yeEnmFIyq0KA="
 
+// three column layout
 let editorContainer, treeContainer
 document.body.appendChild(
   h('.columns',
@@ -74,6 +75,33 @@ document.body.appendChild(
   )
 )
 
+// make editor
+const edit = require('edit')
+const fs = require('fs')
+const insertCSS = require('insert-css')
+require("codemirror/mode/javascript/javascript")
+require("codemirror/addon/edit/matchbrackets.js")
+require("codemirror/addon/lint/lint")
+require('./cm/cm-jsonlint')(require('codemirror/lib/codemirror'))
+let css = fs.readFileSync(require.resolve('codemirror/addon/lint/lint.css'))
+insertCSS(css)
+let editChange // codemirror change generation
+let clean = observable.signal()
+let editor = edit({
+  container: editorContainer,
+  tabSize: 2,
+  matchBrackets: true,
+  smartIndent: true,
+  lint: true,
+  gutters: ['CodeMirror-lint-markers', 'CodeMirror-linenumbers', 'CodeMirror-foldgutter'],
+
+  mode: {name: "javascript", json: true}
+})
+editor.on('changes', (editor, changes)=>{
+  clean(editor.isClean(editChange))
+})
+
+// get root message and start things off
 ssbClient(keys, {
   keys,
   remote: sbotAddress,
@@ -84,7 +112,12 @@ ssbClient(keys, {
   if (err) throw err
 
   const renderMessage = messageTreeRenderer(ssb)
-  revisionsContainer.appendChild(h('span', 'Selection:', h('span.selection', renderMessage.selection)))
+  revisionsContainer.appendChild(
+    h('div',
+      h('div', 'Selection:', h('span.selection', renderMessage.selection)),
+      h('div', 'Clean:', h('span.clean', clean))
+    )
+  )
 
   let id = "%GKmZNjjB3voORbvg8Jm4Jy2r0tvJjH+uhV+cHtMVwSQ=.sha256"
   ssb.get(id, (err, value) => {
@@ -92,13 +125,18 @@ ssbClient(keys, {
     let el = renderMessage({key:id, value})
     treeContainer.appendChild(el)
   })
+
+  renderMessage.selection((id)=>{
+    if (!id) return
+    ssb.get(id, (err, value) => {
+      if (err) throw err  // TODO
+      editor.setValue(JSON.stringify(value, null, 2))
+      editChange =editor.changeGeneration()
+      clean(true)
+    })
+  })
 })
 
-const edit = require('edit')
-const editor = edit({
-  container: editorContainer,
-  tabSize: 2
-})
 
 document.body.appendChild(h('style',tree.css()))
 document.body.appendChild(h('style', `
@@ -123,16 +161,17 @@ document.body.appendChild(h('style', `
     overflow: scroll;
     flex: 1 20%;
     background: #eee;
-    border-right: 1px solid #aaa;
+    border-right: 1px solid #ccc;
   }
   .col.revisions {
     overflow: scroll;
     flex: 1 20%;
     background: #ddd;
-    border-right: 1px solid #aaa;
+    border-right: 1px solid #ccc;
   }
   .col.editor {
     flex: 3 60%;
+    max-width: 60%;
     background: blue;
   }
   .col.editor>* {
