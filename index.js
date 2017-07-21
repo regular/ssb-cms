@@ -1,6 +1,7 @@
 const pull = require('pull-stream')
 const h = require('hyperscript')
 const ho = require('hyperobj')
+const observable = require('observable')
 
 const u = require('hyperobj-tree/util')
 const tree = require('hyperobj-tree/tree')
@@ -13,15 +14,50 @@ const tag = require('hyperobj-tree/tag')
 
 const ref = require('ssb-ref')
 
-const render =ho(
-  tree(),
-  source(),
-  array(),
-  properties(),
-  kv(),
-  filter( (value) => tag(8)(value.substr(0,8)), ref.type),
-  ho.basic()
-)
+function messageTreeRenderer(ssb) {
+
+  let selection = observable.signal()
+
+  selection( (el)=>{
+    document.querySelectorAll('.selected').forEach( el => el.classList.remove('selected') )
+    if (el) el.classList.add('selected')
+  })
+
+  function branches(root) {
+    return function() {
+      return ssb.links({
+        rel: 'branch',
+        dest: root,
+        keys: true,
+        values: true
+      })
+    }
+  }
+
+  let render = ho(
+    function(msg, kp) {
+      if (!msg.key || !msg.value || !msg.value.content) return
+      let value = { type: 'key-value', key: msg.key, value: branches(msg.key) }
+      return this.call(this, value, kp)
+    },
+    filter( value => h('a.node', {
+      id: value,
+      onclick: function(e)  {
+        selection(this)
+        e.preventDefault()
+      }
+    }, tag(8)(value.substr(0,8))), ref.type),
+    tree(),
+    source(),
+    array(),
+    properties(),
+    kv(),
+    ho.basic()
+  )
+
+  render.selection = observable.transform( selection, el => el && el.id )
+  return render
+}
 
 const ssbClient = require('ssb-client')
 const ssbKeys = require('ssb-keys')
@@ -29,27 +65,6 @@ var keys = ssbKeys.loadOrCreateSync('mykeys')
 // run `sbot ws.getAddress` to get this
 const sbotAddress = "ws://localhost:8989~shs:nti4TWBH/WNZnfwEoSleF3bgagd63Z5yeEnmFIyq0KA="
 
-function branches(ssb, root) {
-  return function() {
-    return pull(
-      ssb.links({
-        rel: 'branch',
-        dest: root,
-        keys: true,
-        values: true
-      }),
-      pull.map( (msg) => node(ssb, msg) )
-    )
-  }
-}
-
-function node(ssb, msg) {
-  return { type: 'key-value', key: msg.key, value: branches(ssb, msg.key) }
-}
-
-function renderMessage(ssb, msg) {
-  return render(node(ssb, msg))
-}
 
 ssbClient(keys, {
   keys,
@@ -59,10 +74,14 @@ ssbClient(keys, {
   manifest: require('/Users/regular/.ssb/manifest.json')
 }, function (err, ssb) {
   if (err) throw err
+
+  const renderMessage = messageTreeRenderer(ssb)
+  document.body.appendChild(h('span', 'Selection:', h('span.selection', renderMessage.selection)))
+
   let id = "%GKmZNjjB3voORbvg8Jm4Jy2r0tvJjH+uhV+cHtMVwSQ=.sha256"
   ssb.get(id, (err, value) => {
     if (err) throw err
-    let el = renderMessage(ssb, {key:id, value})
+    let el = renderMessage({key:id, value})
     document.body.appendChild(el)
   })
 })
@@ -74,6 +93,13 @@ document.body.appendChild(h('style', `
   body {
     font-family: sans-serif;
     color: #444;
+  }
+  a.node {
+    color: #dde;
+    text-decoration: none;
+  }
+  a.node>span.tag:hover {
+    background-color: #226;
   }
   ul {
     list-style: none;
@@ -91,6 +117,9 @@ document.body.appendChild(h('style', `
   }
   .tag.color0 {
     background: #b58900;
+  }
+  .node.selected>.tag {
+    background: yellow;
   }
   .tag.color1 {
     background: #cb4b16;
