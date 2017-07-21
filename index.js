@@ -1,3 +1,4 @@
+const fs = require('fs')
 const pull = require('pull-stream')
 const h = require('hyperscript')
 const ho = require('hyperobj')
@@ -77,7 +78,6 @@ document.body.appendChild(
 
 // make editor
 const edit = require('edit')
-const fs = require('fs')
 const insertCSS = require('insert-css')
 require("codemirror/mode/javascript/javascript")
 require("codemirror/addon/edit/matchbrackets.js")
@@ -106,8 +106,7 @@ ssbClient(keys, {
   keys,
   remote: sbotAddress,
   timers: {handshake: 30000},
-  // TODO
-  manifest: require('/Users/regular/.ssb/manifest.json')
+  manifest: JSON.parse(fs.readFileSync(process.env.HOME + '/.ssb/manifest.json'))
 }, function (err, ssb) {
   if (err) throw err
 
