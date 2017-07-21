@@ -65,6 +65,14 @@ var keys = ssbKeys.loadOrCreateSync('mykeys')
 // run `sbot ws.getAddress` to get this
 const sbotAddress = "ws://localhost:8989~shs:nti4TWBH/WNZnfwEoSleF3bgagd63Z5yeEnmFIyq0KA="
 
+let editorContainer, treeContainer
+document.body.appendChild(
+  h('.columns',
+    treeContainer = h('.col.treeview'),
+    revisionsContainer = h('.col.revisions'),
+    editorContainer = h('.col.editor')
+  )
+)
 
 ssbClient(keys, {
   keys,
@@ -82,17 +90,50 @@ ssbClient(keys, {
   ssb.get(id, (err, value) => {
     if (err) throw err
     let el = renderMessage({key:id, value})
-    document.body.appendChild(el)
+    treeContainer.appendChild(el)
   })
 })
 
+const edit = require('edit')
+const editor = edit({
+  container: editorContainer,
+  tabSize: 2
+})
 
-document.body.appendChild(h('h1', 'Hello Wolrd!'))
 document.body.appendChild(h('style',tree.css()))
 document.body.appendChild(h('style', `
+  body, html {
+    height: 100%;
+  }
   body {
     font-family: sans-serif;
     color: #444;
+    overflow: hidden;
+  }
+  .columns {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+    flex-flow: row nowrap;
+    overflow: hidden;
+  }
+  .col {
+  }
+  .col.treeview {
+    overflow: scroll;
+    flex: 1 20%;
+    background: green;
+  }
+  .col.revisions {
+    flex: 1 20%;
+    background: purple;
+  }
+  .col.editor {
+    flex: 3 60%;
+    background: blue;
+  }
+  .col.editor>* {
+    height: 100%;
   }
   a.node {
     color: #dde;
@@ -112,6 +153,9 @@ document.body.appendChild(h('style', `
   span.key::after {
     content: ':'
   }
+  .branch {
+    white-space: nowrap;
+  }
   .branch>span.key::after {
     content: ''
   }
@@ -119,6 +163,7 @@ document.body.appendChild(h('style', `
     background: #b58900;
   }
   .node.selected>.tag {
+    color: black;
     background: yellow;
   }
   .tag.color1 {
