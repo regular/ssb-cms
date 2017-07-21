@@ -84,7 +84,7 @@ ssbClient(keys, {
   if (err) throw err
 
   const renderMessage = messageTreeRenderer(ssb)
-  document.body.appendChild(h('span', 'Selection:', h('span.selection', renderMessage.selection)))
+  revisionsContainer.appendChild(h('span', 'Selection:', h('span.selection', renderMessage.selection)))
 
   let id = "%GKmZNjjB3voORbvg8Jm4Jy2r0tvJjH+uhV+cHtMVwSQ=.sha256"
   ssb.get(id, (err, value) => {
@@ -122,11 +122,14 @@ document.body.appendChild(h('style', `
   .col.treeview {
     overflow: scroll;
     flex: 1 20%;
-    background: green;
+    background: #eee;
+    border-right: 1px solid #aaa;
   }
   .col.revisions {
+    overflow: scroll;
     flex: 1 20%;
-    background: purple;
+    background: #ddd;
+    border-right: 1px solid #aaa;
   }
   .col.editor {
     flex: 3 60%;
