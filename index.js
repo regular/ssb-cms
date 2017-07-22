@@ -40,8 +40,19 @@ function messageTreeRenderer(ssb) {
   let render = ho(
     function(msg, kp) {
       if (!msg.key || !msg.value || !msg.value.content) return
-      let value = { type: 'key-value', key: msg.key, value: branches(msg.key) }
+      let value = { type: 'key-value', key: {type: 'msg-node', msg_type: msg.value.content.type, id: msg.key}, value: branches(msg.key) }
       return this.call(this, value, kp)
+    },
+    function(msgNode, kp) {
+      if (!msgNode.type || msgNode.type != 'msg-node') return
+      kp = kp || []
+      console.log(JSON.stringify(kp))
+      let id = msgNode.id
+      let type = msgNode.msg_type
+      return h('span.msgNode',
+        this.call(this, type, kp.concat(['msg_type'])),
+        this.call(this, id, kp.concat(['key']))
+      )
     },
     filter( value => h('a.node', {
       id: value,

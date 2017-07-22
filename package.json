@@ -12,7 +12,7 @@
   "dependencies": {
     "codemirror": "^4.6.0",
     "hyperobj": "^1.0.2",
-    "hyperobj-tree": "^2.0.0",
+    "hyperobj-tree": "^2.0.1",
     "hyperscript": "^2.0.2",
     "insert-css": "^0.2.0",
     "observable": "^2.1.4",
