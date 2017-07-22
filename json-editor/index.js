@@ -39,6 +39,7 @@ module.exports = function(opts) {
     matchBrackets: true,
     smartIndent: true,
     lint: true,
+    foldGutter: true,
     gutters: ['CodeMirror-lint-markers', 'CodeMirror-linenumbers', 'CodeMirror-foldgutter'],
     mode: {
       name: "javascript", 
