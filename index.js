@@ -3,6 +3,9 @@ const pull = require('pull-stream')
 const h = require('hyperscript')
 const ho = require('hyperobj')
 const observable = require('observable')
+const ref = require('ssb-ref')
+const ssbClient = require('ssb-client')
+const ssbKeys = require('ssb-keys')
 
 const u = require('hyperobj-tree/util')
 const tree = require('hyperobj-tree/tree')
@@ -13,10 +16,9 @@ const array = require('hyperobj-tree/array')
 const filter = require('hyperobj-tree/filter')
 const tag = require('hyperobj-tree/tag')
 
-const ref = require('ssb-ref')
+const Editor = require('./json-editor')
 
 function messageTreeRenderer(ssb) {
-
   let selection = observable.signal()
 
   selection( (el)=>{
@@ -60,9 +62,8 @@ function messageTreeRenderer(ssb) {
   return render
 }
 
-const ssbClient = require('ssb-client')
-const ssbKeys = require('ssb-keys')
 var keys = ssbKeys.loadOrCreateSync('mykeys')
+// TODO
 // run `sbot ws.getAddress` to get this
 const sbotAddress = "ws://localhost:8989~shs:nti4TWBH/WNZnfwEoSleF3bgagd63Z5yeEnmFIyq0KA="
 
@@ -76,36 +77,13 @@ document.body.appendChild(
   )
 )
 
-// make editor
-const edit = require('edit')
-const insertCSS = require('insert-css')
-require("codemirror/mode/javascript/javascript")
-require("codemirror/addon/edit/matchbrackets.js")
-require("codemirror/addon/lint/lint")
-require('./cm/cm-jsonlint')(require('codemirror/lib/codemirror'))
-let css = fs.readFileSync(require.resolve('codemirror/addon/lint/lint.css'))
-insertCSS(css)
-let editChange // codemirror change generation
-let clean = observable.signal()
-let editor = edit({
-  container: editorContainer,
-  tabSize: 2,
-  matchBrackets: true,
-  smartIndent: true,
-  lint: true,
-  gutters: ['CodeMirror-lint-markers', 'CodeMirror-linenumbers', 'CodeMirror-foldgutter'],
-
-  mode: {name: "javascript", json: true}
-})
-editor.on('changes', (editor, changes)=>{
-  clean(editor.isClean(editChange))
-})
+let editor = Editor({container: editorContainer})
 
 // get root message and start things off
 ssbClient(keys, {
   keys,
   remote: sbotAddress,
-  timers: {handshake: 30000},
+  //timers: {handshake: 30000},
   manifest: JSON.parse(fs.readFileSync(process.env.HOME + '/.ssb/manifest.json'))
 }, function (err, ssb) {
   if (err) throw err
@@ -114,7 +92,7 @@ ssbClient(keys, {
   revisionsContainer.appendChild(
     h('div',
       h('div', 'Selection:', h('span.selection', renderMessage.selection)),
-      h('div', 'Clean:', h('span.clean', clean))
+      h('div', 'Clean:', h('span.clean', editor.clean))
     )
   )
 
@@ -130,12 +108,10 @@ ssbClient(keys, {
     ssb.get(id, (err, value) => {
       if (err) throw err  // TODO
       editor.setValue(JSON.stringify(value, null, 2))
-      editChange =editor.changeGeneration()
-      clean(true)
+      editor.clean(true)
     })
   })
 })
-
 
 document.body.appendChild(h('style',tree.css()))
 document.body.appendChild(h('style', `
