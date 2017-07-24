@@ -6,6 +6,8 @@ const observable = require('observable')
 const ref = require('ssb-ref')
 const ssbClient = require('ssb-client')
 const ssbKeys = require('ssb-keys')
+const getAvatar = require('ssb-avatar')
+const obv = require('obv')
 
 const u = require('hyperobj-tree/util')
 const tree = require('hyperobj-tree/tree')
@@ -77,6 +79,7 @@ var keys = ssbKeys.loadOrCreateSync('mykeys')
 // TODO
 // run `sbot ws.getAddress` to get this
 const sbotAddress = "ws://localhost:8989~shs:nti4TWBH/WNZnfwEoSleF3bgagd63Z5yeEnmFIyq0KA="
+const blobsRoot = "http://localhost:8989/blobs/get"
 
 // three column layout
 let editorContainer, treeContainer
@@ -90,7 +93,10 @@ document.body.appendChild(
 
 let editor = Editor({container: editorContainer})
 
-// get root message and start things off
+
+let me = obv()
+let sbot = obv()
+
 ssbClient(keys, {
   keys,
   remote: sbotAddress,
@@ -98,11 +104,21 @@ ssbClient(keys, {
   manifest: JSON.parse(fs.readFileSync(process.env.HOME + '/.ssb/manifest.json'))
 }, function (err, ssb) {
   if (err) throw err
+  sbot.set(ssb)
+  ssb.whoami( (err, feed)=> {
+    if (err) throw err
+    me.set(feed.id)
+  })
+})
 
+let avatar = observable()
+me.once( (feed) => {
+  const ssb = sbot.value
   const renderMessage = messageTreeRenderer(ssb)
   revisionsContainer.appendChild(
     h('div',
       h('div', 'Selection:', h('span.selection', renderMessage.selection)),
+      h('div.icon', avatar),
       h('div', 'Clean:', h('span.clean', editor.clean))
     )
   )
@@ -120,6 +136,11 @@ ssbClient(keys, {
       if (err) throw err  // TODO
       editor.setValue(JSON.stringify(value, null, 2))
       editor.clean(true)
+
+      getAvatar(ssb, me.value, value.author, (err, result) => {
+        if (err) throw err
+        avatar(h('img', {src:`${blobsRoot}/${result.image}`}))
+      })
     })
   })
 })
@@ -154,6 +175,9 @@ document.body.appendChild(h('style', `
     flex: 1 20%;
     background: #ddd;
     border-right: 1px solid #ccc;
+  }
+  .col.revisions .icon img {
+    max-width: 48px;
   }
   .col.editor {
     flex: 3 60%;
