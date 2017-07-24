@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "wzrd index.js -- -t envify -t brfs"
+    "start": "ssb_ws_address=$(sbot ws.getAddress) wzrd index.js -- -t envify -t brfs"
   },
   "keywords": [],
   "author": "Jan Bölsche <jan@lagomorph.de> (http://regular.codes)",

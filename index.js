@@ -75,11 +75,6 @@ function messageTreeRenderer(ssb) {
   return render
 }
 
-var keys = ssbKeys.loadOrCreateSync('mykeys')
-// TODO
-// run `sbot ws.getAddress` to get this
-const sbotAddress = "ws://localhost:8989~shs:nti4TWBH/WNZnfwEoSleF3bgagd63Z5yeEnmFIyq0KA="
-const blobsRoot = "http://localhost:8989/blobs/get"
 
 // three column layout
 let editorContainer, treeContainer
@@ -93,15 +88,23 @@ document.body.appendChild(
 
 let editor = Editor({container: editorContainer})
 
-
 let me = obv()
 let sbot = obv()
 
+var keys = ssbKeys.loadOrCreateSync('mykeys')
+const sbotConfig = JSON.parse(fs.readFileSync(process.env.HOME + '/.' + process.env.ssb_appname + '/config'))
+const manifest = JSON.parse(fs.readFileSync(process.env.HOME + '/.' + process.env.ssb_appname + '/manifest.json'))
+console.log('sbot config', sbotConfig)
+console.log('our pubkey', keys.public)
+const sbotAddress = JSON.parse(process.env.ssb_ws_address) // rmoves quotes
+console.log('sbot address', sbotAddress)
+const blobsRoot = `http://${sbotConfig.host || 'localhost'}:${sbotConfig.ws.port}/blobs/get`
+
 ssbClient(keys, {
-  keys,
+  caps: sbotConfig.caps,
   remote: sbotAddress,
-  //timers: {handshake: 30000},
-  manifest: JSON.parse(fs.readFileSync(process.env.HOME + '/.ssb/manifest.json'))
+  timers: {handshake: 30000},
+  manifest
 }, function (err, ssb) {
   if (err) throw err
   sbot.set(ssb)
