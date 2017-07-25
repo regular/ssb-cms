@@ -1,80 +1,14 @@
 const fs = require('fs')
 const pull = require('pull-stream')
 const h = require('hyperscript')
-const ho = require('hyperobj')
-const observable = require('observable')
-const ref = require('ssb-ref')
 const ssbClient = require('ssb-client')
 const ssbKeys = require('ssb-keys')
 const getAvatar = require('ssb-avatar')
+const observable = require('observable')
 const obv = require('obv')
 
-const u = require('hyperobj-tree/util')
-const tree = require('hyperobj-tree/tree')
-const properties = require('hyperobj-tree/properties')
-const kv = require('hyperobj-tree/kv')
-const source = require('hyperobj-tree/source')
-const array = require('hyperobj-tree/array')
-const filter = require('hyperobj-tree/filter')
-const tag = require('hyperobj-tree/tag')
-
+const Tree = require('./tree-view')
 const Editor = require('./json-editor')
-
-function messageTreeRenderer(ssb) {
-  let selection = observable.signal()
-
-  selection( (el)=>{
-    document.querySelectorAll('.selected').forEach( el => el.classList.remove('selected') )
-    if (el) el.classList.add('selected')
-  })
-
-  function branches(root) {
-    return function() {
-      return ssb.links({
-        rel: 'branch',
-        dest: root,
-        keys: true,
-        values: true
-      })
-    }
-  }
-
-  let render = ho(
-    function(msg, kp) {
-      if (!msg.key || !msg.value || !msg.value.content) return
-      let value = { type: 'key-value', key: {type: 'msg-node', msg_type: msg.value.content.type, id: msg.key}, value: branches(msg.key) }
-      return this.call(this, value, kp)
-    },
-    function(msgNode, kp) {
-      if (!msgNode.type || msgNode.type != 'msg-node') return
-      kp = kp || []
-      console.log(JSON.stringify(kp))
-      let id = msgNode.id
-      let type = msgNode.msg_type
-      return h('span.msgNode',
-        this.call(this, type, kp.concat(['msg_type'])),
-        this.call(this, id, kp.concat(['key']))
-      )
-    },
-    filter( value => h('a.node', {
-      id: value,
-      onclick: function(e)  {
-        selection(this)
-        e.preventDefault()
-      }
-    }, tag(8)(value.substr(0,8))), ref.type),
-    tree(),
-    source(),
-    array(),
-    properties(),
-    kv(),
-    ho.basic()
-  )
-
-  render.selection = observable.transform( selection, el => el && el.id )
-  return render
-}
-
 
 // three column layout
 let editorContainer, treeContainer
@@ -117,10 +51,10 @@ ssbClient(keys, {
 let avatar = observable()
 me.once( (feed) => {
   const ssb = sbot.value
-  const renderMessage = messageTreeRenderer(ssb)
+  const tree = Tree(ssb)
   revisionsContainer.appendChild(
     h('div',
-      h('div', 'Selection:', h('span.selection', renderMessage.selection)),
+      h('div', 'Selection:', h('span.selection', tree.selection)),
       h('div.icon', avatar),
       h('div', 'Clean:', h('span.clean', editor.clean))
     )
@@ -129,11 +63,11 @@ me.once( (feed) => {
   let id = "%GKmZNjjB3voORbvg8Jm4Jy2r0tvJjH+uhV+cHtMVwSQ=.sha256"
   ssb.get(id, (err, value) => {
     if (err) throw err
-    let el = renderMessage({key:id, value})
+    let el = tree({key:id, value})
     treeContainer.appendChild(el)
   })
 
-  renderMessage.selection((id)=>{
+  tree.selection( (id) => {
     if (!id) return
     ssb.get(id, (err, value) => {
       if (err) throw err  // TODO
@@ -148,7 +82,7 @@ me.once( (feed) => {
   })
 })
 
-document.body.appendChild(h('style',tree.css()))
+document.body.appendChild(h('style',Tree.css()))
 document.body.appendChild(h('style', `
   body, html {
     height: 100%;
