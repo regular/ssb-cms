@@ -63,8 +63,20 @@ me.once( (feed) => {
   let id = "%GKmZNjjB3voORbvg8Jm4Jy2r0tvJjH+uhV+cHtMVwSQ=.sha256"
   ssb.get(id, (err, value) => {
     if (err) throw err
-    let el = tree({key:id, value})
-    treeContainer.appendChild(el)
+
+    treeContainer.appendChild(
+      h('.treeView',
+        h('.addRoot',
+          h('span', 'Create root node'),
+          h('button', '+', {
+            onclick: function() {
+              console.log('Add draft')
+            }
+          })
+        ),
+        tree({key:id, value})
+      )
+    )
   })
 
   tree.selection( (id) => {
@@ -106,6 +118,27 @@ document.body.appendChild(h('style', `
     flex: 1 20%;
     background: #eee;
     border-right: 1px solid #ccc;
+  }
+  .col.treeview .addRoot {
+    margin: .1em;
+    height: 1.6em;
+    border-bottom: 1px solid #ccc;
+    background: #ddd;
+    font-size: 14pt;
+  }
+  .col.treeview .addRoot span {
+    font-size: 8pt;
+  }
+  .col.treeview .addRoot button {
+    float: right;
+    margin: .1em;
+    width: 1.4em;
+    height: 1.4em;
+    border: 1px solid #aaa;
+    background: #eee;
+  }
+  .col.treeview .addRoot button:hover {
+    background: #99b;
   }
   .col.revisions {
     overflow: scroll;
