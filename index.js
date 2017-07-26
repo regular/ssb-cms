@@ -9,6 +9,7 @@ const obv = require('obv')
 
 const Tree = require('./tree-view')
 const Editor = require('./json-editor')
+const drafts = require('./drafts')()
 
 // three column layout
 let editorContainer, treeContainer
@@ -51,7 +52,7 @@ ssbClient(keys, {
 let avatar = observable()
 me.once( (feed) => {
   const ssb = sbot.value
-  const tree = Tree(ssb)
+  const tree = Tree(ssb, drafts)
   revisionsContainer.appendChild(
     h('div',
       h('div', 'Selection:', h('span.selection', tree.selection)),
@@ -61,6 +62,16 @@ me.once( (feed) => {
   )
 
   let id = "%GKmZNjjB3voORbvg8Jm4Jy2r0tvJjH+uhV+cHtMVwSQ=.sha256"
+
+  editor.on( 'changes', ()=> {
+    if (/^draft/.test(tree.selection())) {
+      console.log('Saving draft',editor.getValue())
+      drafts.update( tree.selection(), editor.getValue(), (err)=>{
+        if (err) throw err
+      })
+    }
+  })
+
   ssb.get(id, (err, value) => {
     if (err) throw err
 
@@ -71,22 +82,26 @@ me.once( (feed) => {
           h('button', '+', {
             onclick: function() {
               console.log('Add draft')
+              drafts.create({hello: "World"}, (err, key) => {
+                console.log(`Created draft ${key}`)
+              })
             }
           })
         ),
-        tree({key:id, value})
+        h('ul', h('li', tree({key:id, value})))
       )
     )
   })
 
   tree.selection( (id) => {
     if (!id) return
-    ssb.get(id, (err, value) => {
+    let get =  /^draft/.test(id) ? drafts.get : ssb.get
+    get(id, (err, value) => {
       if (err) throw err  // TODO
-      editor.setValue(JSON.stringify(value, null, 2))
+      editor.setValue(typeof value === 'string' ? value : JSON.stringify(value, null, 2))
       editor.clean(true)
 
-      getAvatar(ssb, me.value, value.author, (err, result) => {
+      getAvatar(ssb, me.value, value.author ? value.author : me.value, (err, result) => {
         if (err) throw err
         avatar(h('img', {src:`${blobsRoot}/${result.image}`}))
       })
@@ -157,15 +172,38 @@ document.body.appendChild(h('style', `
   .col.editor>* {
     height: 100%;
   }
+
+  .msgNode button.add {
+    display: none;
+  }
+  .branch.open>.key>.msgNode>button.add {
+    display: inline-block;
+  }
+
+  .msgNode button {
+    broder: 1px solid #ddd;
+    border-radius: 4px;
+  }
   a.node {
     color: #dde;
     text-decoration: none;
+    margin-left: .2em;
+  }
+  a.node.draft {
+    color: red;
+    font-style: italic;
+  }
+  a.node>span:hover {
+    background-color: #226;
   }
   a.node>span.tag:hover {
     background-color: #226;
   }
   ul {
     list-style: none;
+  }
+  .treeView>ul {
+    padding-left: 0px;
   }
   span.key {
     color: #222;
