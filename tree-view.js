@@ -13,7 +13,7 @@ const ref = require('ssb-ref')
 const pull = require('pull-stream')
 const many = require('pull-many')
 
-module.exports = function(ssb, drafts) {
+module.exports = function(ssb, drafts, root, cb) {
   let selection = observable.signal()
 
   selection( (el)=>{
@@ -48,7 +48,7 @@ module.exports = function(ssb, drafts) {
       }
     }
     drafts.create(JSON.stringify(value,null,2), parentId, null, (err, key)=>{
-      let ul = el.querySelector('ul')
+      let ul = el.tagName === 'UL' ? el : el.querySelector('ul')
       ul.appendChild( h('li', render({key, value})) )
     })
   }
@@ -127,6 +127,24 @@ module.exports = function(ssb, drafts) {
     kv(),
     ho.basic()
   )
+
+  ssb.get(root, (err, value) => {
+    if (err) return cb(err)
+    let ul
+    cb(null,
+      h('.treeView',
+        h('.addRoot',
+          h('span', 'Create root node'),
+          h('button', '+', {
+            onclick: function() {
+              addChild(ul, root)
+            }
+          })
+        ),
+        ul = render(branches(root))
+      )
+    )
+  })
 
   render.selection = observable.transform( selection, el => el && el.id )
   render.branches = (root)=>branches(root)()

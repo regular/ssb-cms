@@ -55,7 +55,12 @@ ssbClient(keys, {
 let avatar = observable()
 me.once( (feed) => {
   const ssb = sbot.value
-  const tree = Tree(ssb, drafts)
+
+  const tree = Tree(ssb, drafts, root, (err, el) =>{
+    if (err) throw err
+    treeContainer.appendChild(el)
+  })
+
   revisionsContainer.appendChild(
     h('div',
       h('div', 'Selection:', h('span.selection', tree.selection)),
@@ -71,27 +76,6 @@ me.once( (feed) => {
         if (err) throw err
       })
     }
-  })
-
-  ssb.get(root, (err, value) => {
-    if (err) throw err
-
-    treeContainer.appendChild(
-      h('.treeView',
-        h('.addRoot',
-          h('span', 'Create root node'),
-          h('button', '+', {
-            onclick: function() {
-              console.log('Add draft')
-              drafts.create({hello: "World"}, (err, key) => {
-                console.log(`Created draft ${key}`)
-              })
-            }
-          })
-        ),
-        tree(()=>tree.branches(root))
-      )
-    )
   })
 
   tree.selection( (id) => {
