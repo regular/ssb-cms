@@ -89,15 +89,18 @@ module.exports = function(ssb, drafts, root, cb) {
       let id = msgNode.id
       let type = msgNode.msg_type
       return h('span.msgNode',
-        this.call(this, type, kp.concat(['msg_type'])),
-        this.call(this, id, kp.concat(['key'])), /^draft/.test(id) ? [] : [
+        h('span.type-key',
+          this.call(this, type, kp.concat(['msg_type'])),
+          this.call(this, id, kp.concat(['key']))
+        ), 
+        /^draft/.test(id) ? [] : h('span.buttons',
           h('button.add', 'add', {
             onclick: function() { addChild(ancestorWithClass('branch', this), id) }
           }),
           h('button.clone', 'clone', {
             onclick: function() { clone(ancestorWithClass('branch', this), id) }
           })
-        ]
+        )
       )
     },
 
@@ -130,8 +133,7 @@ module.exports = function(ssb, drafts, root, cb) {
     cb(null,
       h('.treeView',
         h('.addRoot',
-          h('span', 'Create root node'),
-          h('button', '+', {
+          h('button', 'Create root node', {
             onclick: function() {
               addChild(ul, root)
             }
@@ -159,26 +161,44 @@ module.exports.css = ()=> tree.css() + `
     font-weight: bold;
     margin-right: .2em;
   }
-  span.key::after {
-    content: ':'
-  }
   .branch {
     white-space: nowrap;
   }
-  .branch>span.key::after {
-    content: ''
+  .branch-header {
+    display: flex;
+    flex-wrap: nowrap;
   }
-  .msgNode button.add {
+  .branch-header>span.key {
+    flex-grow: 1;
+    display: inline-flex;
+    flex-wrap: nowrap;
+  }
+
+  .msgNode {
+    flex-grow: 1;
+    display: inline-flex;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+  }
+
+  .branch-header .buttons {
+    flex-grow: 1;
+    display: inline-flex;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+  }
+  
+  .branch>.branch-header button.add {
     display: none;
   }
-  .branch.open>.key>.msgNode>button.add {
+  .branch.open>.branch-header button.add {
     display: inline-block;
   }
 
-  .msgNode button {
-    broder: 1px solid #ddd;
-    border-radius: 4px;
+  .branch-header:hover {
+    background: #ccc;
   }
+
   a.node {
     color: #dde;
     text-decoration: none;

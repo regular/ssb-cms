@@ -128,16 +128,21 @@ document.body.appendChild(h('style', `
   .col.treeview .addRoot span {
     font-size: 8pt;
   }
-  .col.treeview .addRoot button {
-    float: right;
-    margin: .1em;
-    width: 1.4em;
-    height: 1.4em;
+  button {
+    border-radius: 4px;
     border: 1px solid #aaa;
     background: #eee;
+    font-size: 60%;
+    font-weight: bold;
+    padding: .1em .3em;
+    vertical-align: middle;
+    margin: .1em;
+    margin-top: -1px;
+    margin-left: .2em;
+    margin-right: .2em;
   }
-  .col.treeview .addRoot button:hover {
-    background: #99b;
+  button:hover {
+    background: #999;
   }
   .col.revisions {
     overflow: scroll;
