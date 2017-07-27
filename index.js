@@ -11,23 +11,6 @@ const Tree = require('./tree-view')
 const Editor = require('./json-editor')
 const drafts = require('./drafts')()
 
-// three column layout
-let editorContainer, treeContainer, discardButton, saveButton
-document.body.appendChild(
-  h('.columns',
-    treeContainer = h('.col.treeview'),
-    revisionsContainer = h('.col.revisions'),
-    h('.col.editor-col',
-      editorContainer = h('.editor-container'),
-      h('.buttons',
-        discardButton = h('button.discard', 'Discard Changes'),
-        saveButton = h('button.save', 'Save')
-      )
-    )
-  )
-)
-
-let editor = Editor({container: editorContainer})
 
 let me = obv()
 let sbot = obv()
@@ -62,6 +45,26 @@ let avatar = observable()
 me.once( (feed) => {
   const ssb = sbot.value
 
+  // three column layout
+  let editorContainer, treeContainer, discardButton, saveButton
+  document.body.appendChild(
+    h('.columns',
+      treeContainer = h('.col.treeview'),
+      revisionsContainer = h('.col.revisions'),
+      h('.col.editor-col',
+        editorContainer = h('.editor-container'),
+        h('.buttons',
+          discardButton = h('button.discard', 'Discard Changes'),
+          saveButton = h('button.save', 'Save', {
+            onclick: save
+          })
+        )
+      )
+    )
+  )
+
+  const editor = Editor({container: editorContainer})
+
   const tree = Tree(ssb, drafts, root, (err, el) =>{
     if (err) throw err
     treeContainer.appendChild(el)
@@ -89,7 +92,7 @@ me.once( (feed) => {
       drafts.update( tree.selection(), editor.getValue(), (err)=>{
         if (err) throw err
       })
-      tree.update(tree.selection(), editor.getValue()) 
+      tree.update(tree.selection(), editor.getValue())
     }
   })
 
@@ -98,6 +101,19 @@ me.once( (feed) => {
     editor.setValue(text)
     editor.clean(true)
     ignoreChanges = false
+  }
+
+  function save() {
+    let key = tree.selection()
+    if (!key || !/draft-/.test(key)) return
+    console.log('Publishing ...')
+    drafts.publish(ssb, key, (err, result) => {
+      console.log('published', result)
+      if (err) throw err
+      drafts.remove(key)
+      loadIntoEditor(JSON.stringify(result.value, null, 2))
+      tree.update(key, JSON.stringify(result.value), result.key)
+    })
   }
 
   tree.selection( (id) => {

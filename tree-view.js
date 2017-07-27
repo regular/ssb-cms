@@ -82,7 +82,6 @@ module.exports = function(ssb, drafts, root, cb) {
   }
 
   function ancestorWithClass(cls, el) {
-    console.log('awc', el)
     if (!el) return null
     if (el.classList.contains(cls)) return el
     return ancestorWithClass(cls, el.parentElement)
@@ -167,15 +166,18 @@ module.exports = function(ssb, drafts, root, cb) {
 
   render.selection = observable.transform( selection, el => el && el.id )
   render.branches = (root)=>branches(root)()
-  render.update = (key, value) => {
+  render.update = (key, value, newKey) => {
+    newKey = newKey || key
     const el = document.getElementById(key)
     const header = ancestorWithClass('branch-header', el)
-    const newEl = render({key, value})
+    const newEl = render({key: newKey, value})
     const newHeader = newEl.querySelector('.branch-header')
     let sel = selection() && selection().id === key
     header.parentElement.insertBefore(newHeader, header)
     header.parentElement.removeChild(header)
-    newHeader.querySelector('a.node').classList.add('selected')
+    if (key === newKey) {
+      newHeader.querySelector('a.node').classList.add('selected')
+    } else selection(newHeader.querySelector('a.node'))
   }
   return render
 }

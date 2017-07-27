@@ -66,6 +66,23 @@ module.exports = function () {
         })
       )
     },
+    publish: (ssb, key, cb) => {
+      db.get(key, (err, value) => {
+        if (err) return cb(err)
+        let msg
+        try {
+          msg = JSON.parse(value.content)
+        } catch(e) {
+          return cb(e)
+        }
+        if (!msg.content) return cb(new Error('message has no content'))
+        // NOTE: we ignore everything but the msg.content and overwrite
+        // branch and revisionRoot!
+        if (value.branch) msg.content.branch = value.branch
+        if (value.revisionRoot) msg.content.revisionRoot = value.revisionRoot
+        ssb.publish(msg.content, cb)
+      })
+    },
 
     byBranch: function(branch) {
       return pull(
