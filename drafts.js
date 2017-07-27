@@ -5,19 +5,53 @@ const crypto = require('crypto')
 
 module.exports = function () {
   const db = levelup('drafts', {
-    db: require('level-js')
-    //, valueEncoding: 'json'
+    db: require('level-js'),
+    valueEncoding: 'json'
   })
   return {
-    get: db.get.bind(db),
-    update: db.put.bind(db),
-    create: function(msg, branch, revisionRoot, cb) {
+    get: (key, cb) => {
+      db.get(key, (err, value) => {
+        if (err) return cb(err)
+        cb(null, value.content)
+      })
+    },
+    update: (key, content, cb) => {
+      db.get(key, (err, value) => {
+        if (err) return cb(err)
+        value.content = content
+        db.put(key, value, cb)
+      })
+    },
+    remove: (key, cb) => {
+      db.get(key, (err, value) => {
+        if (err) return cb(err)
+        let {branch, revisionRoot} = value
+        pull(
+          pull.values([{
+            type: 'del',
+            key: key,
+          }, {
+            type: 'del',
+            key: `~BRANCH~${branch || ''}~${key}`,
+          }, {
+            type: 'del',
+            key: `~REVROOT~${revisionRoot || ''}~${key}`,
+          }]),
+          pl.write(db, cb)
+        )
+      })
+    },
+    create: function(content, branch, revisionRoot, cb) {
       const key = 'draft-' + crypto.randomBytes(16).toString('base64')
       pull(
         pull.values([{
           type: 'put',
           key: key,
-          value: msg
+          value: {
+            revisionRoot,
+            branch,
+            content
+          }
         }, {
           type: 'put',
           key: `~BRANCH~${branch || ''}~${key}`,
@@ -39,7 +73,7 @@ module.exports = function () {
         pull.asyncMap(function (e, cb) {
           db.get(e.value, function (err, value) {
             if (err) return cb(err)
-            cb(null, {key: e.value, value: value})
+            cb(null, {key: e.value, value: value.content})
           })
         })
       )

@@ -91,7 +91,11 @@ me.once( (feed) => {
   })
 
   tree.selection( (id) => {
-    if (!id) return
+    if (!id) {
+      editor.setValue('')
+      editor.clean(true)
+      return
+    }
     let get =  /^draft/.test(id) ? drafts.get : ssb.get
     get(id, (err, value) => {
       if (err) throw err  // TODO

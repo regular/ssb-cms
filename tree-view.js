@@ -66,6 +66,16 @@ module.exports = function(ssb, drafts, root, cb) {
     })
   }
 
+  function discard(el, id) {
+    drafts.remove(id, (err)=>{
+      if (err) throw err
+      if (selection() && selection().id === id) {
+        selection(null)
+      }
+      el.parentElement.removeChild(el)
+    })
+  }
+
   function ancestorWithTagName(tag, el) {
     if (el.tagName === tag.toUpperCase()) return el
     return ancestorWithTagName(tag, el.parentElement)
@@ -98,7 +108,11 @@ module.exports = function(ssb, drafts, root, cb) {
           this.call(this, type, kp.concat(['msg_type'])),
           this.call(this, id, kp.concat(['key']))
         ), 
-        /^draft/.test(id) ? [] : h('span.buttons',
+        /^draft/.test(id) ? h('span.buttons', 
+          h('button.discard', 'discard', {
+            onclick: function() { discard( ancestorWithTagName('li', this), id) }
+          })
+        ) : h('span.buttons',
           h('button.add', 'add', {
             onclick: function() { addChild(ancestorWithClass('branch', this), id) }
           }),
