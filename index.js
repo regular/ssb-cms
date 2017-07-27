@@ -35,6 +35,9 @@ const sbotAddress = JSON.parse(process.env.ssb_ws_address) // rmoves quotes
 console.log('sbot address', sbotAddress)
 const blobsRoot = `http://${sbotConfig.host || 'localhost'}:${sbotConfig.ws.port}/blobs/get`
 
+const root = sbotConfig.cms && sbotConfig.cms.root
+if (!root) throw new Error('Please specify a root node in your config. See ssb-cms README.md for details.')
+
 ssbClient(keys, {
   caps: sbotConfig.caps,
   remote: sbotAddress,
@@ -61,8 +64,6 @@ me.once( (feed) => {
     )
   )
 
-  let id = "%GKmZNjjB3voORbvg8Jm4Jy2r0tvJjH+uhV+cHtMVwSQ=.sha256"
-
   editor.on( 'changes', ()=> {
     if (/^draft/.test(tree.selection())) {
       console.log('Saving draft',editor.getValue())
@@ -72,7 +73,7 @@ me.once( (feed) => {
     }
   })
 
-  ssb.get(id, (err, value) => {
+  ssb.get(root, (err, value) => {
     if (err) throw err
 
     treeContainer.appendChild(
@@ -88,7 +89,7 @@ me.once( (feed) => {
             }
           })
         ),
-        h('ul', h('li', tree({key:id, value})))
+        h('ul', h('li', tree({key: root, value})))
       )
     )
   })
