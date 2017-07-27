@@ -151,4 +151,52 @@ module.exports = function(ssb, drafts, root, cb) {
   return render
 }
 
-module.exports.css = tree.css
+module.exports.css = ()=> tree.css() + `
+  ul {
+    list-style: none;
+  }
+  .treeView>ul {
+    padding-left: 0px;
+  }
+  span.key {
+    color: #222;
+    font-weight: bold;
+    margin-right: .2em;
+  }
+  span.key::after {
+    content: ':'
+  }
+  .branch {
+    white-space: nowrap;
+  }
+  .branch>span.key::after {
+    content: ''
+  }
+  .msgNode button.add {
+    display: none;
+  }
+  .branch.open>.key>.msgNode>button.add {
+    display: inline-block;
+  }
+
+  .msgNode button {
+    broder: 1px solid #ddd;
+    border-radius: 4px;
+  }
+  a.node {
+    color: #dde;
+    text-decoration: none;
+    margin-left: .2em;
+  }
+  a.node.draft {
+    color: red;
+    font-style: italic;
+  }
+  a.node>span:hover {
+    background-color: #226;
+  }
+  .node.selected>span {
+    color: black;
+    background: yellow;
+  }
+`
