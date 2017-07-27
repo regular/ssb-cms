@@ -174,6 +174,26 @@ document.body.appendChild(h('style', `
     height: 100%;
   }
 
+  ul {
+    list-style: none;
+  }
+  .treeView>ul {
+    padding-left: 0px;
+  }
+  span.key {
+    color: #222;
+    font-weight: bold;
+    margin-right: .2em;
+  }
+  span.key::after {
+    content: ':'
+  }
+  .branch {
+    white-space: nowrap;
+  }
+  .branch>span.key::after {
+    content: ''
+  }
   .msgNode button.add {
     display: none;
   }
@@ -197,35 +217,13 @@ document.body.appendChild(h('style', `
   a.node>span:hover {
     background-color: #226;
   }
-  a.node>span.tag:hover {
-    background-color: #226;
-  }
-  ul {
-    list-style: none;
-  }
-  .treeView>ul {
-    padding-left: 0px;
-  }
-  span.key {
-    color: #222;
-    font-weight: bold;
-    margin-right: .2em;
-  }
-  span.key::after {
-    content: ':'
-  }
-  .branch {
-    white-space: nowrap;
-  }
-  .branch>span.key::after {
-    content: ''
-  }
-  .tag.color0 {
-    background: #b58900;
-  }
-  .node.selected>.tag {
+  .node.selected>span {
     color: black;
     background: yellow;
+  }
+
+  .tag.color0 {
+    background: #b58900;
   }
   .tag.color1 {
     background: #cb4b16;
