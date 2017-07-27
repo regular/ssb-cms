@@ -90,13 +90,14 @@ module.exports = function(ssb, drafts, root, cb) {
       let type = msgNode.msg_type
       return h('span.msgNode',
         this.call(this, type, kp.concat(['msg_type'])),
-        this.call(this, id, kp.concat(['key'])),
-        h('button.add', 'add', {
-          onclick: function(e) { addChild(ancestorWithClass('branch', this), id) }
-        }),
-        h('button.clone', 'clone', {
-          onclick: function(e) { clone(ancestorWithClass('branch', this), id) }
-        })
+        this.call(this, id, kp.concat(['key'])), /^draft/.test(id) ? [] : [
+          h('button.add', 'add', {
+            onclick: function() { addChild(ancestorWithClass('branch', this), id) }
+          }),
+          h('button.clone', 'clone', {
+            onclick: function() { clone(ancestorWithClass('branch', this), id) }
+          })
+        ]
       )
     },
 
