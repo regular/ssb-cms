@@ -34,14 +34,12 @@ module.exports = function(ssb, drafts, root, cb) {
             }) 
           : pull.empty(), // TODO: get all root messages
           drafts.byBranch(root)
-        ]),
-        pull.through(console.log)
+        ])
       )
     }
   }
 
   function addChild(el, parentId) {
-    console.log('addChild')
     let value = {
       content: {
         type: 'post'
@@ -54,7 +52,6 @@ module.exports = function(ssb, drafts, root, cb) {
   }
 
   function clone(el, id) {
-    console.log('clone')
     ssb.get(id, (err, value) => {
       if (err) throw err
       drafts.create(JSON.stringify(value,null,2), value.content.branch, value.content.revisionRoot, (err, key)=>{
@@ -65,7 +62,6 @@ module.exports = function(ssb, drafts, root, cb) {
   }
 
   function ancestorWithTagName(tag, el) {
-    console.log(el.tagName)
     if (el.tagName === tag.toUpperCase()) return el
     return ancestorWithTagName(tag, el.parentElement)
   }
@@ -90,7 +86,6 @@ module.exports = function(ssb, drafts, root, cb) {
     function(msgNode, kp) {
       if (!msgNode.type || msgNode.type != 'msg-node') return
       kp = kp || []
-      //console.log(JSON.stringify(kp))
       let id = msgNode.id
       let type = msgNode.msg_type
       return h('span.msgNode',

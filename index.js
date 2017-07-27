@@ -71,7 +71,6 @@ me.once( (feed) => {
 
   editor.on( 'changes', ()=> {
     if (/^draft/.test(tree.selection())) {
-      console.log('Saving draft',editor.getValue())
       drafts.update( tree.selection(), editor.getValue(), (err)=>{
         if (err) throw err
       })
