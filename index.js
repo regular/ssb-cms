@@ -125,6 +125,7 @@ me.once( (feed) => {
 
       getAvatar(ssb, me.value, value.author ? value.author : me.value, (err, result) => {
         if (err) throw err
+        if (!result.image) return
         avatar(h('img', {src:`${blobsRoot}/${result.image}`}))
       })
     })
