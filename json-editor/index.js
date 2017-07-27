@@ -54,7 +54,11 @@ module.exports = function(opts) {
   
   let cmOpts = Object.assign({}, defaults, opts)
   let cm = codemirror(cmOpts.container, cmOpts)
-
+  function setSize() {
+    cm.setSize(`${cmOpts.container.clientWidth}px`, `${cmOpts.container.clientHeight}px`)
+  }
+  setTimeout( setSize, 0)
+  window.addEventListener('resize', setSize)
   cm.on('changes', (editor, changes)=>{
     clean(editor.isClean(editChange))
   })

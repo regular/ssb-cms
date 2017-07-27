@@ -12,12 +12,18 @@ const Editor = require('./json-editor')
 const drafts = require('./drafts')()
 
 // three column layout
-let editorContainer, treeContainer
+let editorContainer, treeContainer, discardButton, saveButton
 document.body.appendChild(
   h('.columns',
     treeContainer = h('.col.treeview'),
     revisionsContainer = h('.col.revisions'),
-    editorContainer = h('.col.editor')
+    h('.col.editor-col',
+      editorContainer = h('.editor-container'),
+      h('.buttons',
+        discardButton = h('button.discard', 'Discard Changes'),
+        saveButton = h('button.save', 'Save')
+      )
+    )
   )
 )
 
@@ -68,6 +74,13 @@ me.once( (feed) => {
       h('div', 'Clean:', h('span.clean', editor.clean))
     )
   )
+
+  /*
+  editor.clean( (isClean)=>{
+   discardButton.disabled = !isClean
+   saveButton.disabled = isClean 
+  })
+  */
 
   editor.on( 'changes', ()=> {
     if (/^draft/.test(tree.selection())) {
@@ -153,15 +166,35 @@ document.body.appendChild(h('style', `
   .col.revisions .icon img {
     max-width: 48px;
   }
-  .col.editor {
+
+  .editor-col {
     flex: 3 60%;
     max-width: 60%;
-    background: blue;
+    display: flex;
+    flex-direction: column;
   }
-  .col.editor>* {
-    height: 100%;
+  .editor-container {
+    flex-grow: 1;
+    position: relative;
+    overflow: hidden;
   }
-
+  .editor-col .buttons {
+    padding: 1em;
+    font-size: 16pt;
+    display: flex;
+    justify-content: flex-end;
+    background: #eee;
+  }
+  .editor-col .buttons button {
+    padding: .8em 1em;
+    padding-top: .6em;
+  }
+  button.save:hover {
+    background: #77f;
+  }
+  button.discard:hover {
+    background: #f77;
+  }
 
   .tag.color0 {
     background: #b58900;
