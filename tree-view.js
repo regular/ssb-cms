@@ -40,14 +40,19 @@ module.exports = function(ssb, drafts, root, cb) {
   }
 
   function addChild(el, parentId) {
-    let value = {
-      content: {
-        type: 'post'
+    ssb.get(parentId, (err, parent) => {
+      if (err) throw err
+      let value = {
+        content: {
+          root: parent.content.root || parentId,
+          branch: parentId,
+          type: 'post'
+        }
       }
-    }
-    drafts.create(JSON.stringify(value,null,2), parentId, null, (err, key)=>{
-      let ul = el.tagName === 'UL' ? el : el.querySelector('ul')
-      ul.appendChild( h('li', render({key, value})) )
+      drafts.create(JSON.stringify(value,null,2), parentId, null, (err, key)=>{
+        let ul = el.tagName === 'UL' ? el : el.querySelector('ul')
+        ul.appendChild( h('li', render({key, value})) )
+      })
     })
   }
 
