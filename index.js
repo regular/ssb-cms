@@ -89,7 +89,7 @@ me.once( (feed) => {
             }
           })
         ),
-        h('ul', h('li', tree({key: root, value})))
+        tree(()=>tree.branches(root))
       )
     )
   })
