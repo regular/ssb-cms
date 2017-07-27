@@ -152,7 +152,7 @@ module.exports = function(ssb, drafts, root, cb) {
     let ul
     cb(null,
       h('.treeView',
-        h('.addRoot',
+        h('.toolbar',
           h('button', 'Create root node', {
             onclick: function() {
               addChild(ul, root)
@@ -187,7 +187,7 @@ module.exports.css = ()=> tree.css() + `
     list-style: none;
   }
   .treeView>ul {
-    padding-left: 0px;
+    padding-left: .5em;
   }
   span.key {
     color: #222;
@@ -228,8 +228,28 @@ module.exports.css = ()=> tree.css() + `
     display: inline-block;
   }
 
+  .branch-header {
+    background: #ddd;
+    border-bottom: 1px solid #eee;
+    border-top-left-radius: 8px;
+    padding-left: .3em;
+  }
   .branch-header:hover {
     background: #ccc;
+  }
+
+  .branch-header button {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    color: #777;
+    padding: 0 .4em;
+  }
+
+  .branch-header button:hover {
+    border-top: 1px solid #ccc;
+    color: #eee;
+    border-bottom: 1px solid #aaa;
   }
 
   a.node {

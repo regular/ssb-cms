@@ -50,12 +50,15 @@ me.once( (feed) => {
   document.body.appendChild(
     h('.columns',
       treeContainer = h('.col.treeview'),
-      revisionsContainer = h('.col.revisions'),
+      revisionsContainer = h('.col.revisions',
+        h('.toolbar')
+      ),
       h('.col.editor-col',
+        h('.toolbar'),
         editorContainer = h('.editor-container'),
         h('.buttons',
           discardButton = h('button.discard', 'Discard Changes'),
-          saveButton = h('button.save', 'Save', {
+          saveButton = h('button.save', 'Publish', {
             onclick: save
           })
         )
@@ -64,17 +67,19 @@ me.once( (feed) => {
   )
 
   const editor = Editor({container: editorContainer})
-
   const tree = Tree(ssb, drafts, root, (err, el) =>{
     if (err) throw err
     treeContainer.appendChild(el)
   })
 
+  revisionsContainer.querySelector('.toolbar').appendChild(
+    h('span.selection', tree.selection)
+  )
+
   revisionsContainer.appendChild(
     h('div',
-      h('div', 'Selection:', h('span.selection', tree.selection)),
-      h('div.icon', avatar),
-      h('div', 'Clean:', h('span.clean', editor.clean))
+      h('div.icon', avatar)
+      //h('div', 'Clean:', h('span.clean', editor.clean))
     )
   )
 
@@ -136,6 +141,7 @@ document.body.appendChild(h('style',Tree.css()))
 document.body.appendChild(h('style', `
   body, html {
     height: 100%;
+    margin: 0;
   }
   body {
     font-family: sans-serif;
@@ -153,20 +159,22 @@ document.body.appendChild(h('style', `
   }
   .col.treeview {
     overflow: scroll;
-    flex: 1 20%;
+    flex: 2 30%;
     background: #eee;
     border-right: 1px solid #ccc;
   }
-  .col.treeview .addRoot {
-    margin: .1em;
+  .toolbar {
+    box-shadow: 0px 0px 3px black;
     height: 1.6em;
     border-bottom: 1px solid #ccc;
     background: #ddd;
-    font-size: 14pt;
+    font-size: 16pt;
   }
-  .col.treeview .addRoot span {
-    font-size: 8pt;
+
+  .toolbar button {
+    margin: .5em;
   }
+  
   button {
     border-radius: 4px;
     border: 1px solid #aaa;
@@ -189,13 +197,17 @@ document.body.appendChild(h('style', `
     background: #ddd;
     border-right: 1px solid #ccc;
   }
+  .col.revisions .toolbar .selection {
+    font-size: 6pt;
+    margin-left: .2em;
+  }
   .col.revisions .icon img {
     max-width: 48px;
   }
 
   .editor-col {
-    flex: 3 60%;
-    max-width: 60%;
+    flex: 35 50%;
+    max-width: 50%;
     display: flex;
     flex-direction: column;
   }
