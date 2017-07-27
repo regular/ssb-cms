@@ -82,25 +82,30 @@ me.once( (feed) => {
   })
   */
 
+  let ignoreChanges = false
   editor.on( 'changes', ()=> {
+    if (ignoreChanges) return
     if (/^draft/.test(tree.selection())) {
       drafts.update( tree.selection(), editor.getValue(), (err)=>{
         if (err) throw err
       })
+      tree.update(tree.selection(), editor.getValue()) 
     }
   })
 
+  function loadIntoEditor(text) {
+    ignoreChanges = true
+    editor.setValue(text)
+    editor.clean(true)
+    ignoreChanges = false
+  }
+
   tree.selection( (id) => {
-    if (!id) {
-      editor.setValue('')
-      editor.clean(true)
-      return
-    }
+    if (!id) return loadIntoEditor('')
     let get =  /^draft/.test(id) ? drafts.get : ssb.get
     get(id, (err, value) => {
       if (err) throw err  // TODO
-      editor.setValue(typeof value === 'string' ? value : JSON.stringify(value, null, 2))
-      editor.clean(true)
+      loadIntoEditor(typeof value === 'string' ? value : JSON.stringify(value, null, 2))
 
       getAvatar(ssb, me.value, value.author ? value.author : me.value, (err, result) => {
         if (err) throw err
