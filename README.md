@@ -2,7 +2,7 @@
 
 :hammer: Work in progress :hammer:
 
-ssb is used, among other things, as a social network, to share music, to play chess and to collaborate on code. There is another, similar but different use case: distributed groups collaborating on curating content. This might be teachers collecting learning materials, or a museum organizing content for digital exhibits. While ssb's decentralised nature is not strictly needed for this use case, it is still benificial. It increases availability, robustness and data reduncany. It also provides a lot of building blocks, such as authentication, encryption and replication.
+ssb is used, among other things, as a social network, to share music, to play chess and to collaborate on code. There is another, similar but different use case: distributed groups collaborating on curating content. This might be teachers collecting learning materials, or a museum organizing content for digital exhibits. While ssb's decentralised nature is not strictly needed for this use case, it is still beneficial. It increases availability, robustness and data reduncany. It also provides a lot of building blocks, such as authentication, encryption and replication.
 
 Collaboratively maintaining a database of content requires manipulating and organizing documents. In ssb-cms, these documents are ssb messages (JSON objects) and the organisational structure is a tree. The `content.branch` and `content.root` properties are used to form the tree structure, just like threads in the social network. Additionally, `content.revisionBranch` and `content.revisionRoot` are being used to be able to mutate (update) documents. See [`ssb-sort (reduce branch)`](http://127.0.0.1:7718/%2533PdKt9pNcyNI2O9AdPXa%2BKwaWfvgv%2F6CfpEd5YmOww%3D.sha256/tree/reduce) for details. (link requires `git ssb web` to be running)
 
@@ -36,7 +36,7 @@ TODO: There's a status bar at the top that shows various tiny progress bars (lik
 ### Drafts
 Add and Clone buttons in the tree add a draft for a new message. The draft is an ssb message content object stored in IndexDB (via level.js). There can by an unlimited number of drafts. They are displayed in the tree (done) and revision (todo) views, clearly marked as draft. A draft may contain invalid JSON. If it is selected in the tree it is loaded into the editor, like any other message and can be modified. Any modification is immediately stored in IndexDB. If the "Publish" button is pressed and hte message is valid JSON, it is published to ssb.
 
-> NOTE: Currently properties outside the `content` property are ignored when publishing. THe `content` part is passed to `sbot.publish`. The` branch` and `revisionRoot` proerties entered by the user are also ignored and overwritten by values corresponding to the position of the draft in the tree/revision history. (RODO/WIP what about `root` and `revisionBranch`?)
+> NOTE: Currently properties outside the `content` property are ignored when publishing. THe `content` part is passed to `sbot.publish`. The` branch` and `revisionRoot` proerties entered by the user are also ignored and overwritten by values corresponding to the position of the draft in the tree/revision history. (TODO/WIP what about `root` and `revisionBranch`?)
 
 TODO: Changing the text of a non-draft message in the editor automatically creates a new draft based off of the currently selected revision. (after the first keystroke, the draft is selected instead of the revision it is based on)
 
@@ -52,10 +52,10 @@ TODO (low priority) same for images/icons.
 TODO: Before publishing the editor's content, make sure it actually differs from the lates revision and the content is valid json and satisfies a schema or validation function.
 
 ### Renderers
-A renderer is a function that takes an object and returns an html element, potentially with event handlers already attached. Renders can be used to implement in-place editing of content. (e.g. content-editable divs, images are drag-targets). On creation, a renderer receives the ssb api, so it can access the network/database.
-TODO: A set if standard renderers are provided for `content.type` `post` and `about` messages. User can provide their own rendering functions to render custom content-tyes.
+A renderer is a function that takes an object and returns an html element, potentially with event handlers already attached. Renderers can be used to implement in-place editing of content. (e.g. content-editable divs, images are drag-targets). On creation, a renderer receives the ssb api, so it can access the network/database.
+TODO: A set of standard renderers are provided for `content.type` `post` and `about` messages. User can provide their own rendering functions to render custom content-tyes.
 
-Renderers either occupy the space of the editor (tabbed UI), or they render the entire view port _behind_ the ssb-cms UI. The user can switch between three modes:
+TODO: Renderers either occupy the space of the editor (tabbed UI), or they render the entire view port _behind_ the ssb-cms UI. The user can switch between three modes:
 
 - three-column layout with editor or renderer output on the right
 - translucent tree view and revision history UI on top of fullscreen renderer output
@@ -147,7 +147,7 @@ The key pair was created when you first loaded the page. The public key should b
 
 ## Identity
 
-Note that the public key you just used is not your ssb identity (feed id). It is just your browser's id, sort of a password. Your actual ssb id is in ~/.ssb-cms/secret. You could actually use the secret file from your main (social) id here, just by copyin it over:
+Note that the public key you just used is not your ssb identity (feed id). It is just your browser's id, sort of a password. Your actual ssb id is in ~/.ssb-cms/secret. You could actually use the secret file from your main (social) id here, just by copying it over:
 
 ```
 cp ~/.ssb/secret ~/.ssb-cms/secret
