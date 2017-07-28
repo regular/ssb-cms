@@ -33,7 +33,24 @@ ssbClient(keys, {
   timers: {handshake: 30000},
   manifest
 }, function (err, ssb) {
-  if (err) throw err
+  if (err) {
+    document.body.innerHTML = `<pre>
+    ssb-client says: "${err.message}"
+    If you have not done already, please add your public key to sbot's master array:
+
+    "master": [
+      "@${keys.public}"
+    ]
+
+    in ${process.env.HOME + '/.' + process.env.ssb_appname + '/config'}
+
+    (the above is not an example, it is your actual public key)
+
+    Then restart sbot and reload this page. Hopefully you won't see this message again.
+
+    </pre>`
+    throw err
+  }
   sbot.set(ssb)
   ssb.whoami( (err, feed)=> {
     if (err) throw err
