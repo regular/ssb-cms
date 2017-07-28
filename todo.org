@@ -1,0 +1,53 @@
+#+STARTUP: content
+
+*** TODO [/] Questions
+    - [X] How to configure custom network key?
+    - [ ] What can we do to prevent accidental cross-posting to main network?
+    - [ ] Configure sbot max blob size?
+
+*** navigation
+**** [1/3] tree-view
+    - [X] hyperobj-tree
+    - [X] show message hierarchy
+    - [X] make selectable
+**** [/] "git lola" view (tree of revisions)
+    - [ ] hyperobj-lola
+    - [ ] show branches and "commits" (revisions)
+    - [ ] make selectable
+    - [ ] shift-select secondary revision (for diffing)
+    - [ ] auto-select latest revision (latest in the sense of `ssb-sort`)
+    - [ ] display comments (low priority)
+**** [/] json view (editor)
+    - [X] embed codemirror
+    - [X] JSON syntax highlighting
+    - [X] Syntax validation (show errors in editor gutter)
+    - [ ] JSON beautifier
+
+*** [/] Publishing
+    - [X] Publish new nodes when draft is loaded into editor and "Publish" is
+      clicked
+    - [ ] enable "Publish" button when editor contents differs from selected revision
+    - [ ] publish new revision when 'commit' is clicked and sytnax is okay.
+
+*** [0/3] packaging/deployment
+    - [ ] electron app
+        - [ ] embed sbot (ssb-party?)
+        - [ ] make OS X installer
+    - [ ] deploy lite version on pub server
+    - [ ] make AUR (arch packages) or debian package (undecided)
+        1. [ ] scuttlebot as systemd service 
+        2. [ ] ssb-cms (depends on 1.)
+
+*** TODO [/] Standard renderers
+    - [ ] post messages (render ssb-markdown)
+    - [ ] about messages
+    - [ ] comment message
+
+*** TODO [/] Editable Content Renderers
+Implement renderers (for text, images) that can be switched
+into "edit mode". In this mode, they implement a simple interface for chaning
+the content and committing a new revision.
+    - [ ] image (drop target), a message containing a blob link, width,
+      height and, optionally, a position
+    - [ ] markdown text, a message with properties named after ISO language
+      codes. In edit mode, all language versions can be edited.

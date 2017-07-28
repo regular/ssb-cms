@@ -55,7 +55,14 @@ TODO (low priority) same for images/icons.
 TODO: Before publishing the editor's content, make sure it actually differs from the lates revision and the content is valid json and satisfies a schema or validation function.
 
 ### Renderers
-A renderer is a function that takes an object and returns an html element, potentially with event handlers already attached. Renderers can be used to implement in-place editing of content. (e.g. content-editable divs, images are drag-targets). On creation, a renderer receives the ssb api, so it can access the network/database.
+
+Renderers are composable Javascript functions that follow the `hyperobj`
+pattern. They take an object as input and generate an HTMLElement.
+Renderers can invoke other Renderers to render child nodes (or otherwise
+related Nodes). They also provide and add event handlers to the HTML
+elements they return.
+
+Renderers can be used to implement in-place editing of content. (e.g. content-editable divs, images are drag-targets). On creation, a renderer receives the ssb api, so it can access the network/database.
 TODO: A set of standard renderers are provided for `content.type` `post` and `about` messages. User can provide their own rendering functions to render custom content-tyes.
 
 TODO: Renderers either occupy the space of the editor (tabbed UI), or they render the entire view port _behind_ the ssb-cms UI. The user can switch between three modes:
