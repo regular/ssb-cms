@@ -14,6 +14,9 @@ Collaboratively maintaining a database of content requires manipulating and orga
 - middle: (TODO) a tree of revisions for the post selected on the left
 - right: the post as json in a code editor (CodeMirror)
 
+### Root
+One message is declared the `root` message in `config.cms.root`. WHen the application starts, it displays children of the root message as top-level nodes. With this config option, you can `chroot` clients into a subtree. TODO: if `config.cms.root` is an array, show the listed messages as top level objects. (not their children)
+
 ### Tree view
 Nodes in the tree have expand/collapse triangles.
 
