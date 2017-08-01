@@ -59,6 +59,17 @@ ssbClient(keys, {
 })
 
 let avatar = observable()
+me( (feed) => {
+  getAvatar(sbot.value, feed, feed, (err, result) => {
+    if (err) throw err
+    if (!result.image) return
+    avatar({
+      name: result.name,
+      imageUrl:`${blobsRoot}/${result.image}`
+    })
+  })
+})
+
 me.once( (feed) => {
   const ssb = sbot.value
 
@@ -74,12 +85,21 @@ me.once( (feed) => {
         id: 'content'
       }],
       right: [{
+        icon: 'broken',
         label: 'username',
         id: 'profile'
       }]
     })
   )
   menubar.activate('content')
+
+  avatar( (result)=>{
+    if (!result) return
+    let img = menubar.querySelector('#profile img')
+    img.setAttribute('src', result.imageUrl)
+    let span = menubar.querySelector('#profile span')
+    span.innerHTML = result.name
+  })
 
   // three column layout
   let editorContainer, treeContainer, discardButton, saveButton
@@ -112,12 +132,14 @@ me.once( (feed) => {
     h('span.selection', tree.selection)
   )
 
+  /*
   revisionsContainer.appendChild(
     h('div',
-      h('div.icon', avatar)
+      //h('div.icon', avatar)
       //h('div', 'Clean:', h('span.clean', editor.clean))
     )
   )
+  */
 
   /*
   editor.clean( (isClean)=>{
@@ -167,7 +189,7 @@ me.once( (feed) => {
       getAvatar(ssb, me.value, value.author ? value.author : me.value, (err, result) => {
         if (err) throw err
         if (!result.image) return
-        avatar(h('img', {src:`${blobsRoot}/${result.image}`}))
+        //avatar(h('img', {src:`${blobsRoot}/${result.image}`}))
       })
     })
   })
@@ -186,9 +208,10 @@ document.body.appendChild(h('style', `
     overflow: hidden;
   }
   .menubar {
-    font-size: 16px;
+    font-size: 14px;
     background: #222;
     color: #777;
+    align-items: stretch;
   }
   .menu-item:hover {
     background: #333;
@@ -196,6 +219,9 @@ document.body.appendChild(h('style', `
   .menu-item.active {
     background: #444;
     color: #eee;
+  }
+  .menu-item img {
+    max-height: 32px;
   }
   .columns {
     display: flex;

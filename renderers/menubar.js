@@ -62,10 +62,11 @@ module.exports.css = function() {
     .menubar {
       display: flex;
       justify-content: space-between;
+      align-items: stretch;
     }
 
     .menubar>section {
-      height: 100%;
+      align-items: stretch;
       display: flex;
       margin: 0;
       padding: 0;
@@ -76,15 +77,13 @@ module.exports.css = function() {
       flex-wrap: nowrap;
       justify-content: center;
       align-items: center;
-      padding-left: 1px;
-      padding-right: 1px;
-      min-width: 150px;
+      padding-left: 10px;
+      padding-right: 10px;
     }
 
     .menu-item>span {
       margin-left: 17px;
       margin-right: 8px;
-      margin-top: 5px;
     }
 
     .menubar>section.middle {
