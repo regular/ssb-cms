@@ -9,8 +9,8 @@ const obv = require('obv')
 
 const Tree = require('./tree-view')
 const Editor = require('./json-editor')
+const Menubar = require('./renderers/menubar')
 const drafts = require('./drafts')()
-
 
 let me = obv()
 let sbot = obv()
@@ -61,6 +61,25 @@ ssbClient(keys, {
 let avatar = observable()
 me.once( (feed) => {
   const ssb = sbot.value
+
+  let menubar
+  document.body.appendChild(
+    menubar = Menubar({
+      type: 'menubar',
+      left: [{
+        label: 'Activity',
+        id: 'activity'
+      }, {
+        label: 'Content',
+        id: 'content'
+      }],
+      right: [{
+        label: 'username',
+        id: 'profile'
+      }]
+    })
+  )
+  menubar.activate('content')
 
   // three column layout
   let editorContainer, treeContainer, discardButton, saveButton
@@ -155,6 +174,7 @@ me.once( (feed) => {
 })
 
 document.body.appendChild(h('style',Tree.css()))
+document.body.appendChild(h('style',Menubar.css()))
 document.body.appendChild(h('style', `
   body, html {
     height: 100%;
@@ -164,6 +184,18 @@ document.body.appendChild(h('style', `
     font-family: sans-serif;
     color: #444;
     overflow: hidden;
+  }
+  .menubar {
+    font-size: 16px;
+    background: #222;
+    color: #777;
+  }
+  .menu-item:hover {
+    background: #333;
+  }
+  .menu-item.active {
+    background: #444;
+    color: #eee;
   }
   .columns {
     display: flex;
