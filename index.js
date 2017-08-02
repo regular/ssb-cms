@@ -1,6 +1,7 @@
 const fs = require('fs')
 const pull = require('pull-stream')
 const h = require('hyperscript')
+const ho = require('hyperobj')
 const ssbClient = require('ssb-client')
 const ssbKeys = require('ssb-keys')
 const getAvatar = require('ssb-avatar')
@@ -73,31 +74,40 @@ me( (feed) => {
 me.once( (feed) => {
   const ssb = sbot.value
 
-  let menubar
-  document.body.appendChild(
-    menubar = Menubar({
-      type: 'menubar',
-      left: [{
-        label: 'Activity',
-        id: 'activity'
-      }, {
-        label: 'Content',
-        id: 'content'
-      }],
-      right: [{
-        icon: 'broken',
-        label: 'username',
-        id: 'profile'
-      }]
-    })
+  let renderMenu = ho(
+    Menubar,
+    function(value, kp) {
+      if (kp.slice(-1)[0] === 'profile') {
+        return [ h('span'), h('img') ]
+      } else return Menubar.renderItem(value, kp)
+    }
   )
+  let menubar = renderMenu({
+    type: 'menubar',
+    left: [{
+      key: 'activity',
+      value: { label: 'Activity' }
+    }, {
+      key: 'content',
+      value: { label: 'Content'}
+    }],
+    right: [{
+      key: 'profile',
+      value: {
+        icon: 'broken',
+        label: 'username'
+      }
+    }]
+  })
+
+  document.body.appendChild(menubar)
   menubar.activate('content')
 
   avatar( (result)=>{
     if (!result) return
-    let img = menubar.querySelector('#profile img')
+    let img = menubar.querySelector('[data-key=profile] img')
     img.setAttribute('src', result.imageUrl)
-    let span = menubar.querySelector('#profile span')
+    let span = menubar.querySelector('[data-key=profile] span')
     span.innerHTML = result.name
   })
 

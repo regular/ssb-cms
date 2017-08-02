@@ -1,13 +1,15 @@
 /* renderes objects that have a type property of 'menubar'
  * expects
- * - left: array of items displayed left-alogned
- *- right: same for right-aligned items
+ * - left: array of items displayed left (or top) -alogned
+ * - right: same for right-aligned (or bottom-aligned) items
  *
  * for each item:
- * - id
- * - icon: url of an image (optional_
- * - label: text (optional)
+ * - key: a string that identifies the item (used fir  the element's name attribute)
  * - classes: array of classes to add to the item element (optional)
+ * - value: the content of the item (rendered by a different renderer or exports.renderItem)
+ *    If you use exportd.renderItem:
+ *    - icon: url of an image (optional_
+ *    - label: text (optional)
  *
  * Has an observable (activeItem) for the currently active item (HTMLElement)
  * The active item will have an additional class: active.
@@ -17,8 +19,11 @@
 const h = require('hyperscript')
 const observable = require('observable')
 
-module.exports = function render(value) {
+module.exports = function render(value, kp, renderItem) {
   if (value.type !== 'menubar') return;
+  kp = kp || []
+  renderItem = renderItem || this
+
   let left, right
   let activeItem = observable()
 
@@ -38,11 +43,10 @@ module.exports = function render(value) {
   })
   
   function makeItem(item) {
-    console.log('mi', item)
     return h('section.menu-item' + (item.classes && item.classes.length ? '.' + item.classes.join('.') : ''),
-      item.icon ? h('img', {src: item.icon}) : [],
-      item.label ? h('span', item.label) : [], {
-        id: item.id,
+      renderItem.call(renderItem, item.value, kp.concat([item.key])),
+      {
+        "data-key": item.key,
         onclick: function() {
           activeItem(this)
         }
@@ -51,10 +55,17 @@ module.exports = function render(value) {
   }
 
   menubar.activeItem = activeItem
-  menubar.activate = (id)=>{
-    activeItem(menubar.querySelector(`#${id}.menu-item`))
+  menubar.activate = (key)=>{
+    activeItem(menubar.querySelector(`.menu-item[data-key=${key}]`))
   }
   return menubar
+}
+
+module.exports.renderItem = function(value, kp) {
+  let ret = []
+  if (value.icon) ret.push(h('img', {src: value.icon}))
+  if (value.label) ret.push(h('span', value.label))
+  return ret
 }
 
 module.exports.css = function() {
