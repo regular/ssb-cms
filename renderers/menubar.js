@@ -47,8 +47,9 @@ module.exports = function render(value, kp, renderItem) {
       renderItem.call(renderItem, item.value, kp.concat([item.key])),
       {
         "data-key": item.key,
-        onclick: function() {
+        onclick: function(e) {
           activeItem(this)
+          e.stopPropagation()
         }
       }
     )
