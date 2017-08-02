@@ -13,27 +13,31 @@ const md = require('ssb-marked')
 
 module.exports = function(opts) {
   opts = opts || {}
-  let docLang = document.getElementsByTagName('html')[0].getAttribute('lang')
-  let defaultLang = docLang || opts.defaultLanguage || 'en'
-  let lang = defaultLang
+  const transform = opts.transform || function (x) {return x}
+  const tag = opts.tag || 'div.text'
 
   return function render(value, kp) {
-    let el = h('div.text', {
+    const docLang = document.getElementsByTagName('html')[0].getAttribute('lang')
+    const defaultLang = docLang || opts.defaultLanguage || 'en'
+    let lang = defaultLang
+
+    function localizedText() {
+     return value[lang] || opts.defaultText || 'n/a' 
+    }
+
+    let el = h(tag, {
       onclick: (e)=> {
-        console.log('ME 1')
         makeEditable()
       }
     })
-    console.log('M D')
-    el.innerHTML = md(value[lang] || opts.defaultText || 'n/a')
+    el.innerHTML = transform(localizedText())
     let editable = false 
     let unsubscribe
 
     function makeEditable() {
       if (editable) return
-      console.log('ME 2')
       editable = true
-      el.innerText = value[lang] || opts.defaultText || 'n/a'
+      el.innerText = localizedText()
       el.contentEditable = true
       el.focus()
       let width = el.offsetWidth, height = el.offsetHeight
@@ -72,16 +76,12 @@ module.exports = function(opts) {
         menu.parentElement.removeChild(menu)
         menu = null
         lang = defaultLang
-        console.log('close', value)
-
-        console.log('M D')
-        el.innerHTML = md(value[lang] || opts.defaultText || 'n/a')
+        el.innerHTML = transform(localizedText())
         el.contentEditable = false
         editable = false
       }
 
       unsubscribe = menu.activeItem( (item)=>{
-        console.log('update', el)
         value[lang] = el.innerText
         let key = item.getAttribute('data-key')
         if (key === 'close') return closeEditor()
@@ -95,12 +95,15 @@ module.exports = function(opts) {
   }
 }
 
-document.body.appendChild(module.exports()({
+/*
+document.body.appendChild(module.exports({
+  //transform: md
+  tag: 'h1'
+})({
   en: "# Hello World",
   fr: "# Bonjour le monde",
   de: "# Hallo Welt"
 }))
-
 
 document.body.appendChild(h('style', `
   .text {
@@ -111,3 +114,4 @@ document.body.appendChild(h('style', `
     background: blue;
   }
 ` + renderMenu.css()))
+*/
