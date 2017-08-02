@@ -21,6 +21,12 @@ module.exports = function(opts) {
     const defaultLang = docLang || opts.defaultLanguage || 'en'
     let lang = defaultLang
 
+    if (opts.languages) {
+      opts.languages.forEach( (l)=> {
+        if (!value[l]) value[l] = opts.defaultText || 'n/a'
+      })
+    }
+
     function localizedText() {
      return value[lang] || opts.defaultText || 'n/a' 
     }
@@ -40,9 +46,9 @@ module.exports = function(opts) {
       el.innerText = localizedText()
       el.contentEditable = true
       el.focus()
-      let width = el.offsetWidth, height = el.offsetHeight
+      let width = el.offsetWidth
       if (width<300) width = 300
-      let x = el.offsetLeft, y = el.offsetTop
+      let x = el.offsetLeft
       let langs = Object.keys(value)
       let menu = ho(
         renderMenu,
@@ -56,8 +62,8 @@ module.exports = function(opts) {
       })
       menu.style.position='absolute'
       menu.style.left = `${x}px`
-      menu.style.top = `${y + height}px`
       menu.style.width = `${width}px`
+      reposition()
       el.parentElement.appendChild(menu)
       menu.activate(lang)
 
@@ -66,7 +72,7 @@ module.exports = function(opts) {
       function reposition() {
         let height = el.offsetHeight
         let y = el.offsetTop
-        menu.style.top = `${y + height}px`
+        menu.style.top = `${y + height + 8}px`
       }
 
       let closeEditor = function() {
