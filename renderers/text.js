@@ -13,31 +13,34 @@ const md = require('ssb-marked')
 
 module.exports = function(opts) {
   opts = opts || {}
-  let lang = document.getElementsByTagName('html')[0].getAttribute('lang')
-  lang = lang || opts.defaultLanguage || 'en'
+  let docLang = document.getElementsByTagName('html')[0].getAttribute('lang')
+  let defaultLang = docLang || opts.defaultLanguage || 'en'
+  let lang = defaultLang
 
   return function render(value, kp) {
     let el = h('div.text', {
       onclick: (e)=> {
-        console.log(e.target)
+        console.log('ME 1')
         makeEditable()
       }
     })
+    console.log('M D')
     el.innerHTML = md(value[lang] || opts.defaultText || 'n/a')
     let editable = false 
+    let unsubscribe
 
     function makeEditable() {
       if (editable) return
-      console.log('edit')
+      console.log('ME 2')
       editable = true
+      el.innerText = value[lang] || opts.defaultText || 'n/a'
+      el.contentEditable = true
+      el.focus()
       let width = el.offsetWidth, height = el.offsetHeight
-      el.innerHTML = ''
-      let textarea = h('textarea', value[lang], {
-        style: {width: `${width}px`, height: `${height}px`}
-      })
-      el.appendChild(textarea)
+      if (width<300) width = 300
+      let x = el.offsetLeft, y = el.offsetTop
       let langs = Object.keys(value)
-      let  menu = ho(
+      let menu = ho(
         renderMenu,
         function(value) {
           return h('span', value)
@@ -45,27 +48,46 @@ module.exports = function(opts) {
       )({
         type: 'menubar',
         left: langs.map((l)=>{ return { key: l, value: l } }),
-        right: [{key: 'save', value: 'Save'}]
+        right: [{key: 'close', value: 'Done'}]
       })
-      el.appendChild(menu)
+      menu.style.position='absolute'
+      menu.style.left = `${x}px`
+      menu.style.top = `${y + height}px`
+      menu.style.width = `${width}px`
+      el.parentElement.appendChild(menu)
       menu.activate(lang)
+
+      el.addEventListener('keyup', reposition)
+          
+      function reposition() {
+        let height = el.offsetHeight
+        let y = el.offsetTop
+        menu.style.top = `${y + height}px`
+      }
 
       let closeEditor = function() {
         if (!editable) return
-        console.log('close', el, value)
+        unsubscribe()
+        el.removeEventListener('keyup', reposition)
+        menu.parentElement.removeChild(menu)
+        menu = null
+        lang = defaultLang
+        console.log('close', value)
+
+        console.log('M D')
         el.innerHTML = md(value[lang] || opts.defaultText || 'n/a')
-        console.log(el)
+        el.contentEditable = false
         editable = false
       }
 
-      menu.activeItem( (el)=>{
-        console.log('before update', lang, value)
-        value[lang] = textarea.value
-        console.log('after update', lang, value)
-        let key = el.getAttribute('data-key')
-        if (key === 'save') return closeEditor()
+      unsubscribe = menu.activeItem( (item)=>{
+        console.log('update', el)
+        value[lang] = el.innerText
+        let key = item.getAttribute('data-key')
+        if (key === 'close') return closeEditor()
         lang = key
-        textarea.value = value[lang]
+        el.innerText = value[lang]
+        reposition()
       })
     }
 
