@@ -19,54 +19,60 @@
 const h = require('hyperscript')
 const observable = require('observable')
 
-module.exports = function render(value, kp, renderItem) {
-  if (value.type !== 'menubar') return;
-  kp = kp || []
-  renderItem = renderItem || this
+module.exports = function(opts) {
+  opts = opts | {}
 
-  let left, right
-  let activeItem = observable()
+  let render = function(value, kp) {
+    if (value.type !== 'menubar') return;
+    kp = kp || []
+    renderItem = opts.renderItem || this
 
-  let menubar = h('.menubar',
-    left = h('section.left'),
-    h('section.middle'),
-    right = h('section.right')
-  )
-  ;(value.left || []).forEach( item => left.appendChild(makeItem(item)) )
-  ;(value.right || []).forEach( item => right.appendChild(makeItem(item)) )
+    let left, right
+    let activeItem = observable()
 
-  activeItem( (el)=>{
-    [].slice.call(menubar.querySelectorAll('.menu-item')).forEach(
-      (item)=> item.classList.remove('active')
+    let menubar = h('.menubar',
+      left = h('section.left'),
+      h('section.middle'),
+      right = h('section.right')
     )
-    if (el) el.classList.add('active')
-  })
-  
-  function makeItem(item) {
-    return h('section.menu-item' + (item.classes && item.classes.length ? '.' + item.classes.join('.') : ''),
-      renderItem.call(renderItem, item.value, kp.concat([item.key])),
-      {
-        "data-key": item.key,
-        onclick: function(e) {
-          activeItem(this)
-          e.stopPropagation()
+    ;(value.left || []).forEach( item => left.appendChild(makeItem(item)) )
+    ;(value.right || []).forEach( item => right.appendChild(makeItem(item)) )
+
+    activeItem( (el)=>{
+      [].slice.call(menubar.querySelectorAll('.menu-item')).forEach(
+        (item)=> item.classList.remove('active')
+      )
+      if (el) el.classList.add('active')
+    })
+    
+    function makeItem(item) {
+      return h('section.menu-item' + (item.classes && item.classes.length ? '.' + item.classes.join('.') : ''),
+        renderItem.call(renderItem, item.value, kp.concat([item.key])),
+        {
+          "data-key": item.key,
+          onclick: function(e) {
+            activeItem(this)
+            e.stopPropagation()
+          }
         }
-      }
-    )
+      )
+    }
+
+    menubar.activeItem = activeItem
+    menubar.activate = (key)=>{
+      activeItem(menubar.querySelector(`.menu-item[data-key=${key}]`))
+    }
+    return menubar
   }
 
-  menubar.activeItem = activeItem
-  menubar.activate = (key)=>{
-    activeItem(menubar.querySelector(`.menu-item[data-key=${key}]`))
+  render.renderItem = function(value, kp) {
+    let ret = []
+    if (value.icon) ret.push(h('img', {src: value.icon}))
+    if (value.label) ret.push(h('span', value.label))
+    return ret
   }
-  return menubar
-}
 
-module.exports.renderItem = function(value, kp) {
-  let ret = []
-  if (value.icon) ret.push(h('img', {src: value.icon}))
-  if (value.label) ret.push(h('span', value.label))
-  return ret
+  return render
 }
 
 module.exports.css = function() {

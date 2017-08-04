@@ -76,11 +76,11 @@ me.once( (feed) => {
   const ssb = sbot.value
 
   let renderMenu = ho(
-    Menubar,
+    Menubar(),
     function(value, kp) {
       if (kp.slice(-1)[0] === 'profile') {
         return [ h('span'), h('img') ]
-      } else return Menubar.renderItem(value, kp)
+      } else return Menubar().renderItem(value, kp)
     }
   )
   let menubar = renderMenu({
