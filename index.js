@@ -132,7 +132,10 @@ me.once( (feed) => {
     )
   )
 
-  const editor = Editor({container: editorContainer})
+  const editor = Editor({
+    container: editorContainer,
+    blobs: ssb.blobs
+  })
   const tree = Tree(ssb, drafts, root, (err, el) =>{
     if (err) throw err
     treeContainer.appendChild(el)

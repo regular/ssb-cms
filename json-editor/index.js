@@ -2,6 +2,8 @@ const codemirror = require('codemirror')
 const fs = require('fs')
 const insertCSS = require('insert-css')
 const observable = require('observable')
+const pull = require('pull-stream')
+const fileReader = require('pull-file-reader')
 
 module.exports = function(opts) {
   if (!opts) opts = {}
@@ -48,11 +50,17 @@ module.exports = function(opts) {
     },
     autofocus: (window === window.top),
     updateInterval: 500,
-    dragAndDrop: true,
+    dragDrop: true,
     container: document.body
   }
-  
+
   let cmOpts = Object.assign({}, defaults, opts)
+
+  // handle blob drops. these listeners have to be added before codemirrors own
+  // internal ones.
+  cmOpts.container.addEventListener('dragover', onDragOver, true)
+  cmOpts.container.addEventListener('drop', onDrop, true)
+
   let cm = codemirror(cmOpts.container, cmOpts)
   function setSize() {
     cm.setSize(`${cmOpts.container.clientWidth}px`, `${cmOpts.container.clientHeight}px`)
@@ -62,6 +70,31 @@ module.exports = function(opts) {
   cm.on('changes', (editor, changes)=>{
     clean(editor.isClean(editChange))
   })
+
+  function onDragOver(e) {
+    e.preventDefault()
+  }
+
+  function onDrop(e) {
+    // allow text selection drops to pass through to codemirror
+    const files = e.dataTransfer && [].slice.call(e.dataTransfer.files)
+    if (!files || !files.length) return
+    e.preventDefault()
+    e.stopPropagation()
+    // add blobs and insert them into the editor
+    files.forEach(function (file) {
+      pull(
+        fileReader(file, {chunkSize: 4087}),
+        opts.blobs.add(function (err, id) {
+          if (err) return alert(err.message)
+          var cursor = cm.getCursor()
+          cm.setSelection(cursor, cursor)
+          cm.replaceSelection(id, 'around', 'paste')
+        })
+      )
+    })
+  }
+
   // explicitly set clean from outside and get notified when the editor
   // becomes dirty
   clean( isClean => {
