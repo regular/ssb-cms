@@ -124,7 +124,9 @@ me.once( (feed) => {
         h('.toolbar'),
         editorContainer = h('.editor-container'),
         h('.buttons',
-          discardButton = h('button.discard', 'Discard Changes'),
+          discardButton = h('button.discard', 'Discard Changes', {
+            onclick: discard
+          }),
           saveButton = h('button.save', 'Publish', {
             onclick: save
           })
@@ -170,11 +172,14 @@ me.once( (feed) => {
   let ignoreChanges = false
   editor.on( 'changes', ()=> {
     if (ignoreChanges) return
-    if (/^draft/.test(tree.selection())) {
-      drafts.update( tree.selection(), editor.getValue(), (err)=>{
+    let content = editor.getValue()
+    if (/^draft/.test(revs.selection())) {
+      drafts.update( revs.selection(), content, (err)=>{
         if (err) throw err
       })
-      tree.update(tree.selection(), editor.getValue())
+    }
+    if (/^draft/.test(tree.selection())) {
+      tree.update(tree.selection(), content)
     }
   })
 
@@ -186,26 +191,51 @@ me.once( (feed) => {
   }
 
   function save() {
-    let key = tree.selection()
+    let key = revs.selection()
     if (!key) return
     console.log('Publishing ...')
     drafts.publish(ssb, key, (err, result) => {
-      console.log('published', result)
       if (err) throw err
+      console.log('published', result)
       drafts.remove(key)
-      loadIntoEditor(JSON.stringify(result.value, null, 2))
-      tree.update(key, JSON.stringify(result.value), result.key)
+      let content = JSON.stringify(result.value, null, 2)
+      loadIntoEditor(content)
+      if (/^draft/.test(tree.selection())) {
+        tree.update(tree.selection(), content, result.key)
+      }
+      revs.update(key, content, result.key)
+    })
+  }
+
+  function discard() {
+    // if (!confirm('Discard changes?')) return
+    let key = revs.selection()
+    if (!key) return
+    drafts.get(key, (err, value)=>{
+      if (err) throw err
+      // select the previous revision
+      revs.selection(value.revisionBranch)
+      revs.remove(key)
+      drafts.remove(key, (err)=>{
+        if (err) throw err
+      })
+      if (/^draft/.test(tree.selection())) {
+        tree.remove(key)
+      }
     })
   }
 
   tree.selection(revs.root)
 
+  let ignoreRevsSelectionChanges = false
   revs.selection( (id) => {
+    if (ignoreRevsSelectionChanges) return
     if (!id) return loadIntoEditor('')
     let get =  /^draft/.test(id) ? drafts.get : ssb.get
     get(id, (err, value) => {
       if (err) throw err  // TODO
-      loadIntoEditor(typeof value === 'string' ? value : JSON.stringify(value, null, 2))
+      let c = value.content
+      loadIntoEditor(typeof c === 'string' ? c : JSON.stringify(value, null, 2))
 
       getAvatar(ssb, me.value, value.author ? value.author : me.value, (err, result) => {
         if (err) throw err
@@ -213,6 +243,22 @@ me.once( (feed) => {
         //avatar(h('img', {src:`${blobsRoot}/${result.image}`}))
       })
     })
+  })
+
+  editor.clean( (isClean)=>{
+    if (!isClean && !ignoreChanges && !isRevisionDraft() && !isNewDraft()) {
+      // first edit: create new revision draft
+      let content = editor.getValue()
+      let revisionRoot = tree.selection()
+      let revisionBranch = revs.selection()
+      drafts.create(content, null, revisionRoot, revisionBranch, (err, key)=>{
+        if (err) return console.error(err)
+        revs.add({key: key, value: {content, revisionBranch}})
+        ignoreRevsSelectionChanges = true
+        revs.selection(key)
+        ignoreRevsSelectionChanges = false
+      })
+    }
   })
 })
 

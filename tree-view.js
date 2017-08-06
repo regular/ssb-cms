@@ -25,14 +25,19 @@ module.exports = function(ssb, drafts, root, cb) {
     return function() {
       return pull(
          many([
-          root && ref.type(root) ?
+          root && ref.type(root) ? pull(
             ssb.links({
               rel: 'branch',
               dest: root,
               keys: true,
               values: true
-            }) 
-          : pull.empty(), // TODO: get all root messages
+            }),
+            pull.unique('key'),
+            pull.filter( (msg)=>{
+              const c = msg.value.content
+              return !c.revisionRoot
+            })
+          ) : pull.empty(), // TODO: get all root messages
           drafts.byBranch(root)
         ])
       )
@@ -49,7 +54,7 @@ module.exports = function(ssb, drafts, root, cb) {
           type: 'post'
         }
       }
-      drafts.create(JSON.stringify(value,null,2), parentId, null, (err, key)=>{
+      drafts.create(JSON.stringify(value,null,2), parentId, null, null, (err, key)=>{
         let ul = el.tagName === 'UL' ? el : el.querySelector('ul')
         ul.appendChild( h('li', render({key, value})) )
       })
@@ -59,7 +64,7 @@ module.exports = function(ssb, drafts, root, cb) {
   function clone(el, id) {
     ssb.get(id, (err, value) => {
       if (err) throw err
-      drafts.create(JSON.stringify(value,null,2), value.content.branch, value.content.revisionRoot, (err, key)=>{
+      drafts.create(JSON.stringify(value,null,2), value.content.branch, null, null, (err, key)=>{
         let ul = ancestorWithTagName('ul', el.parentElement)
         ul.appendChild( h('li', render({key, value})) )
       })
@@ -90,11 +95,11 @@ module.exports = function(ssb, drafts, root, cb) {
   var render = ho(
     function(msg, kp) {
       if (!msg.key || !msg.value) return
-      let v = msg.value
-      if (typeof v === 'string') { // drafts might by unparsable json strings
-        try { v = JSON.parse(v) } catch(e) {}
-      } else if (!msg.value.content) return
-      let t = (v.content && v.content.type) || 'Invalid'
+      let c = msg.value.content
+      if (typeof c === 'string') { // drafts might by unparsable json strings
+        try { c = JSON.parse(c) } catch(e) {}
+      } else if (!c) return
+      let t = c.type || 'Invalid'
       let value = { type: 'key-value', key: {type: 'msg-node', msg_type: t, id: msg.key}, value: branches(msg.key) }
       return this.call(this, value, kp)
     },
@@ -166,11 +171,11 @@ module.exports = function(ssb, drafts, root, cb) {
 
   render.selection = observable.transform( selection, el => el && el.id )
   render.branches = (root)=>branches(root)()
-  render.update = (key, value, newKey) => {
+  render.update = (key, content, newKey) => {
     newKey = newKey || key
     const el = document.getElementById(key)
     const header = ancestorWithClass('branch-header', el)
-    const newEl = render({key: newKey, value})
+    const newEl = render({key: newKey, value: {content}})
     const newHeader = newEl.querySelector('.branch-header')
     let sel = selection() && selection().id === key
     header.parentElement.insertBefore(newHeader, header)
@@ -178,6 +183,11 @@ module.exports = function(ssb, drafts, root, cb) {
     if (key === newKey) {
       newHeader.querySelector('a.node').classList.add('selected')
     } else selection(newHeader.querySelector('a.node'))
+  }
+  render.remove = (key) => {
+    const el = ancestorWithTagName('li', document.getElementById(key))
+    if (el) el.parentElement.removeChild(el)
+    if (selection() && selection().id === key) selection(null)
   }
   return render
 }

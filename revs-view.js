@@ -10,7 +10,6 @@ const ssbSort = require('ssb-sort')
 
 module.exports = function(ssb, drafts) {
   let revs = h('.revs')
-  let msgs
   let msgEls = {}
 
   revs.selection = observable.signal()
@@ -18,7 +17,7 @@ module.exports = function(ssb, drafts) {
   revs.selection( (id)=>{
     let el = msgEls[id]
     revs.querySelectorAll('.selected').forEach( el => el.classList.remove('selected') )
-    if (el) el.classList.add('selected')
+    if (el) el.querySelector('.node').classList.add('selected')
   })
 
   function revisionsByRoot(root) {
@@ -40,12 +39,11 @@ module.exports = function(ssb, drafts) {
   var render = ho(
     function(msg, kp) {
       if (!msg.key || !msg.value) return
-      let v = msg.value
-      if (typeof v === 'string') { // drafts might by unparsable json strings
-        try { v = JSON.parse(v) } catch(e) {}
-      } else if (!msg.value.content) return
-      let isDraft = /^draft/.test(msg.key)
-      let value = {type: 'msg-node', id: msg.key, value: v, isDraft}
+      let c = msg.value.content
+      if (typeof c === 'string') { // drafts might by unparsable json strings
+        try { c = JSON.parse(c) } catch(e) {}
+      } else if (!c) return
+      let value = {type: 'msg-node', id: msg.key}
       return this.call(this, value, kp)
     },
 
@@ -53,9 +51,9 @@ module.exports = function(ssb, drafts) {
       if (!msgNode.type || msgNode.type !== 'msg-node') return
       kp = kp || []
       let id = msgNode.id
-      return h('.rev' + (msgNode.isDraft ? '.draft' : ''), [
+      return h('.rev',
         this.call(this, id, kp.concat(['key']))
-      ])
+      )
     },
 
     filter( value => h('a.node', {
@@ -75,12 +73,29 @@ module.exports = function(ssb, drafts) {
 
   revs.root = observable.signal()
 
-  function addToGraph(msg) {
-    if (msg.key in msgEls) return
+  revs.add = (msg) => {
+    if (msgEls[msg.key]) throw new Error('msg already added')
     let el = render(msg)
     msgEls[msg.key] = el
     revs.appendChild(el)
-    msgs.push(msg)
+  }
+
+  revs.remove = (key) => {
+    let el = msgEls[key]
+    if (!el) return
+    delete msgEls[key]
+    revs.removeChild(el)
+  }
+
+  revs.update = (key, content, newKey) => {
+    newKey = newKey || key
+    let oldEl = msgEls[key]
+    if (!oldEl) throw new Error('msg not present')
+    let el = render({key: newKey, value: {content}})
+    revs.insertBefore(el, oldEl)
+    revs.removeChild(oldEl)
+    delete msgEls[key]
+    msgEls[newKey] = el
   }
 
   let revisions
@@ -96,19 +111,24 @@ module.exports = function(ssb, drafts) {
       })
     }
     revs.selection(null)
-    msgs = []
     msgEls = {}
 
     if (!id) return
     let get = /^draft/.test(id) ? drafts.get : ssb.get
-    get(id, (err, value) => {
+    let msgs = []
+    get(id, (err, value)=>{
       if (err) return console.error(err) // TODO: indicate missing message?
       if (revs.root() !== id) return // aborted
-      addToGraph({key: id, value: value})
+      let msg = {key: id, value: value}
+      revs.add(msg)
+      msgs.push(msg)
     })
     revisions = pull(
       revisionsByRoot(id),
-      pull.drain(addToGraph, (err)=>{
+      pull.drain( (msg)=>{
+        revs.add(msg)
+        msgs.push(msg)
+      }, (err)=>{
         if (err) return console.error(err)
         let latest = ssbSort.heads(msgs)[0]
         revs.selection(latest)
@@ -120,20 +140,8 @@ module.exports = function(ssb, drafts) {
 }
 
 module.exports.css = ()=> `
-  .revs {
-  }
   .rev {
     background-color: #eee;
     margin: 1px 1px 0 .3em;
-  }
-  .rev.draft {
-    color: red;
-    font-style: italic;
-  }
-  .rev.selected {
-    color: black;
-    background: yellow;
-  }
-  .rev:hover {
   }
 `

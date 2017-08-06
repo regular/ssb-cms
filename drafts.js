@@ -10,10 +10,7 @@ module.exports = function () {
   })
   return {
     get: (key, cb) => {
-      db.get(key, (err, value) => {
-        if (err) return cb(err)
-        cb(null, value.content)
-      })
+      db.get(key, cb)
     },
     update: (key, content, cb) => {
       db.get(key, (err, value) => {
@@ -41,7 +38,7 @@ module.exports = function () {
         )
       })
     },
-    create: function(content, branch, revisionRoot, cb) {
+    create: function(content, branch, revisionRoot, revisionBranch, cb) {
       const key = 'draft-' + crypto.randomBytes(16).toString('base64')
       pull(
         pull.values([{
@@ -49,6 +46,7 @@ module.exports = function () {
           key: key,
           value: {
             revisionRoot,
+            revisionBranch,
             branch,
             content
           }
@@ -77,9 +75,11 @@ module.exports = function () {
         }
         if (!msg.content) return cb(new Error('message has no content'))
         // NOTE: we ignore everything but the msg.content and overwrite
-        // branch and revisionRoot!
+        // branch, revisionRoot, and revisionBranch!
         if (value.branch) msg.content.branch = value.branch
         if (value.revisionRoot) msg.content.revisionRoot = value.revisionRoot
+        if (value.revisionBranch) msg.content.revisionBranch = value.revisionBranch
+        // return cb(null, {key: '%LSJi4fsIbXNSNhlDEnRJFTBqdXWasegtUAKcclhmbXk=.sha256', value: msg})
         ssb.publish(msg.content, cb)
       })
     },
@@ -90,7 +90,7 @@ module.exports = function () {
         pull.asyncMap(function (e, cb) {
           db.get(e.value, function (err, value) {
             if (err) return cb(err)
-            cb(null, {key: e.value, value: value.content})
+            cb(null, {key: e.value, value})
           })
         })
       )
@@ -102,11 +102,10 @@ module.exports = function () {
         pull.asyncMap(function (e, cb) {
           db.get(e.value, function (err, value) {
             if (err) return cb(err)
-            cb(null, {key: e.value, value: value.content})
+            cb(null, {key: e.value, value})
           })
         })
       )
     }
-  
   }
 }
