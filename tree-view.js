@@ -95,11 +95,11 @@ module.exports = function(ssb, drafts, root, cb) {
   var render = ho(
     function(msg, kp) {
       if (!msg.key || !msg.value) return
-      let c = msg.value.content
-      if (typeof c === 'string') { // drafts might by unparsable json strings
-        try { c = JSON.parse(c) } catch(e) {}
-      } else if (!c) return
-      let t = c.type || 'Invalid'
+      let v = msg.value
+      if (typeof v.content === 'string') { // drafts might by unparsable json strings
+        try { v = JSON.parse(v.content) } catch(e) {}
+      } else if (!v.content) return
+      let t = v.content && v.content.type || 'Invalid'
       let value = { type: 'key-value', key: {type: 'msg-node', msg_type: t, id: msg.key}, value: branches(msg.key) }
       return this.call(this, value, kp)
     },

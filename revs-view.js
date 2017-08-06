@@ -39,10 +39,10 @@ module.exports = function(ssb, drafts) {
   var render = ho(
     function(msg, kp) {
       if (!msg.key || !msg.value) return
-      let c = msg.value.content
-      if (typeof c === 'string') { // drafts might by unparsable json strings
-        try { c = JSON.parse(c) } catch(e) {}
-      } else if (!c) return
+      let v = msg.value
+      if (typeof v.content === 'string') { // drafts might by unparsable json strings
+        try { v = JSON.parse(v.content) } catch(e) {}
+      }
       let value = {type: 'msg-node', id: msg.key}
       return this.call(this, value, kp)
     },
