@@ -10,6 +10,7 @@ const obv = require('obv')
 
 const Tree = require('./tree-view')
 const Editor = require('./json-editor')
+const Revs = require('./revs-view')
 const Menubar = require('./renderers/menubar')
 const drafts = require('./drafts')()
 
@@ -144,6 +145,8 @@ me.once( (feed) => {
   revisionsContainer.querySelector('.toolbar').appendChild(
     h('span.selection', tree.selection)
   )
+  const revs = Revs(ssb, drafts)
+  revisionsContainer.appendChild(revs)
 
   /*
   revisionsContainer.appendChild(
@@ -154,12 +157,15 @@ me.once( (feed) => {
   )
   */
 
-  /*
-  editor.clean( (isClean)=>{
-   discardButton.disabled = !isClean
-   saveButton.disabled = isClean 
+  let isNewDraft = observable.transform(tree.selection, id => /^draft/.test(id))
+  let isRevisionDraft = observable.transform(revs.selection, id => /^draft/.test(id))
+  let isPublishable = observable.compute(
+    [editor.clean, isNewDraft, isRevisionDraft],
+    (clean, newDraft, revDraft) => !clean || newDraft || revDraft)
+  isPublishable( (isPublishable)=>{
+    discardButton.disabled = !isPublishable
+    saveButton.disabled = !isPublishable
   })
-  */
 
   let ignoreChanges = false
   editor.on( 'changes', ()=> {
@@ -181,7 +187,7 @@ me.once( (feed) => {
 
   function save() {
     let key = tree.selection()
-    if (!key || !/draft-/.test(key)) return
+    if (!key) return
     console.log('Publishing ...')
     drafts.publish(ssb, key, (err, result) => {
       console.log('published', result)
@@ -192,7 +198,9 @@ me.once( (feed) => {
     })
   }
 
-  tree.selection( (id) => {
+  tree.selection(revs.root)
+
+  revs.selection( (id) => {
     if (!id) return loadIntoEditor('')
     let get =  /^draft/.test(id) ? drafts.get : ssb.get
     get(id, (err, value) => {
@@ -210,6 +218,7 @@ me.once( (feed) => {
 
 document.body.appendChild(h('style',Tree.css()))
 document.body.appendChild(h('style',Menubar.css()))
+document.body.appendChild(h('style',Revs.css()))
 document.body.appendChild(h('style', `
   body, html {
     height: 100%;

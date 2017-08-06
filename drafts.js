@@ -94,6 +94,18 @@ module.exports = function () {
           })
         })
       )
+    },
+
+    byRevisionRoot: function(root) {
+      return pull(
+        pl.read(db, {min: `~REVROOT~${root||""}`, max: `~REVROOT~${root||""}~~`}),
+        pull.asyncMap(function (e, cb) {
+          db.get(e.value, function (err, value) {
+            if (err) return cb(err)
+            cb(null, {key: e.value, value: value.content})
+          })
+        })
+      )
     }
   
   }

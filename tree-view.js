@@ -17,7 +17,7 @@ module.exports = function(ssb, drafts, root, cb) {
   let selection = observable.signal()
 
   selection( (el)=>{
-    document.querySelectorAll('.selected').forEach( el => el.classList.remove('selected') )
+    document.querySelectorAll('.treeView .selected').forEach( el => el.classList.remove('selected') )
     if (el) el.classList.add('selected')
   })
 
