@@ -75,6 +75,11 @@ me( (feed) => {
 me.once( (feed) => {
   const ssb = sbot.value
 
+  function get(id, cb) {
+    if (/^draft/.test(id)) drafts.get(id, cb)
+    else ssb.get(id, cb)
+  }
+
   let renderMenu = ho(
     Menubar,
     function(value, kp) {
@@ -176,10 +181,11 @@ me.once( (feed) => {
     if (/^draft/.test(revs.selection())) {
       drafts.update( revs.selection(), content, (err)=>{
         if (err) throw err
+        drafts.get( revs.selection(), (err, value)=>{
+          if (err) throw err
+          tree.update(tree.selection(), value)
+        })
       })
-    }
-    if (/^draft/.test(tree.selection())) {
-      tree.update(tree.selection(), content)
     }
   })
 
@@ -221,6 +227,13 @@ me.once( (feed) => {
       })
       if (/^draft/.test(tree.selection())) {
         tree.remove(key)
+      } else if (tree.selection() === value.revisionRoot) {
+        get(value.revisionBranch, (err, value)=>{
+          if (err) return console.error(err)
+          let c = value.content
+          if (typeof c !== 'string') value.content = JSON.stringify(value, null, 2)
+          tree.update(tree.selection(), value)
+        })
       }
     })
   }
@@ -231,7 +244,6 @@ me.once( (feed) => {
   revs.selection( (id) => {
     if (ignoreRevsSelectionChanges) return
     if (!id) return loadIntoEditor('')
-    let get =  /^draft/.test(id) ? drafts.get : ssb.get
     get(id, (err, value) => {
       if (err) throw err  // TODO
       let c = value.content
@@ -245,19 +257,40 @@ me.once( (feed) => {
     })
   })
 
+  function getMessageBranch(id, cb) {
+    get(id, (err, value)=>{
+      if (err) return cb(err)
+      cb(null, value.content && value.content.branch || value.branch)
+    })
+  }
+
   editor.clean( (isClean)=>{
     if (!isClean && !ignoreChanges && !isRevisionDraft() && !isNewDraft()) {
       // first edit: create new revision draft
       let content = editor.getValue()
       let revisionRoot = tree.selection()
       let revisionBranch = revs.selection()
-      drafts.create(content, null, revisionRoot, revisionBranch, (err, key)=>{
-        if (err) return console.error(err)
-        revs.add({key: key, value: {content, revisionBranch}})
-        ignoreRevsSelectionChanges = true
-        revs.selection(key)
-        ignoreRevsSelectionChanges = false
+      // get the post branch so that the tree view can detect the revision
+      getMessageBranch(revisionBranch, (err, branch)=>{
+        if (branch) return gotBranch(branch)
+        getMessageBranch(revisionRoot, (err, branch)=>{
+          if (err) console.error(err)
+          gotBranch(branch)
+        })
       })
+      function gotBranch(branch) {
+        drafts.create(content, branch, revisionRoot, revisionBranch, (err, key)=>{
+          if (err) return console.error(err)
+          revs.add({key: key, value: {content, revisionBranch}})
+          ignoreRevsSelectionChanges = true
+          revs.selection(key)
+          ignoreRevsSelectionChanges = false
+          drafts.get( key, (err, value)=>{
+            if (err) throw err
+            tree.update(tree.selection(), value)
+          })
+        })
+      }
     }
   })
 })

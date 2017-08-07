@@ -12,6 +12,50 @@ const tag = require('hyperobj-tree/tag')
 const ref = require('ssb-ref')
 const pull = require('pull-stream')
 const many = require('pull-many')
+const ssbSort = require('ssb-sort')
+
+function filterRevisions() {
+  // return only latest revisions
+  return function (read) {
+    var queue, _err, _cb
+    var heads = {}, roots = {}
+    var drain = pull.drain(function (msg) {
+      let c = msg.value.content
+      var revisionBranch = msg.value.revisionBranch || (c && c.revisionBranch)
+      if (revisionBranch) {
+        if (heads[revisionBranch]) delete heads[revisionBranch]
+        else roots[revisionBranch] = true
+      }
+      if (roots[msg.key]) delete roots[msg.key]
+      else heads[msg.key] = msg
+    }, function (_err) {
+      queue = ssbSort(Object.keys(heads).map(key => heads[key]))
+      if (_cb) {
+        let cb = _cb
+        _cb = null
+        if (_err) cb(_err)
+        else if (queue.length) cb(null, queue.shift())
+        else cb(true)
+      } else {
+        _err = err
+      }
+    })(read)
+    return function (abort, cb) {
+      if (abort) {
+        if (drain) {
+          let _drain = drain
+          drain = null
+          return _drain.abort(abort, cb)
+        }
+        return read(abort, cb)
+      }
+      if (_err) cb(_err)
+      else if (!queue) _cb = cb
+      else if (queue.length) return cb(null, queue.shift())
+      else cb(true)
+    }
+  }
+}
 
 module.exports = function(ssb, drafts, root, cb) {
   let selection = observable.signal()
@@ -32,14 +76,11 @@ module.exports = function(ssb, drafts, root, cb) {
               keys: true,
               values: true
             }),
-            pull.unique('key'),
-            pull.filter( (msg)=>{
-              const c = msg.value.content
-              return !c.revisionRoot
-            })
+            pull.unique('key')
           ) : pull.empty(), // TODO: get all root messages
           drafts.byBranch(root)
-        ])
+        ]),
+        filterRevisions()
       )
     }
   }
@@ -99,8 +140,9 @@ module.exports = function(ssb, drafts, root, cb) {
       if (typeof v.content === 'string') { // drafts might by unparsable json strings
         try { v = JSON.parse(v.content) } catch(e) {}
       } else if (!v.content) return
+      let id = msg.value.revisionRoot || v.content.revisionRoot || msg.key
       let t = v.content && v.content.type || 'Invalid'
-      let value = { type: 'key-value', key: {type: 'msg-node', msg_type: t, id: msg.key}, value: branches(msg.key) }
+      let value = { type: 'key-value', key: {type: 'msg-node', msg_type: t, id}, value: branches(id) }
       return this.call(this, value, kp)
     },
 
@@ -171,11 +213,11 @@ module.exports = function(ssb, drafts, root, cb) {
 
   render.selection = observable.transform( selection, el => el && el.id )
   render.branches = (root)=>branches(root)()
-  render.update = (key, content, newKey) => {
+  render.update = (key, value, newKey) => {
     newKey = newKey || key
     const el = document.getElementById(key)
     const header = ancestorWithClass('branch-header', el)
-    const newEl = render({key: newKey, value: {content}})
+    const newEl = render({key: newKey, value})
     const newHeader = newEl.querySelector('.branch-header')
     let sel = selection() && selection().id === key
     header.parentElement.insertBefore(newHeader, header)
