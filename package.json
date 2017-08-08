@@ -16,7 +16,9 @@
   "author": "Jan Bölsche <jan@lagomorph.de> (http://regular.codes)",
   "license": "MIT",
   "dependencies": {
+    "asyncmemo": "^1.0.0",
     "codemirror": "^4.6.0",
+    "hashlru": "^2.2.0",
     "human-time": "0.0.1",
     "hyperobj": "^1.0.2",
     "hyperobj-tree": "^2.1.1",

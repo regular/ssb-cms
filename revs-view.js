@@ -8,11 +8,22 @@ const many = require('pull-many')
 const filter = require('hyperobj-tree/filter')
 const ssbSort = require('ssb-sort')
 const htime = require('human-time')
-const getAvatar = require('ssb-avatar')
+const ssbAvatar = require('ssb-avatar')
+const memo = require('asyncmemo')
+const lru = require('lrucache')
 
 module.exports = function(ssb, drafts, me) {
   let revs = h('.revs')
   let msgEls = {}
+
+  let getName = memo({cache: lru(50)}, function (id, cb) {
+    ssbAvatar(ssb, me, id, (err, about)=>{
+      if (err) return cb(err)
+      let name = about.name
+      if (!/^@/.test(name)) name = '@' + name
+      cb(null, name)
+    })
+  })
 
   revs.selection = observable.signal()
 
@@ -73,10 +84,8 @@ module.exports = function(ssb, drafts, me) {
     function(feed, kp) {
       if (!ref.isFeedId(feed)) return
       let text = document.createTextNode(feed.substr(0, 7) + '…')
-      getAvatar(feed, (err, result) => {
+      getName(feed, (err, name) => {
         if (err) return console.error(err)
-        let name = result.name
-        if (!/^@/.test(name)) name = '@' + name
         text.nodeValue = name
       })
       return h('a.author', text)
