@@ -213,6 +213,7 @@ me.once( (feed) => {
     ignoreChanges = true
     editor.setValue(text)
     editor.clean(true)
+    editor.clearHistory()
     ignoreChanges = false
   }
 
