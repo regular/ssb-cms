@@ -17,6 +17,7 @@
   "license": "MIT",
   "dependencies": {
     "codemirror": "^4.6.0",
+    "human-time": "0.0.1",
     "hyperobj": "^1.0.2",
     "hyperobj-tree": "^2.1.1",
     "hyperscript": "^2.0.2",

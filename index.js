@@ -152,7 +152,7 @@ me.once( (feed) => {
   revisionsContainer.querySelector('.toolbar').appendChild(
     h('span.selection', tree.selection)
   )
-  const revs = Revs(ssb, drafts)
+  const revs = Revs(ssb, drafts, me.value)
   revisionsContainer.appendChild(revs)
 
   /*

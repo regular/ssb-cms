@@ -7,8 +7,10 @@ const pull = require('pull-stream')
 const many = require('pull-many')
 const filter = require('hyperobj-tree/filter')
 const ssbSort = require('ssb-sort')
+const htime = require('human-time')
+const getAvatar = require('ssb-avatar')
 
-module.exports = function(ssb, drafts) {
+module.exports = function(ssb, drafts, me) {
   let revs = h('.revs')
   let msgEls = {}
 
@@ -43,17 +45,41 @@ module.exports = function(ssb, drafts) {
       if (typeof v.content === 'string') { // drafts might by unparsable json strings
         try { v = JSON.parse(v.content) } catch(e) {}
       }
-      let value = {type: 'msg-node', id: msg.key}
+      let value = {type: 'msg-node', id: msg.key, value: msg.value, content: v.content}
       return this.call(this, value, kp)
     },
 
     function(msgNode, kp) {
       if (!msgNode.type || msgNode.type !== 'msg-node') return
       kp = kp || []
+      let value = msgNode.value || {}
       let id = msgNode.id
+      let isDraft = value.revisionRoot || value.revisionBranch || value.branch
       return h('.rev',
-        this.call(this, id, kp.concat(['key']))
+        this.call(this, id, kp.concat(['key'])), ' ',
+        this.call(this, isDraft ? me : value.author, kp.concat(['author'])), ' ',
+        !isDraft ?
+          this.call(this, new Date(value.timestamp), kp.concat(['date']))
+        : h('em', 'draft'),
       )
+    },
+
+    function(date, kp) {
+      if (date instanceof Date) return h('span.timestamp',
+        htime(date)
+      )
+    },
+
+    function(feed, kp) {
+      if (!ref.isFeedId(feed)) return
+      let text = document.createTextNode(feed.substr(0, 7) + '…')
+      getAvatar(feed, (err, result) => {
+        if (err) return console.error(err)
+        let name = result.name
+        if (!/^@/.test(name)) name = '@' + name
+        text.nodeValue = name
+      })
+      return h('a.author', text)
     },
 
     filter( value => h('a.node', {
@@ -61,14 +87,14 @@ module.exports = function(ssb, drafts) {
         revs.selection(value)
         e.preventDefault()
       }
-    }, tag(8)(value.substr(0,8))), ref.type),
+    }, tag(8)('⚬')), ref.isMsgId),
 
     filter( value => h('a.node.draft', {
       onclick: function(e)  {
         revs.selection(value)
         e.preventDefault()
       }
-    }, h('span', value.substr(0, 14))), (value) => /^draft/.test(value) ),
+    }, '⚬'), (value) => /^draft/.test(value) ),
   )
 
   revs.root = observable.signal()
@@ -142,6 +168,6 @@ module.exports = function(ssb, drafts) {
 module.exports.css = ()=> `
   .rev {
     background-color: #eee;
-    margin: 1px 1px 0 .3em;
+    margin: 1px 1px 0 1px;
   }
 `
