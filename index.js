@@ -167,8 +167,8 @@ me.once( (feed) => {
   let isNewDraft = observable.transform(tree.selection, id => /^draft/.test(id))
   let isRevisionDraft = observable.transform(revs.selection, id => /^draft/.test(id))
   let isPublishable = observable.compute(
-    [editor.clean, isNewDraft, isRevisionDraft],
-    (clean, newDraft, revDraft) => !clean || newDraft || revDraft)
+    [isNewDraft, isRevisionDraft],
+    (newDraft, revDraft) => newDraft || revDraft)
   isPublishable( (isPublishable)=>{
     discardButton.disabled = !isPublishable
     saveButton.disabled = !isPublishable
