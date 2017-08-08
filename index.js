@@ -174,6 +174,25 @@ me.once( (feed) => {
     saveButton.disabled = !isPublishable
   })
 
+  function cleanupRevision(key, value) {
+    // if all edits have been undone, remove the revision
+    if (value.revisionBranch) {
+      get(value.revisionBranch, (err, val)=>{
+        if (err) return console.error(err)
+        if (typeof val.content !== 'string') val.content = JSON.stringify(val, null, 2)
+        if (val.content === value.content) {
+          ignoreRevsSelectionChanges = true
+          revs.remove(key)
+          revs.selection(value.revisionBranch)
+          ignoreRevsSelectionChanges = false
+          drafts.remove(key, (err)=>{
+            if (err) throw err
+          })
+        }
+      })
+    }
+  }
+
   let ignoreChanges = false
   editor.on( 'changes', ()=> {
     if (ignoreChanges) return
@@ -184,6 +203,7 @@ me.once( (feed) => {
         drafts.get( revs.selection(), (err, value)=>{
           if (err) throw err
           tree.update(tree.selection(), value)
+          if (editor.clean()) cleanupRevision(revs.selection(), value)
         })
       })
     }
