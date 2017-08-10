@@ -64,8 +64,9 @@ module.exports = function(opts) {
       menu.style.position='absolute'
       menu.style.left = `${x}px`
       menu.style.width = `${width}px`
-      reposition()
       el.parentElement.appendChild(menu)
+      let menuHeight = menu.offsetHeight
+      reposition()
       menu.activate(lang)
 
       el.addEventListener('keyup', reposition)
@@ -73,7 +74,9 @@ module.exports = function(opts) {
       function reposition() {
         let height = el.offsetHeight
         let y = el.offsetTop
-        menu.style.top = `${y + height + 8}px`
+        let p = y - menuHeight - 8
+        if (p<0) p = y + height + 8;
+        menu.style.top = `${p}px`
       }
 
       let closeEditor = function() {
