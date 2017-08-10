@@ -33,7 +33,11 @@ module.exports = function(opts) {
 
     let el = h(tag, {
       onclick: (e)=> {
-        makeEditable()
+        if (e.altKey) {
+          makeEditable()
+          e.preventDefault()
+          e.stopPropagation()
+        }
       }
     })
     el.innerHTML = transform(localizedText())
