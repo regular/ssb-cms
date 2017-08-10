@@ -20,7 +20,7 @@ const h = require('hyperscript')
 const observable = require('observable')
 
 module.exports = function(opts) {
-  opts = opts | {}
+  opts = opts || {}
 
   let render = function(value, kp) {
     if (value.type !== 'menubar') return;
