@@ -10,7 +10,7 @@ const ssbSort = require('ssb-sort')
 const htime = require('human-time')
 const ssbAvatar = require('ssb-avatar')
 const memo = require('asyncmemo')
-const lru = require('lrucache')
+const lru = require('hashlru')
 
 module.exports = function(ssb, drafts, me) {
   let revs = h('.revs')
