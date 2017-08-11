@@ -1,6 +1,6 @@
 const h = require('hyperscript')
 const ho = require('hyperobj')
-const renderMenu = require('./menubar')
+const Menubar = require('./menubar')
 const md = require('ssb-marked')
 
 // we expect the value to have properties conforming to
@@ -51,10 +51,7 @@ module.exports = function(opts) {
       let x = el.offsetLeft
       let langs = Object.keys(value)
       let menu = ho(
-        renderMenu,
-        function(value) {
-          return h('span', value)
-        }
+        Menubar({renderItem: value => h('span', value) })
       )({
         type: 'menubar',
         left: langs.map((l)=>{ return { key: l, value: l } }),
