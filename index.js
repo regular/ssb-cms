@@ -118,11 +118,11 @@ me.once( (feed) => {
   })
 
   // three column layout
-  let editorContainer, treeContainer, discardButton, saveButton
+  let editorContainer, treeColumn, discardButton, saveButton
   document.body.appendChild(
     h('.columns',
-      treeContainer = h('.col.treeview'),
-      revisionsContainer = h('.col.revisions',
+      treeColumn = h('.col.treeview'),
+      revisionsColumn = h('.col.revisions',
         h('.toolbar')
       ),
       h('.col.editor-col',
@@ -146,17 +146,17 @@ me.once( (feed) => {
   })
   const tree = Tree(ssb, drafts, root, (err, el) =>{
     if (err) throw err
-    treeContainer.appendChild(el)
+    treeColumn.appendChild(el)
   })
 
-  revisionsContainer.querySelector('.toolbar').appendChild(
+  revisionsColumn.querySelector('.toolbar').appendChild(
     h('span.selection', tree.selection)
   )
   const revs = Revs(ssb, drafts, me.value, blobsRoot)
-  revisionsContainer.appendChild(revs)
+  revisionsColumn.appendChild(h('.revs-container', revs))
 
   /*
-  revisionsContainer.appendChild(
+  revisionsColumn.appendChild(
     h('div',
       //h('div.icon', avatar)
       //h('div', 'Clean:', h('span.clean', editor.clean))
