@@ -308,6 +308,7 @@ me.once( (feed) => {
 document.body.appendChild(h('style',Tree.css()))
 document.body.appendChild(h('style',Menubar.css()))
 document.body.appendChild(h('style',Revs.css()))
+document.body.appendChild(h('style',Editor.css()))
 document.body.appendChild(h('style', `
   body, html {
     height: 100%;

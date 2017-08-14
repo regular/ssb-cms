@@ -10,13 +10,32 @@ const filter = require('hyperobj-tree/filter')
 const tag = require('hyperobj-tree/tag')
 const ref = require('ssb-ref')
 
+const Menubar = require('./renderers/menubar')
 const JsonEditor = require('./json-editor')
+
+let renderMenu = ho(
+  Menubar(),
+  Menubar().renderItem
+)
 
 module.exports = function(parent, ssb) {
 
   let toolbar, container
   parent.appendChild(toolbar = h('.toolbar'))
   parent.appendChild(container = h('.editor-container'))
+
+  let menubar = renderMenu({
+    type: 'menubar',
+    right: [{
+      key: 'preview',
+      value: { label: 'Preview' }
+    }, {
+      key: 'json',
+      value: { label: 'Json'}
+    }],
+  })
+  toolbar.appendChild(menubar)
+  menubar.activate('json')
 
   let change = observable()
 
@@ -37,7 +56,18 @@ module.exports = function(parent, ssb) {
 }
 
 
-module.exports.css = ()=> JsonEditor.css() + `
-  .editor-container {
+module.exports.css = ()=>  `
+  .editor-container>.toolbar {
+    display: flex;
+    align-items: flex-end;
+    flex-direction: row;
+  }
+  .editor-container>.toolbar>.menubar {
+    flex: 1 1 auto;
+    background: unset;
+  }
+  .editor-container>.toolbar>.menubar>.right>.menu-item.active {
+    background: #fff;
+    color: #888;
   }
 `
