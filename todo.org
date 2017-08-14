@@ -12,10 +12,10 @@
     - [X] make selectable
 **** [/] "git lola" view (tree of revisions)
     - [ ] hyperobj-lola
-    - [ ] show branches and "commits" (revisions)
-    - [ ] make selectable
+    - [X] show branches and "commits" (revisions)
+    - [X] make selectable
     - [ ] shift-select secondary revision (for diffing)
-    - [ ] auto-select latest revision (latest in the sense of `ssb-sort`)
+    - [X] auto-select latest revision (latest in the sense of `ssb-sort`)
     - [ ] display comments (low priority)
 **** [/] json view (editor)
     - [X] embed codemirror
@@ -27,7 +27,7 @@
     - [X] Publish new nodes when draft is loaded into editor and "Publish" is
       clicked
     - [ ] enable "Publish" button when editor contents differs from selected revision
-    - [ ] publish new revision when 'commit' is clicked and sytnax is okay.
+    - [X] publish new revision when 'commit' is clicked and sytnax is okay.
 
 *** [0/3] packaging/deployment
     - [ ] electron app
