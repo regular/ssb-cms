@@ -398,11 +398,6 @@ document.body.appendChild(h('style', `
     display: flex;
     flex-direction: column;
   }
-  .editor-container {
-    flex-grow: 1;
-    position: relative;
-    overflow: hidden;
-  }
   .editor-col .buttons {
     padding: 1em;
     font-size: 16pt;

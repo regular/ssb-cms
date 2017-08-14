@@ -18,11 +18,25 @@ let renderMenu = ho(
   Menubar().renderItem
 )
 
+let renderPreviewEditor = ho(
+  source(),
+  array(),
+  properties(),
+  kv(),
+  ho.basic()
+)
+
+
 module.exports = function(parent, ssb) {
 
-  let toolbar, container
+  let toolbar, container, jsonContainer, previewContainer
   parent.appendChild(toolbar = h('.toolbar'))
+  // NOTE: these nested containers need to be of class .editor-container
+  // to make resizing of code-mirror work properly when the browser window
+  // is resized.
   parent.appendChild(container = h('.editor-container'))
+  container.appendChild(jsonContainer = h('.editor-container'))
+  container.appendChild(previewContainer = h('.editor-container'))
 
   let menubar = renderMenu({
     type: 'menubar',
@@ -40,16 +54,55 @@ module.exports = function(parent, ssb) {
   let change = observable()
 
   const editor = JsonEditor({
-    container,
+    container: jsonContainer,
     blobs: ssb.blobs
   })
 
   editor.on('changes', (e)=>change(e) )
 
+  let previewEditor
+  function showPreviewEditor(value) {
+    removePreviewEditor()
+    // only render preview if our value is parsable JSON
+    let msg
+    try {
+      msg = JSON.parse(value)
+    } catch(e) {
+      console.error('parsing failed', value)
+      return
+    }
+    previewEditor = renderPreviewEditor(msg)
+    if (previewEditor) {
+      previewContainer.appendChild(previewEditor)
+    }
+  }
+
+  function removePreviewEditor() {
+    if (previewEditor) {
+      previewEditor.parentElement.removeChild(previewEditor)
+      previewEditor = null
+    }
+  }
+
+  menubar.activeItem( (item)=>{
+    let key = item.getAttribute('data-key')
+    jsonContainer.style.display = key === 'json' ?  "block" : "none"
+    removePreviewEditor()
+    if (key === 'preview') {
+      let value = editor.getValue()
+      showPreviewEditor(value)
+    }
+  })
+
   return {
     change,
     clean: editor.clean,
-    setValue: editor.setValue.bind(editor),
+    setValue: (value) => {
+      if (value && previewEditor) {
+        showPreviewEditor(value)
+      }
+      editor.setValue(value)
+    },
     getValue: editor.getValue.bind(editor),
     clearHistory: editor.clearHistory.bind(editor)
   }
@@ -57,6 +110,13 @@ module.exports = function(parent, ssb) {
 
 
 module.exports.css = ()=>  `
+  .editor-container {
+    flex-grow: 1;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
   .editor-container>.toolbar {
     display: flex;
     align-items: flex-end;
