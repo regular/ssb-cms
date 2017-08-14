@@ -133,17 +133,24 @@ module.exports = function(ssb, drafts, root, cb) {
     return ancestorWithClass(cls, el.parentElement)
   }
 
+  function safeParse(s) {
+    try {
+      return JSON.parse(s)
+    } catch(e) {}
+    return {}
+  }
+
   var render = ho(
     function(msg, kp) {
       if (!msg.key || !msg.value) return
-      let v = msg.value
-      if (typeof v.content === 'string') { // drafts might by unparsable json strings
-        try { v = JSON.parse(v.content) } catch(e) {}
-      } else if (!v.content) return
-      let id = msg.value.revisionRoot || v.content.revisionRoot || msg.key
-      let t = v.content && v.content.type || 'Invalid'
-      let value = { type: 'key-value', key: {type: 'msg-node', msg_type: t, id}, value: branches(id) }
-      return this.call(this, value, kp)
+      let value = msg.value
+      if (typeof value === 'function') return
+      if (typeof value === 'object' && !value.content && !value.msgString) return
+      let content = value.content || safeParse(value.msgString).content
+      let id = content.revisionRoot || msg.key
+      let t = (content && content.type) || 'Invalid'
+      let kv = { type: 'key-value', key: {type: 'msg-node', msg_type: t, id}, value: branches(id) }
+      return this.call(this, kv, kp)
     },
 
     function(msgNode, kp) {

@@ -196,9 +196,9 @@ me.once( (feed) => {
   let ignoreChanges = false
   editor.on( 'changes', ()=> {
     if (ignoreChanges) return
-    let content = editor.getValue()
+    let msgString = editor.getValue()
     if (/^draft/.test(revs.selection())) {
-      drafts.update( revs.selection(), content, (err)=>{
+      drafts.update( revs.selection(), msgString, (err)=>{
         if (err) throw err
         drafts.get( revs.selection(), (err, value)=>{
           if (err) throw err
@@ -225,12 +225,12 @@ me.once( (feed) => {
       if (err) throw err
       console.log('published', result)
       drafts.remove(key)
-      let content = JSON.stringify(result.value, null, 2)
-      loadIntoEditor(content)
+      let msgString = JSON.stringify(result.value, null, 2)
+      loadIntoEditor(msgString)
+      revs.update(key, result.value, result.key)
       if (/^draft/.test(tree.selection())) {
-        tree.update(tree.selection(), content, result.key)
+        tree.update(tree.selection(), result.value, result.key)
       }
-      revs.update(key, content, result.key)
     })
   }
 
@@ -267,9 +267,10 @@ me.once( (feed) => {
     if (!id) return loadIntoEditor('')
     get(id, (err, value) => {
       if (err) throw err  // TODO
-      let c = value.content
-      loadIntoEditor(typeof c === 'string' ? c : JSON.stringify(value, null, 2))
+      let msgString = value.msgString || JSON.stringify(value, null, 2)
+      loadIntoEditor(msgString)
 
+      // TODO: move to rev-view
       getAvatar(ssb, me.value, value.author ? value.author : me.value, (err, result) => {
         if (err) throw err
         if (!result.image) return
@@ -288,7 +289,7 @@ me.once( (feed) => {
   editor.clean( (isClean)=>{
     if (!isClean && !ignoreChanges && !isRevisionDraft() && !isNewDraft()) {
       // first edit: create new revision draft
-      let content = editor.getValue()
+      let msgString = editor.getValue()
       let revisionRoot = tree.selection()
       let revisionBranch = revs.selection()
       // get the post branch so that the tree view can detect the revision
@@ -300,9 +301,9 @@ me.once( (feed) => {
         })
       })
       function gotBranch(branch) {
-        drafts.create(content, branch, revisionRoot, revisionBranch, (err, key)=>{
+        drafts.create(msgString, branch, revisionRoot, revisionBranch, (err, key)=>{
           if (err) return console.error(err)
-          revs.add({key: key, value: {content, revisionBranch}})
+          revs.add({key: key, value: {msgString, revisionBranch}})
           ignoreRevsSelectionChanges = true
           revs.selection(key)
           ignoreRevsSelectionChanges = false

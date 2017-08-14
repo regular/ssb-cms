@@ -49,14 +49,18 @@ module.exports = function(ssb, drafts, me) {
     )
   }
 
+  function safeParse(s) {
+    try {
+      return JSON.parse(s)
+    } catch(e) {}
+    return {}
+  }
+
   var render = ho(
     function(msg, kp) {
       if (!msg.key || !msg.value) return
-      let v = msg.value
-      if (typeof v.content === 'string') { // drafts might by unparsable json strings
-        try { v = JSON.parse(v.content) } catch(e) {}
-      }
-      let value = {type: 'msg-node', id: msg.key, value: msg.value, content: v.content}
+      let content = msg.value.content || safeParse(msg.value.msgString).content
+      let value = {type: 'msg-node', id: msg.key, value: msg.value, content}
       return this.call(this, value, kp)
     },
 
@@ -71,7 +75,7 @@ module.exports = function(ssb, drafts, me) {
         this.call(this, isDraft ? me : value.author, kp.concat(['author'])), ' ',
         !isDraft ?
           this.call(this, new Date(value.timestamp), kp.concat(['date']))
-        : h('em', 'draft'),
+        : h('em', 'draft')
       )
     },
 
@@ -96,14 +100,14 @@ module.exports = function(ssb, drafts, me) {
         revs.selection(value)
         e.preventDefault()
       }
-    }, tag(8)('⚬')), ref.isMsgId),
+    }, tag(8)('⚬ ' + value.substr(0,6))), ref.isMsgId),
 
     filter( value => h('a.node.draft', {
       onclick: function(e)  {
         revs.selection(value)
         e.preventDefault()
       }
-    }, '⚬'), (value) => /^draft/.test(value) ),
+    }, tag(8)('⚬ draft')), (value) => /^draft/.test(value) )
   )
 
   revs.root = observable.signal()
@@ -122,11 +126,11 @@ module.exports = function(ssb, drafts, me) {
     revs.removeChild(el)
   }
 
-  revs.update = (key, content, newKey) => {
+  revs.update = (key, value, newKey) => {
     newKey = newKey || key
     let oldEl = msgEls[key]
-    if (!oldEl) throw new Error('msg not present')
-    let el = render({key: newKey, value: {content}})
+    if (!oldEl) throw new Error(`msg not present: ${key}`)
+    let el = render({key: newKey, value})
     revs.insertBefore(el, oldEl)
     revs.removeChild(oldEl)
     delete msgEls[key]

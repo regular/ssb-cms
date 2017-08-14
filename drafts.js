@@ -12,10 +12,10 @@ module.exports = function () {
     get: (key, cb) => {
       db.get(key, cb)
     },
-    update: (key, content, cb) => {
+    update: (key, msgString, cb) => {
       db.get(key, (err, value) => {
         if (err) return cb(err)
-        value.content = content
+        value.msgString = msgString
         db.put(key, value, cb)
       })
     },
@@ -38,7 +38,7 @@ module.exports = function () {
         )
       })
     },
-    create: function(content, branch, revisionRoot, revisionBranch, cb) {
+    create: function(msgString, branch, revisionRoot, revisionBranch, cb) {
       const key = 'draft-' + crypto.randomBytes(16).toString('base64')
       pull(
         pull.values([{
@@ -48,7 +48,7 @@ module.exports = function () {
             revisionRoot,
             revisionBranch,
             branch,
-            content
+            msgString
           }
         }, {
           type: 'put',
@@ -69,7 +69,7 @@ module.exports = function () {
         if (err) return cb(err)
         let msg
         try {
-          msg = JSON.parse(value.content)
+          msg = JSON.parse(value.msgString)
         } catch(e) {
           return cb(e)
         }
