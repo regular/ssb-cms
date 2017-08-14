@@ -9,7 +9,7 @@ const observable = require('observable')
 const obv = require('obv')
 
 const Tree = require('./tree-view')
-const Editor = require('./json-editor')
+const Editor = require('./editor-view')
 const Revs = require('./revs-view')
 const Menubar = require('./renderers/menubar')
 const drafts = require('./drafts')()
@@ -126,7 +126,6 @@ me.once( (feed) => {
         h('.toolbar')
       ),
       h('.col.editor-col',
-        h('.toolbar'),
         editorContainer = h('.editor-container'),
         h('.buttons',
           discardButton = h('button.discard', 'Discard Changes', {
@@ -140,10 +139,8 @@ me.once( (feed) => {
     )
   )
 
-  const editor = Editor({
-    container: editorContainer,
-    blobs: ssb.blobs
-  })
+  const editor = Editor(editorContainer, ssb)
+
   const tree = Tree(ssb, drafts, root, (err, el) =>{
     if (err) throw err
     treeColumn.appendChild(el)
@@ -154,15 +151,6 @@ me.once( (feed) => {
   )
   const revs = Revs(ssb, drafts, me.value, blobsRoot)
   revisionsColumn.appendChild(h('.revs-container', revs))
-
-  /*
-  revisionsColumn.appendChild(
-    h('div',
-      //h('div.icon', avatar)
-      //h('div', 'Clean:', h('span.clean', editor.clean))
-    )
-  )
-  */
 
   let isNewDraft = observable.transform(tree.selection, id => /^draft/.test(id))
   let isRevisionDraft = observable.transform(revs.selection, id => /^draft/.test(id))
@@ -194,7 +182,7 @@ me.once( (feed) => {
   }
 
   let ignoreChanges = false
-  editor.on( 'changes', ()=> {
+  editor.change( ()=> {
     if (ignoreChanges) return
     let msgString = editor.getValue()
     if (/^draft/.test(revs.selection())) {
