@@ -12,16 +12,17 @@ const ssbAvatar = require('ssb-avatar')
 const memo = require('asyncmemo')
 const lru = require('hashlru')
 
-module.exports = function(ssb, drafts, me) {
+module.exports = function(ssb, drafts, me, blobsRoot) {
   let revs = h('.revs')
   let msgEls = {}
 
-  let getName = memo({cache: lru(50)}, function (id, cb) {
+  let getAvatar = memo({cache: lru(50)}, function (id, cb) {
     ssbAvatar(ssb, me, id, (err, about)=>{
       if (err) return cb(err)
       let name = about.name
       if (!/^@/.test(name)) name = '@' + name
-      cb(null, name)
+      let imageUrl = `${blobsRoot}/${about.image}`
+      cb(null, {name, imageUrl})
     })
   })
 
@@ -88,11 +89,13 @@ module.exports = function(ssb, drafts, me) {
     function(feed, kp) {
       if (!ref.isFeedId(feed)) return
       let text = document.createTextNode(feed.substr(0, 7) + '…')
-      getName(feed, (err, name) => {
+      let img = h('img')
+      getAvatar(feed, (err, avatar) => {
         if (err) return console.error(err)
-        text.nodeValue = name
+        text.nodeValue = avatar.name
+        img.setAttribute('src', avatar.imageUrl)
       })
-      return h('a.author', text)
+      return [img, h('a.author', text)]
     },
 
     filter( value => h('a.node', {
@@ -182,5 +185,23 @@ module.exports.css = ()=> `
   .rev {
     background-color: #eee;
     margin: 1px 1px 0 1px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    max-height: 32px;
+    font-size: 12px;
+    align-content: flex-start;
+  }
+  .rev .node {
+    order: 3;
+    margin: 8px 32px;
+  }
+  .rev img {
+    margin: 0 8px;
+    max-height: 32px;
+  }
+  .rev .author, .rev .timestamp {
+    width: 80px;
   }
 `
