@@ -183,6 +183,8 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
 
 module.exports.css = ()=> `
   .rev {
+    font-size: 11px;
+    color: #6b6969;
     background-color: #eee;
     margin: 1px 1px 0 1px;
     display: flex;
@@ -190,7 +192,6 @@ module.exports.css = ()=> `
     align-items: flex-start;
     flex-wrap: wrap;
     max-height: 32px;
-    font-size: 12px;
     align-content: flex-start;
   }
   .rev .node {

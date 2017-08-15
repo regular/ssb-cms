@@ -92,7 +92,7 @@ module.exports = function(ssb, drafts, root, cb) {
         content: {
           root: parent.content.root || parentId,
           branch: parentId,
-          type: 'post'
+          type: 'node'
         }
       }
       drafts.create(JSON.stringify(value,null,2), parentId, null, null, (err, key)=>{
@@ -147,9 +147,10 @@ module.exports = function(ssb, drafts, root, cb) {
       if (typeof value === 'function') return
       if (typeof value === 'object' && !value.content && !value.msgString) return
       let content = value.content || safeParse(value.msgString).content
-      let id = content.revisionRoot || msg.key
+      let id = (content && content.revisionRoot) || msg.key
       let t = (content && content.type) || 'Invalid'
-      let kv = { type: 'key-value', key: {type: 'msg-node', msg_type: t, id}, value: branches(id) }
+      let name = content && content.name
+      let kv = { type: 'key-value', key: {type: 'msg-node', msg_type: t, msg_name: name, id}, value: branches(id) }
       return this.call(this, kv, kp)
     },
 
@@ -158,10 +159,11 @@ module.exports = function(ssb, drafts, root, cb) {
       kp = kp || []
       let id = msgNode.id
       let type = msgNode.msg_type
+      let name = msgNode.msg_name
       return h('span.msgNode',
         h('span.type-key',
           this.call(this, type, kp.concat(['msg_type'])),
-          this.call(this, id, kp.concat(['key']))
+          this.call(this, name ? {type: 'msg-link', name, link: id} : id, kp.concat(['key']))
         ), 
         /^draft/.test(id) ? h('span.buttons', 
           h('button.discard', 'discard', {
@@ -175,6 +177,18 @@ module.exports = function(ssb, drafts, root, cb) {
             onclick: function() { clone(ancestorWithClass('branch', this), id) }
           })
         )
+      )
+    },
+
+    function(value, kp) {
+      if (value.type !== 'msg-link') return
+      return h('a.node', {
+        id: value.link,
+        onclick: function(e)  {
+          selection(this)
+          e.preventDefault()
+        } },
+        h('span.name', value.name)
       )
     },
 
@@ -320,6 +334,23 @@ module.exports.css = ()=> tree.css() + `
     color: red;
     font-style: italic;
   }
+
+  a.node>span.name {
+    color: #161438;
+    padding: 0px 4px;
+    background: #babace;
+  }
+
+  a.node>span.name:hover {
+    color: #0f0d25;
+    background: #9f9fb1;
+  }
+  .node.selected>span.name,
+  .node.selected>span.name:hover {
+    color: #111110;
+    background: #b39254;
+  }
+
   a.node>span:hover {
     background-color: #226;
   }
