@@ -2,7 +2,7 @@
   "name": "ssb-cms",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "main.js",
   "scripts": {
     "start": "ssb_ws_address=$(sbot ws.getAddress) budo index.js"
   },

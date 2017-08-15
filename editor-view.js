@@ -18,16 +18,19 @@ let renderMenu = ho(
   Menubar().renderItem
 )
 
-let renderPreviewEditor = ho(
-  source(),
-  array(),
-  properties(),
-  kv(),
-  ho.basic()
-)
 
+module.exports = function(parent, ssb, opts) {
+  opts = opts || {}
+  let customRender = opts.render || function () {}
 
-module.exports = function(parent, ssb) {
+  let renderPreviewEditor = ho(
+    customRender(),
+    source(),
+    array(),
+    properties(),
+    kv(),
+    ho.basic()
+  )
 
   let toolbar, container, jsonContainer, previewContainer
   parent.appendChild(toolbar = h('.toolbar'))
