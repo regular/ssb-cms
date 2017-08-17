@@ -107,7 +107,8 @@ module.exports = function(parent, ssb, opts) {
       editor.setValue(value)
     },
     getValue: editor.getValue.bind(editor),
-    clearHistory: editor.clearHistory.bind(editor)
+    clearHistory: editor.clearHistory.bind(editor),
+    renderPreviewEditor
   }
 }
 
