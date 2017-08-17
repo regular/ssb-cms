@@ -12,7 +12,7 @@ const Revs = require('./revs-view')
 const Menubar = require('./renderers/menubar')
 const drafts = require('./drafts')()
 
-module.exports = function(config) {
+module.exports = function(config, cb) {
   const root = config.sbot.cms && config.sbot.cms.root
   if (!root) throw new Error('Please specify a root node in your config. See ssb-cms README.md for details.')
 
@@ -41,6 +41,7 @@ module.exports = function(config) {
       Then restart sbot and reload this page. Hopefully you won't see this message again.
 
       </pre>`
+      cb(err)
       throw err
     }
     sbot.set(ssb)
@@ -53,7 +54,7 @@ module.exports = function(config) {
   let avatar = observable()
   me( (feed) => {
     getAvatar(sbot.value, feed, feed, (err, result) => {
-      if (err) throw err
+      if (err) console.error(err)
       if (!result.image) return
       avatar({
         name: result.name,
@@ -299,6 +300,7 @@ module.exports = function(config) {
         }
       }
     })
+    cb(null, ssb)
   })
 }
 
@@ -316,6 +318,12 @@ module.exports.css = function() {
     font-family: sans-serif;
     color: #444;
     overflow: hidden;
+  }
+  .fullscreen-preview {
+    position: absolute;
+  }
+  .ui {
+    position: absolute;
   }
   .menubar {
     font-size: 14px;
