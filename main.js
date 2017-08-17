@@ -199,12 +199,14 @@ module.exports = function(config, cb) {
       editor.clearHistory()
       // TODO temp hack
       fullscreenPreview.innerHTML = ''
-      try {
-        let msg = JSON.parse(text)
-        let el = editor.renderPreviewEditor(msg)
-        fullscreenPreview.appendChild(el)
-      } catch(e) {
-        console.error(e)
+      if (text) {
+        try {
+          let msg = JSON.parse(text)
+          let el = editor.renderPreviewEditor(msg)
+          fullscreenPreview.appendChild(el)
+        } catch(e) {
+          console.error(e)
+        }
       }
       ignoreChanges = false
     }

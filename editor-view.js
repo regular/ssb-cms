@@ -24,7 +24,7 @@ module.exports = function(parent, ssb, opts) {
   let customRender = opts.render || function () {}
 
   let renderPreviewEditor = ho(
-    customRender(),
+    customRender(ssb),
     source(),
     array(),
     properties(),
