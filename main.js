@@ -209,22 +209,22 @@ module.exports = function(config, cb) {
       }
     })
 
+    function updateFullscreenPreview(key) {
+      // TODO temp hack
+      fullscreenPreview.innerHTML = ''
+      ssb.cms.getReduced(key, (err, msg)=>{
+        console.log('reduced', err, msg)
+        if (err) throw err  
+        let el = editor.renderPreviewEditor(msg)
+        fullscreenPreview.appendChild(el)
+      })
+    }
+
     function loadIntoEditor(text) {
       ignoreChanges = true
       editor.setValue(text)
       editor.clean(true)
       editor.clearHistory()
-      // TODO temp hack
-      fullscreenPreview.innerHTML = ''
-      if (text) {
-        try {
-          let msg = JSON.parse(text)
-          let el = editor.renderPreviewEditor(msg)
-          fullscreenPreview.appendChild(el)
-        } catch(e) {
-          console.error(e)
-        }
-      }
       ignoreChanges = false
     }
 
@@ -281,6 +281,7 @@ module.exports = function(config, cb) {
         let msgString = value.msgString || JSON.stringify(value, null, 2)
         loadIntoEditor(msgString)
       })
+      updateFullscreenPreview(id)
     })
 
     function getMessageBranch(id, cb) {

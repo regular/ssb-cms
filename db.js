@@ -2,6 +2,7 @@ const ref = require('ssb-ref')
 const pull = require('pull-stream')
 const many = require('pull-many')
 const ssbSort = require('ssb-sort')
+const deepAssign = require('deep-assign')
 
 function filterRevisions() {
   // return only latest revisions
@@ -50,6 +51,7 @@ module.exports = function(ssb, drafts) {
   // get latest revision of given revisionRoot
   // (including drafts)
   function get(key, cb) {
+    if (!key) return cb(new Error('no key specified'))
     pull(
       many([
         pull(
@@ -102,9 +104,31 @@ module.exports = function(ssb, drafts) {
       )
     }
   }
+
+  function getPrototypeChain(key, result, cb) {
+    get(key, (err, msg)=>{
+      if (err) return cb(err)
+      result.unshift(msg)
+      let p
+      if (p = msg.content.prototype) {
+        if (result.indexOf(p) !== -1) return cb(new Error('Cyclic prototype chain'))
+        return getPrototypeChain(p, result, cb)
+      }
+      cb(null, result)
+    })
+  }
+
+  function getReduced(key, cb) {
+    getPrototypeChain(key, [{}], (err, chain)=>{
+      if (err) return cb(err)
+      cb(null, deepAssign.apply(null, chain))
+    })
+  }
   
   return {
     get,
+    getPrototypeChain: function (key, cb) {getPrototypeChain(key, [], cb)},
+    getReduced,
     branches
   }
 }

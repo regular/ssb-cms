@@ -18,6 +18,7 @@
   "dependencies": {
     "asyncmemo": "^1.0.0",
     "codemirror": "^4.6.0",
+    "deep-assign": "^2.0.0",
     "hashlru": "^2.2.0",
     "human-time": "0.0.1",
     "hyperobj": "^1.0.2",
