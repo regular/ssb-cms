@@ -52,6 +52,7 @@ module.exports = function(ssb, drafts, root, cb) {
       drafts.create(JSON.stringify(value,null,2), value.content.branch, null, null, (err, key)=>{
         // TODO: leak, see above
         let ul = ancestorWithTagName('ul', el.parentElement)
+        const h = hs
         ul.appendChild( h('li', render()({key, value})) )
       })
     })
