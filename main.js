@@ -12,9 +12,12 @@ const Revs = require('./revs-view')
 const Menubar = require('./renderers/menubar')
 const drafts = require('./drafts')()
 
+const modes = ['normal', 'translucent', 'no-ui']
+
 module.exports = function(config, cb) {
   const root = config.sbot.cms && config.sbot.cms.root
   if (!root) throw new Error('Please specify a root node in your config. See ssb-cms README.md for details.')
+
 
   let me = obv()
   let sbot = obv()
@@ -135,6 +138,20 @@ module.exports = function(config, cb) {
     )
 
     const editor = Editor(editorContainer, ssb, config.editor)
+
+    let mode = 0
+    window.addEventListener('keydown', (e)=>{
+      if (e.key === 'Tab' && e.shiftKey) {
+        document.body.classList.remove(modes[mode])
+        mode = (mode + 1) % modes.length
+        console.log(mode)
+        document.body.classList.add(modes[mode])
+        if (mode === 0) {
+          editor.adjustSize()
+        }
+        e.preventDefault()
+      }
+    })
 
     const tree = Tree(ssb, drafts, root, (err, el) =>{
       if (err) throw err
@@ -406,6 +423,34 @@ module.exports.css = function() {
     display: flex;
     flex-direction: column;
   }
+  
+  body.no-ui .ui {
+    display: none;
+  }
+  body.translucent .editor-col {
+    height: 0px;
+  }
+  body.translucent .editor-col .buttons {
+    display: none;
+  }
+  body.translucent .toolbar {
+    background: rgba(221, 221, 221, 0.45);
+  }
+  body.translucent .col.treeview {
+    background: rgba(238, 238, 238, 0.17);
+    border-color: transparent;
+  }
+  body.translucent .col.revisions {
+    background: rgba(221, 221, 221, 0.06);
+    border-color: transparent;
+  }
+  body.translucent .col.revisions .rev {
+    background: rgba(238, 238, 238, 0.17);
+  }
+  body.translucent .col.treeview .branch-header {
+    background: rgba(209, 195, 195, 0.57);
+  }
+
   .editor-col .buttons {
     padding: 1em;
     font-size: 16pt;
