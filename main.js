@@ -302,7 +302,7 @@ module.exports = function(config, cb) {
         }
       }
     })
-    cb(null, ssb)
+    if (cb) cb(null, ssb)
   })
 }
 
