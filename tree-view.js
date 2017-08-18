@@ -12,51 +12,6 @@ const filter = require('hyperobj-tree/filter')
 const tag = require('hyperobj-tree/tag')
 const ref = require('ssb-ref')
 const pull = require('pull-stream')
-const many = require('pull-many')
-const ssbSort = require('ssb-sort')
-
-function filterRevisions() {
-  // return only latest revisions
-  return function (read) {
-    var queue, _err, _cb
-    var heads = {}, roots = {}
-    var drain = pull.drain(function (msg) {
-      let c = msg.value.content
-      var revisionBranch = msg.value.revisionBranch || (c && c.revisionBranch)
-      if (revisionBranch) {
-        if (heads[revisionBranch]) delete heads[revisionBranch]
-        else roots[revisionBranch] = true
-      }
-      if (roots[msg.key]) delete roots[msg.key]
-      else heads[msg.key] = msg
-    }, function (_err) {
-      queue = ssbSort(Object.keys(heads).map(key => heads[key]))
-      if (_cb) {
-        let cb = _cb
-        _cb = null
-        if (_err) cb(_err)
-        else if (queue.length) cb(null, queue.shift())
-        else cb(true)
-      } else {
-        _err = err
-      }
-    })(read)
-    return function (abort, cb) {
-      if (abort) {
-        if (drain) {
-          let _drain = drain
-          drain = null
-          return _drain.abort(abort, cb)
-        }
-        return read(abort, cb)
-      }
-      if (_err) cb(_err)
-      else if (!queue) _cb = cb
-      else if (queue.length) return cb(null, queue.shift())
-      else cb(true)
-    }
-  }
-}
 
 module.exports = function(ssb, drafts, root, cb) {
   let selection = observable.signal()
@@ -66,26 +21,6 @@ module.exports = function(ssb, drafts, root, cb) {
     document.querySelectorAll('.treeView .selected').forEach( el => el.classList.remove('selected') )
     if (el) el.classList.add('selected')
   })
-
-  function branches(root) {
-    return function() {
-      return pull(
-         many([
-          root && ref.type(root) ? pull(
-            ssb.links({
-              rel: 'branch',
-              dest: root,
-              keys: true,
-              values: true
-            }),
-            pull.unique('key')
-          ) : pull.empty(), // TODO: get all root messages
-          drafts.byBranch(root)
-        ]),
-        filterRevisions()
-      )
-    }
-  }
 
   function addChild(el, parentId) {
     ssb.get(parentId, (err, parent) => {
@@ -164,7 +99,7 @@ module.exports = function(ssb, drafts, root, cb) {
         let id = (content && content.revisionRoot) || msg.key
         let t = (content && content.type) || 'Invalid'
         let name = content && content.name
-        let kv = { type: 'key-value', key: {type: 'msg-node', msg_type: t, msg_name: name, id}, value: branches(id) }
+        let kv = { type: 'key-value', key: {type: 'msg-node', msg_type: t, msg_name: name, id}, value: ssb.cms.branches(id) }
         return this.call(this, kv, kp)
       },
 
@@ -264,13 +199,12 @@ module.exports = function(ssb, drafts, root, cb) {
             }
           })
         ),
-        ul = render()(branches(root))
+        ul = render()(ssb.cms.branches(root))
       )
     )
   })
 
   render.selection = observable.transform( selection, el => el && el.id )
-  render.branches = (root)=>branches(root)()
   render.update = (key, value, newKey) => {
     // TODO: leaks event handler
     // Probably would be better if a node observes its message value

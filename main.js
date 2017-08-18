@@ -11,13 +11,13 @@ const Editor = require('./editor-view')
 const Revs = require('./revs-view')
 const Menubar = require('./renderers/menubar')
 const drafts = require('./drafts')()
+const DB = require('./db')
 
 const modes = ['normal', 'translucent', 'no-ui']
 
 module.exports = function(config, cb) {
   const root = config.sbot.cms && config.sbot.cms.root
   if (!root) throw new Error('Please specify a root node in your config. See ssb-cms README.md for details.')
-
 
   let me = obv()
   let sbot = obv()
@@ -47,6 +47,7 @@ module.exports = function(config, cb) {
       cb(err)
       throw err
     }
+    ssb.cms = DB(ssb, drafts)
     sbot.set(ssb)
     ssb.whoami( (err, feed)=> {
       if (err) throw err
@@ -144,7 +145,6 @@ module.exports = function(config, cb) {
       if (e.key === 'Tab' && e.shiftKey) {
         document.body.classList.remove(modes[mode])
         mode = (mode + 1) % modes.length
-        console.log(mode)
         document.body.classList.add(modes[mode])
         if (mode === 0) {
           editor.adjustSize()
