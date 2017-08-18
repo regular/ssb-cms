@@ -4,6 +4,7 @@ const insertCSS = require('insert-css')
 const observable = require('observable')
 const pull = require('pull-stream')
 const fileReader = require('pull-file-reader')
+const raf = require('raf')
 
 module.exports = function(opts) {
   if (!opts) opts = {}
@@ -62,10 +63,14 @@ module.exports = function(opts) {
   cmOpts.container.addEventListener('drop', onDrop, true)
 
   let cm = codemirror(cmOpts.container, cmOpts)
+  let rafId, hide
   function setSize() {
-    cm.setSize(`${cmOpts.container.clientWidth}px`, `${cmOpts.container.clientHeight}px`)
+    if (rafId) raf.cancel(rafId)
+    raf( ()=>
+      cm.setSize(`${cmOpts.container.clientWidth}px`, `${hide ? 0 : cmOpts.container.clientHeight}px`)
+    )
   }
-  setTimeout( setSize, 0)
+  setSize()
   window.addEventListener('resize', setSize)
   cm.on('changes', (editor, changes)=>{
     clean(editor.isClean(editChange))
@@ -101,5 +106,13 @@ module.exports = function(opts) {
     if (isClean) editChange = cm.changeGeneration()
   })
   cm.clean = clean
+  cm.show = function() {
+    hide = false
+    setSize()
+  }
+  cm.hide = function() {
+    hide = true
+    setSize()
+  }
   return cm
 }

@@ -38,8 +38,8 @@ module.exports = function(parent, ssb, opts) {
   // to make resizing of code-mirror work properly when the browser window
   // is resized.
   parent.appendChild(container = h('.editor-container'))
-  container.appendChild(jsonContainer = h('.editor-container'))
-  container.appendChild(previewContainer = h('.editor-container'))
+  container.appendChild(jsonContainer = h('.editor-container.cm-wrapper'))
+  container.appendChild(previewContainer = h('.editor-container.preview-wrapper'))
 
   let menubar = renderMenu({
     type: 'menubar',
@@ -89,7 +89,14 @@ module.exports = function(parent, ssb, opts) {
 
   menubar.activeItem( (item)=>{
     let key = item.getAttribute('data-key')
-    jsonContainer.style.display = key === 'json' ?  "block" : "none"
+    if (key === 'json') {
+      jsonContainer.style.display = 'block'
+      editor.show() 
+    } else {
+      editor.hide()
+      jsonContainer.style.display = 'none'
+    }
+
     removePreviewEditor()
     if (key === 'preview') {
       let value = editor.getValue()
@@ -115,11 +122,17 @@ module.exports = function(parent, ssb, opts) {
 
 module.exports.css = ()=>  `
   .editor-container {
-    flex-grow: 1;
+    flex: 1 0;
     position: relative;
     overflow: hidden;
     display: flex;
     flex-direction: column;
+  }
+  .editor-container.cm-wrapper {
+    flex: 1 0 100%;
+  }
+  .editor-container.preview-wrapper {
+    overflow: scroll;
   }
   .editor-container>.toolbar {
     display: flex;
