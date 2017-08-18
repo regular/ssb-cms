@@ -48,26 +48,37 @@ function filterRevisions() {
 module.exports = function(ssb, drafts) {
   
   // get latest revision of given revisionRoot
+  // (including drafts)
   function get(key, cb) {
     pull(
       many([
         pull(
           pull.once(key),
           pull.asyncMap(ssb.get),
-          pull.map( x=>{return {value: x}})
+          pull.map( x=>{return {key, value: x}})
         ),
         ssb.links({
           rel: 'revisionRoot',
           dest: key,
-          keys: false,
+          keys: true,
           values: true
-        })
+        }),
+        drafts.byRevisionRoot(key)
       ]),
       filterRevisions(),
-      pull.collect( (err, messages)=>{
+      pull.collect( (err, results)=>{
         if (err) return cb(err)
-        if (messages.length !== 1) return cb(new Error('got more or less than one message'))
-        cb(null, messages[0].value)
+        if (results.length !== 1) return cb(new Error('got more or less than one result'))
+        let msg = results[0].value
+        if (msg.msgString) {
+          try{
+            msg = JSON.parse(msg.msgString)
+          } catch(e) {
+            e.msgString = msg.msgString
+            return cb(e)
+          }
+        }
+        cb(null, msg)
       })
     )
   }
@@ -84,7 +95,7 @@ module.exports = function(ssb, drafts) {
               values: true
             }),
             pull.unique('key')
-          ) : pull.empty(), // TODO: get all root messages
+          ) : pull.empty(),
           drafts.byBranch(root)
         ]),
         filterRevisions()
