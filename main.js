@@ -451,7 +451,13 @@ module.exports.css = function() {
   body.translucent .col.treeview .branch-header {
     background: rgba(209, 195, 195, 0.57);
   }
-
+  body.translucent .fullscreen-preview {
+    filter: blur(.8px) brightness(0.8);
+  }
+  body.translucent .branch-header,
+  body.translucent .toolbar {
+      border-color: #777;
+  }
   .editor-col .buttons {
     padding: 1em;
     font-size: 16pt;
