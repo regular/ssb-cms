@@ -1,5 +1,6 @@
-const h = require('hyperscript')
-const ho = require('hyperobj')
+const hs = require('hyperscript-nested-contexts')(require('hyperscript'))
+const ho = require('hyperobj-context')(require('hyperobj'), hs)
+
 const observable = require('observable')
 const u = require('hyperobj-tree/util')
 const tree = require('hyperobj-tree/tree')
@@ -59,6 +60,7 @@ function filterRevisions() {
 
 module.exports = function(ssb, drafts, root, cb) {
   let selection = observable.signal()
+  //let nodes = {}
 
   selection( (el)=>{
     document.querySelectorAll('.treeView .selected').forEach( el => el.classList.remove('selected') )
@@ -96,8 +98,15 @@ module.exports = function(ssb, drafts, root, cb) {
         }
       }
       drafts.create(JSON.stringify(value,null,2), parentId, null, null, (err, key)=>{
+        // TODO: leak: event hander will not be removed when the parent node
+        // is collapes. It would be much better, if the hyperobj-tree used a live stream
+        // and therefor autmatically would append the new node to the dom (in the correct
+        // hyperscript context)
         let ul = el.tagName === 'UL' ? el : el.querySelector('ul')
-        ul.appendChild( h('li', render({key, value})) )
+        //h = nodes[parentId].ctx.innerContext
+        //console.log('innerContext', h)
+        const h = hs
+        ul.appendChild( h('li', render(h)({key, value})) )
       })
     })
   }
@@ -106,8 +115,9 @@ module.exports = function(ssb, drafts, root, cb) {
     ssb.get(id, (err, value) => {
       if (err) throw err
       drafts.create(JSON.stringify(value,null,2), value.content.branch, null, null, (err, key)=>{
+        // TODO: leak, see above
         let ul = ancestorWithTagName('ul', el.parentElement)
-        ul.appendChild( h('li', render({key, value})) )
+        ul.appendChild( h('li', render()({key, value})) )
       })
     })
   }
@@ -118,6 +128,7 @@ module.exports = function(ssb, drafts, root, cb) {
       if (selection() && selection().id === id) {
         selection(null)
       }
+      // TODO: leak, the event handler is not removed
       el.parentElement.removeChild(el)
     })
   }
@@ -140,84 +151,110 @@ module.exports = function(ssb, drafts, root, cb) {
     return {}
   }
 
-  var render = ho(
-    function(msg, kp) {
-      if (!msg.key || !msg.value) return
-      let value = msg.value
-      if (typeof value === 'function') return
-      if (typeof value === 'object' && !value.content && !value.msgString) return
-      let content = value.content || safeParse(value.msgString).content
-      let id = (content && content.revisionRoot) || msg.key
-      let t = (content && content.type) || 'Invalid'
-      let name = content && content.name
-      let kv = { type: 'key-value', key: {type: 'msg-node', msg_type: t, msg_name: name, id}, value: branches(id) }
-      return this.call(this, kv, kp)
-    },
+  function render(ctx) {
+    ctx = ctx || hs
+    let ret =  ho(
+      function(msg, kp) {
+        if (!msg.key || !msg.value) return
+        let value = msg.value
+        if (typeof value === 'function') return
+        if (typeof value === 'object' && !value.content && !value.msgString) return
+        let content = value.content || safeParse(value.msgString).content
 
-    function(msgNode, kp) {
-      if (!msgNode.type || msgNode.type != 'msg-node') return
-      kp = kp || []
-      let id = msgNode.id
-      let type = msgNode.msg_type
-      let name = msgNode.msg_name
-      return h('span.msgNode',
-        h('span.type-key',
-          this.call(this, type, kp.concat(['msg_type'])),
-          this.call(this, name ? {type: 'msg-link', name, link: id} : id, kp.concat(['key']))
-        ), 
-        /^draft/.test(id) ? h('span.buttons', 
-          h('button.discard', 'discard', {
-            onclick: function() { discard( ancestorWithTagName('li', this), id) }
-          })
-        ) : h('span.buttons',
-          h('button.add', 'add', {
-            onclick: function() { addChild(ancestorWithClass('branch', this), id) }
-          }),
-          h('button.clone', 'clone', {
-            onclick: function() { clone(ancestorWithClass('branch', this), id) }
-          })
+        let id = (content && content.revisionRoot) || msg.key
+        let t = (content && content.type) || 'Invalid'
+        let name = content && content.name
+        let kv = { type: 'key-value', key: {type: 'msg-node', msg_type: t, msg_name: name, id}, value: branches(id) }
+        return this.call(this, kv, kp)
+      },
+
+      function(msgNode, kp) {
+        if (!msgNode.type || msgNode.type != 'msg-node') return
+        kp = kp || []
+        let h = this.ctx
+        let id = msgNode.id
+        let type = msgNode.msg_type
+        let name = msgNode.msg_name
+
+        let _cleanup = this.ctx.cleanup
+        this.ctx.cleanup = function() {
+          console.log('Removing context for ', id)
+          _cleanup()
+        }
+        /*
+        nodes[id] = {
+          ctx: this.ctx,
+        }
+        */
+        return h('span.msgNode',
+          h('span.type-key',
+            this.call(this, type, kp.concat(['msg_type'])),
+            this.call(this, name ? {type: 'msg-link', name, link: id} : id, kp.concat(['key']))
+          ), 
+          /^draft/.test(id) ? h('span.buttons', 
+            h('button.discard', 'discard', {
+              onclick: function() { discard( ancestorWithTagName('li', this), id) }
+            })
+          ) : h('span.buttons',
+            h('button.add', 'add', {
+              onclick: function() { addChild(ancestorWithClass('branch', this), id) }
+            }),
+            h('button.clone', 'clone', {
+              onclick: function() { clone(ancestorWithClass('branch', this), id) }
+            })
+          )
         )
-      )
-    },
+      },
 
-    function(value, kp) {
-      if (value.type !== 'msg-link') return
-      return h('a.node', {
-        id: value.link,
-        onclick: function(e)  {
-          selection(this)
-          e.preventDefault()
-        } },
-        h('span.name', value.name)
-      )
-    },
+      function(value, kp) {
+        if (value.type !== 'msg-link') return
+        const h = this.ctx
+        return h('a.node', {
+          id: value.link,
+          onclick: function(e)  {
+            selection(this)
+            e.preventDefault()
+          } },
+          h('span.name', value.name)
+        )
+      },
 
-    filter( value => h('a.node', {
-      id: value,
-      onclick: function(e)  {
-        selection(this)
-        e.preventDefault()
-      }
-    }, tag(8)(value.substr(0,8))), ref.type),
+      filter( function(value) {
+        const h = this.ctx
+        return h('a.node', {
+          id: value,
+          onclick: function(e)  {
+            selection(this)
+            e.preventDefault()
+          }
+        }, tag(8)(value.substr(0,8)))
+      }, ref.type),
 
-    filter( value => h('a.node.draft', {
-      id: value,
-      onclick: function(e)  {
-        selection(this)
-        e.preventDefault()
-      }
-    }, h('span', value.substr(0, 14))), (value) => /^draft/.test(value) ),
-    tree(),
-    source(),
-    array(),
-    properties(),
-    kv(),
-    ho.basic()
-  )
+      filter( function(value) {
+        const h = this.ctx
+        return h('a.node.draft', {
+          id: value,
+          onclick: function(e)  {
+            selection(this)
+            e.preventDefault()
+          }
+        }, h('span', value.substr(0, 14)))
+      }, (value) => /^draft/.test(value) ),
+      tree(),
+      source(),
+      array(),
+      properties(),
+      kv(),
+      ho.basic()
+    )
+    ret.ctx = ctx
+    return ret
+  }
 
   ssb.get(root, (err, value) => {
     if (err) return cb(err)
     let ul
+    const h = hs
     cb(null,
       h('.treeView',
         h('.toolbar',
@@ -227,7 +264,7 @@ module.exports = function(ssb, drafts, root, cb) {
             }
           })
         ),
-        ul = render(branches(root))
+        ul = render()(branches(root))
       )
     )
   })
@@ -235,10 +272,12 @@ module.exports = function(ssb, drafts, root, cb) {
   render.selection = observable.transform( selection, el => el && el.id )
   render.branches = (root)=>branches(root)()
   render.update = (key, value, newKey) => {
+    // TODO: leaks event handler
+    // Probably would be better if a node observes its message value
     newKey = newKey || key
     const el = document.getElementById(key)
     const header = ancestorWithClass('branch-header', el)
-    const newEl = render({key: newKey, value})
+    const newEl = render()({key: newKey, value})
     const newHeader = newEl.querySelector('.branch-header')
     let sel = selection() && selection().id === key
     header.parentElement.insertBefore(newHeader, header)
@@ -248,6 +287,7 @@ module.exports = function(ssb, drafts, root, cb) {
     } else selection(newHeader.querySelector('a.node'))
   }
   render.remove = (key) => {
+    // TODO: leaks event handler
     const el = ancestorWithTagName('li', document.getElementById(key))
     if (el) el.parentElement.removeChild(el)
     if (selection() && selection().id === key) selection(null)
