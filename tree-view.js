@@ -1,19 +1,32 @@
-const hs = require('hyperscript-nested-contexts')(require('hyperscript'))
-const ho = require('hyperobj-context')(require('hyperobj'), hs)
+//const hs = require('hyperscript-nested-contexts')(require('hyperscript'))
+//const ho = require('hyperobj-context')(require('hyperobj'), hs)
 
-const observable = require('observable')
-const u = require('hyperobj-tree/util')
+// mutant
+const h = require('mutant/html-element')
+const MappedArray = require('mutant/mapped-array')
+const MutantMap = require('mutant/map')
+const Dict = require('mutant/dict')
+const Struct = require('mutant/struct')
+const MutantArray = require('mutant/array')
+const computed = require('mutant/computed')
+const when = require('mutant/when')
+const send = require('mutant/send')
+const resolve = require('mutant/resolve')
+
+//const observable = require('observable')
+//const u = require('hyperobj-tree/util')
 const tree = require('hyperobj-tree/tree')
-const properties = require('hyperobj-tree/properties')
-const kv = require('hyperobj-tree/kv')
-const source = require('hyperobj-tree/source')
-const array = require('hyperobj-tree/array')
+//const properties = require('hyperobj-tree/properties')
+//const kv = require('hyperobj-tree/kv')
+//const source = require('hyperobj-tree/source')
+//const array = require('hyperobj-tree/array')
 const filter = require('hyperobj-tree/filter')
 const tag = require('hyperobj-tree/tag')
 const ref = require('ssb-ref')
 const pull = require('pull-stream')
 
 module.exports = function(ssb, drafts, root, cb) {
+  return
   let selection = observable.signal()
   //let nodes = {}
 
@@ -87,76 +100,69 @@ module.exports = function(ssb, drafts, root, cb) {
     return {}
   }
 
-  function render(ctx) {
-    ctx = ctx || hs
-    let ret =  ho(
-      function(msg, kp) {
-        if (!msg.key || !msg.value) return
-        let value = msg.value
-        if (typeof value === 'function') return
-        if (typeof value === 'object' && !value.content && !value.msgString) return
-        let content = value.content || safeParse(value.msgString).content
+  function render() {
+    return function() {return h('span', 'nothing')}
+    return function html(node) {
+      return h('li', [
+        h('span.triangle', {
+          'ev-click': send(()=>{
+            node.open.set(!node.open())
+          })
+        }),
+        h('span.type', node.type),
+        ' ',
+        h('span.name', node.label),
+        when(node.open, h('ul', MutantMap(node.children, html)))
+      ])
+    }
+    return ho(
+      function(kv, kp) {
+        if (!kv.key || !kv.value) return
+        let msg = kv.value
+        if (typeof nsg === 'function') return
+        if (typeof msg === 'object' && !msg.content && !msg.msgString) return
+        let content = msg.content || safeParse(msg.msgString).content
 
-        let id = (content && content.revisionRoot) || msg.key
-        let t = (content && content.type) || 'Invalid'
+        let id = (content && content.revisionRoot) || kv.key
+
+        let type = (content && content.type) || 'Invalid'
         let name = content && content.name
-        let kv = { type: 'key-value', key: {type: 'msg-node', msg_type: t, msg_name: name, id}, value: ssb.cms.branches(id) }
-        return this.call(this, kv, kp)
-      },
+        children = ssb.cms.branches(id) 
 
-      function(msgNode, kp) {
-        if (!msgNode.type || msgNode.type != 'msg-node') return
-        kp = kp || []
-        let h = this.ctx
-        let id = msgNode.id
-        let type = msgNode.msg_type
-        let name = msgNode.msg_name
-
-        let _cleanup = this.ctx.cleanup
-        this.ctx.cleanup = function() {
-          console.log('Removing context for ', id)
-          _cleanup()
-        }
-        /*
-        nodes[id] = {
-          ctx: this.ctx,
-        }
-        */
-        return h('span.msgNode',
-          h('span.type-key',
-            this.call(this, type, kp.concat(['msg_type'])),
-            this.call(this, name ? {type: 'msg-link', name, link: id} : id, kp.concat(['key']))
-          ), 
-          /^draft/.test(id) ? h('span.buttons', 
-            h('button.discard', 'discard', {
-              onclick: function() { discard( ancestorWithTagName('li', this), id) }
-            })
-          ) : h('span.buttons',
-            h('button.add', 'add', {
-              onclick: function() { addChild(ancestorWithClass('branch', this), id) }
-            }),
-            h('button.clone', 'clone', {
-              onclick: function() { clone(ancestorWithClass('branch', this), id) }
-            })
-          )
-        )
-      },
-
-      function(value, kp) {
-        if (value.type !== 'msg-link') return
-        const h = this.ctx
-        return h('a.node', {
-          id: value.link,
-          onclick: function(e)  {
-            selection(this)
-            e.preventDefault()
-          } },
-          h('span.name', value.name)
-        )
+        return h('div.branch.open', [
+          h('div.branch-header', [
+            h('span.triangle'),
+            h('span.key', [
+              h('span.msgNode', [
+                h('span.type-key', type),
+                h('a.node', {
+                  id: value.link,
+                  onclick: function(e)  {
+                    selection(this)
+                    e.preventDefault()
+                  } }, [
+                    h('span.name', name)
+                  ]
+                ),
+                /^draft/.test(id) ? h('span.buttons', 
+                  h('button.discard', 'discard', {
+                    onclick: function() { discard( ancestorWithTagName('li', this), id) }
+                  })
+                ) : h('span.buttons', [
+                  h('button.add', 'add', {
+                    onclick: function() { addChild(ancestorWithClass('branch', this), id) }
+                  }),
+                  h('button.clone', 'clone', {
+                    onclick: function() { clone(ancestorWithClass('branch', this), id) }
+                  })
+                ])
+              ])
+            ])
+          ])
+        ])
       },
 
       filter( function(value) {
-        const h = this.ctx
         return h('a.node', {
           id: value,
           onclick: function(e)  {
@@ -167,7 +173,6 @@ module.exports = function(ssb, drafts, root, cb) {
       }, ref.type),
 
       filter( function(value) {
-        const h = this.ctx
         return h('a.node.draft', {
           id: value,
           onclick: function(e)  {
@@ -175,16 +180,8 @@ module.exports = function(ssb, drafts, root, cb) {
             e.preventDefault()
           }
         }, h('span', value.substr(0, 14)))
-      }, (value) => /^draft/.test(value) ),
-      tree(),
-      source(),
-      array(),
-      properties(),
-      kv(),
-      ho.basic()
+      }, value => /^draft/.test(value) )
     )
-    ret.ctx = ctx
-    return ret
   }
 
   ssb.get(root, (err, value) => {

@@ -19,6 +19,7 @@ function filterRevisions() {
       if (roots[msg.key]) delete roots[msg.key]
       else heads[msg.key] = msg
     }, function (_err) {
+      //if (err) throw err
       queue = ssbSort(Object.keys(heads).map(key => heads[key]))
       if (_cb) {
         let cb = _cb

@@ -153,7 +153,7 @@ module.exports = function(config, cb) {
       }
     })
 
-    const tree = Tree(ssb, drafts, root, (err, el) =>{
+    const tree = cb(ssb, drafts, root, (err, el) =>{
       if (err) throw err
       treeColumn.appendChild(el)
     })
