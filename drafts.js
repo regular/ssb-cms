@@ -11,6 +11,7 @@ function tryToParse(value) {
     content.revisionRoot = value.revisionRoot
     content.revisionBranch = value.revisionBranch
     content.branch = value.branch
+    msg.draft = true
     return msg
   } catch(e) {}
   return value

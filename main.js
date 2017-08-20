@@ -47,7 +47,9 @@ module.exports = function(config, cb) {
       cb(err)
       throw err
     }
+
     ssb.cms = DB(ssb, drafts)
+
     sbot.set(ssb)
     ssb.whoami( (err, feed)=> {
       if (err) throw err
@@ -69,11 +71,6 @@ module.exports = function(config, cb) {
 
   me.once( (feed) => {
     const ssb = sbot.value
-
-    function get(id, cb) {
-      if (/^draft/.test(id)) drafts.get(id, cb)
-      else ssb.get(id, cb)
-    }
 
     let renderMenu = ho(
       Menubar(),
@@ -177,7 +174,7 @@ module.exports = function(config, cb) {
     function cleanupRevision(key, value) {
       // if all edits have been undone, remove the revision
       if (value.revisionBranch) {
-        get(value.revisionBranch, (err, val)=>{
+        ssb.get(value.revisionBranch, (err, val)=>{
           if (err) return console.error(err)
           if (typeof val.content !== 'string') val.content = JSON.stringify(val, null, 2)
           if (val.content === value.content) {
@@ -260,7 +257,7 @@ module.exports = function(config, cb) {
         if (/^draft/.test(tree.selection())) {
           tree.remove(key)
         } else if (tree.selection() === value.revisionRoot) {
-          get(value.revisionBranch, (err, value)=>{
+          ssb.get(value.revisionBranch, (err, value)=>{
             if (err) return console.error(err)
             let c = value.content
             if (typeof c !== 'string') value.content = JSON.stringify(value, null, 2)
@@ -276,7 +273,7 @@ module.exports = function(config, cb) {
     revs.selection( (id) => {
       if (ignoreRevsSelectionChanges) return
       if (!id) return loadIntoEditor('')
-      get(id, (err, value) => {
+      ssb.cms.getMessageOrDraft(id, (err, value) => {
         if (err) throw err  // TODO
         let msgString = value.msgString || JSON.stringify(value, null, 2)
         loadIntoEditor(msgString)
@@ -285,7 +282,7 @@ module.exports = function(config, cb) {
     })
 
     function getMessageBranch(id, cb) {
-      get(id, (err, value)=>{
+      ssb.cms.getMessageOrDraft(id, (err, value)=>{
         if (err) return cb(err)
         cb(null, value.content && value.content.branch || value.branch)
       })

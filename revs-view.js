@@ -70,7 +70,7 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
       kp = kp || []
       let value = msgNode.value || {}
       let id = msgNode.id
-      let isDraft = value.revisionRoot || value.revisionBranch || value.branch
+      let isDraft = value.draft
       return h('.rev',
         this.call(this, id, kp.concat(['key'])), ' ',
         this.call(this, isDraft ? me : value.author, kp.concat(['author'])), ' ',

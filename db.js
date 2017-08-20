@@ -48,11 +48,18 @@ function filterRevisions() {
   }
 }
 module.exports = function(ssb, drafts) {
+
+  function getMessageOrDraft(id, cb) {
+    console.log('getting', id)
+    if (/^draft/.test(id)) drafts.get(id, cb)
+    else ssb.get(id, cb)
+  }
   
   // get latest revision of given revisionRoot
   // (including drafts)
   function getLatest(key, cb) {
     if (!key) return cb(new Error('no key specified'))
+    if (/^draft/.test(key)) return drafts.get(key, cb)
     pull(
       many([
         pull(
@@ -132,6 +139,7 @@ module.exports = function(ssb, drafts) {
   }
   
   return {
+    getMessageOrDraft,
     getLatest,
     getPrototypeChain: function (key, cb) {getPrototypeChain(key, [], cb)},
     getReduced,
