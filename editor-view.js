@@ -19,9 +19,9 @@ let renderMenu = ho(
 )
 
 
-module.exports = function(parent, ssb, opts) {
-  opts = opts || {}
-  let customRender = opts.render || function () {}
+module.exports = function(parent, ssb, config) {
+  config = config || {}
+  let customRender = config.editor && config.editor.render || function () {}
 
   let renderPreviewEditor = ho(
     customRender(ssb),
@@ -29,6 +29,14 @@ module.exports = function(parent, ssb, opts) {
     array(),
     properties(),
     kv(),
+    function(value) {
+      if (!ref.isMsg(value)) return
+      return h('a', {href: `#${value}`}, value)
+    },
+    function(value) {
+      if (!ref.isBlob(value)) return
+      return h('a', {href: `${config.blobsRoot}/${value}`}, value)
+    },
     ho.basic()
   )
 

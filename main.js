@@ -138,7 +138,7 @@ module.exports = function(config, cb) {
       )
     )
 
-    const editor = Editor(editorContainer, ssb, config.editor)
+    const editor = Editor(editorContainer, ssb, config)
 
     let mode = 0
     window.addEventListener('keydown', (e)=>{
