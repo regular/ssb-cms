@@ -3,6 +3,19 @@ const pl = require('pull-level')
 const pull = require('pull-stream')
 const crypto = require('crypto')
 
+function tryToParse(value) {
+  try {
+    let msg = JSON.parse(value.msgString)
+    // overwrite crucial values
+    let content = (msg.content = msg.content || {})
+    content.revisionRoot = value.revisionRoot
+    content.revisionBranch = value.revisionBranch
+    content.branch = value.branch
+    return msg
+  } catch(e) {}
+  return value
+}
+
 module.exports = function () {
   const db = levelup('drafts', {
     db: require('level-js'),
@@ -10,7 +23,11 @@ module.exports = function () {
   })
   return {
     get: (key, cb) => {
-      db.get(key, cb)
+      db.get(key, (err, value) => {
+        if (err) return cb(err)
+        value = tryToParse(value)
+        cb(null, value)
+      })
     },
     update: (key, msgString, cb) => {
       db.get(key, (err, value) => {
@@ -90,7 +107,7 @@ module.exports = function () {
         pull.asyncMap(function (e, cb) {
           db.get(e.value, function (err, value) {
             if (err) return cb(err)
-            cb(null, {key: e.value, value})
+            cb(null, {key: e.value, value: tryToParse(value)})
           })
         })
       )
@@ -102,7 +119,7 @@ module.exports = function () {
         pull.asyncMap(function (e, cb) {
           db.get(e.value, function (err, value) {
             if (err) return cb(err)
-            cb(null, {key: e.value, value})
+            cb(null, {key: e.value, value: tryToParse(value)})
           })
         })
       )

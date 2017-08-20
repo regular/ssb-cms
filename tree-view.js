@@ -279,6 +279,9 @@ module.exports.css = ()=> tree.css() + `
     border-top-left-radius: 8px;
     padding-left: .3em;
   }
+  .draft .branch-header {
+    background: #dedfb5;
+  }
   .branch-header:hover {
     background: #ccc;
   }
