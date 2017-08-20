@@ -150,10 +150,8 @@ module.exports = function(config, cb) {
       }
     })
 
-    const tree = cb(ssb, drafts, root, (err, el) =>{
-      if (err) throw err
-      treeColumn.appendChild(el)
-    })
+    const tree = Tree(ssb, drafts, root)
+    treeColumn.appendChild(tree)
 
     revisionsColumn.querySelector('.toolbar').appendChild(
       h('span.selection', tree.selection)
