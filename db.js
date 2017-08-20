@@ -86,24 +86,29 @@ module.exports = function(ssb, drafts) {
     )
   }
 
-  function branches(root) {
-    return function() {
-      return pull(
-         many([
-          root && ref.type(root) ? pull(
-            ssb.links({
-              rel: 'branch',
-              dest: root,
-              keys: true,
-              values: true
-            }),
-            pull.unique('key')
-          ) : pull.empty(),
-          drafts.byBranch(root)
-        ]),
-        filterRevisions()
-      )
-    }
+  function branches(root, opts) {
+    opts = opts || {}
+    let sync = opts.sync ? 2 : 0
+    return pull(
+       many([
+        root && ref.type(root) ? pull(
+          ssb.links(Object.assign({}, opts, {
+            rel: 'branch',
+            dest: root,
+            keys: true,
+            values: true
+          })),
+          pull.unique('key')
+        ) : pull.empty(),
+        drafts.byBranch(root, opts)
+      ]),
+      pull.filter( x => {
+        // only let the last expected sync pass through
+        if (sync && x.sync) return (!--sync)
+        return true
+      })
+      //filterRevisions()
+    )
   }
 
   function getPrototypeChain(key, result, cb) {

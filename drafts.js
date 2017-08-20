@@ -101,10 +101,12 @@ module.exports = function () {
       })
     },
 
-    byBranch: function(branch) {
+    byBranch: function(branch, opts) {
+      opts = opts || {}
       return pull(
-        pl.read(db, {min: `~BRANCH~${branch||""}`, max: `~BRANCH~${branch||""}~~`}),
+        pl.read(db, Object.assign({}, opts, {min: `~BRANCH~${branch||""}`, max: `~BRANCH~${branch||""}~~`})),
         pull.asyncMap(function (e, cb) {
+          if (e.sync) return cb(null, e)
           db.get(e.value, function (err, value) {
             if (err) return cb(err)
             cb(null, {key: e.value, value: tryToParse(value)})
@@ -113,9 +115,10 @@ module.exports = function () {
       )
     },
 
-    byRevisionRoot: function(root) {
+    byRevisionRoot: function(root, opts) {
+      opts = opts || {}
       return pull(
-        pl.read(db, {min: `~REVROOT~${root||""}`, max: `~REVROOT~${root||""}~~`}),
+        pl.read(db, Object.assign({}, opts, {min: `~REVROOT~${root||""}`, max: `~REVROOT~${root||""}~~`})),
         pull.asyncMap(function (e, cb) {
           db.get(e.value, function (err, value) {
             if (err) return cb(err)
