@@ -34,7 +34,7 @@ module.exports = function(config, cb) {
       If you have not done already, please add your public key to sbot's master array:
 
       "master": [
-        "@${keys.public}"
+        "@${config.keys.public}"
       ]
 
       in ${process.env.HOME + '/.' + process.env.ssb_appname + '/config'}
@@ -320,7 +320,7 @@ module.exports = function(config, cb) {
         }
       }
     })
-    if (cb) cb(null, ssb)
+    if (cb) cb(null, ssb, drafts, root)
   })
 }
 
