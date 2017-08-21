@@ -50,7 +50,7 @@ module.exports = function(ssb, drafts) {
   
   // get latest revision of given revisionRoot
   // (including drafts)
-  function get(key, cb) {
+  function getLatest(key, cb) {
     if (!key) return cb(new Error('no key specified'))
     pull(
       many([
@@ -106,7 +106,7 @@ module.exports = function(ssb, drafts) {
   }
 
   function getPrototypeChain(key, result, cb) {
-    get(key, (err, msg)=>{
+    getLatest(key, (err, msg)=>{
       if (err) return cb(err)
       result.unshift(msg)
       let p
@@ -126,7 +126,7 @@ module.exports = function(ssb, drafts) {
   }
   
   return {
-    get,
+    getLatest,
     getPrototypeChain: function (key, cb) {getPrototypeChain(key, [], cb)},
     getReduced,
     branches
