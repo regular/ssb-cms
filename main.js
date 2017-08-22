@@ -294,25 +294,22 @@ module.exports = function(config, cb) {
         let revisionBranch = revs.selection()
         // get the post branch so that the tree view can detect the revision
         getMessageBranch(revisionBranch, (err, branch)=>{
+          function gotBranch(branch) {
+            drafts.create(msgString, branch, revisionRoot, revisionBranch, (err, key, value)=>{
+              if (err) return console.error(err)
+              revs.add({key, value})
+              ignoreRevsSelectionChanges = true
+              revs.selection(key)
+              ignoreRevsSelectionChanges = false
+              //tree.update(tree.selection(), value)
+            })
+          }
           if (branch) return gotBranch(branch)
           getMessageBranch(revisionRoot, (err, branch)=>{
             if (err) console.error(err)
             gotBranch(branch)
           })
         })
-        function gotBranch(branch) {
-          drafts.create(msgString, branch, revisionRoot, revisionBranch, (err, key)=>{
-            if (err) return console.error(err)
-            revs.add({key: key, value: {msgString, revisionBranch}})
-            ignoreRevsSelectionChanges = true
-            revs.selection(key)
-            ignoreRevsSelectionChanges = false
-            drafts.get( key, (err, value)=>{
-              if (err) throw err
-              tree.update(tree.selection(), value)
-            })
-          })
-        }
       }
     })
     if (cb) cb(null, ssb, drafts, root)

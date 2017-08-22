@@ -58,17 +58,17 @@ module.exports = function () {
     },
     create: function(msgString, branch, revisionRoot, revisionBranch, cb) {
       const key = 'draft-' + crypto.randomBytes(16).toString('base64')
-      pull(
-        pull.values([{
+      let value = {
+        revisionRoot,
+        revisionBranch,
+        branch,
+        msgString
+      }
+      pull( pull.values([{
           type: 'put',
-          key: key,
-          value: {
-            revisionRoot,
-            revisionBranch,
-            branch,
-            msgString
-          }
-        }, {
+          key,
+          value
+        } , {
           type: 'put',
           key: `~BRANCH~${branch || ''}~${key}`,
           value: key
@@ -78,7 +78,8 @@ module.exports = function () {
           value: key
         }]),
         pl.write(db, (err)=>{
-          cb(err, key)
+          value.draft = true
+          cb(err, key, value)
         })
       )
     },

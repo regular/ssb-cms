@@ -82,12 +82,14 @@ module.exports = function(ssb, drafts, root) {
           h('span.msgNode', [ // TODO: do we need this?
             h('span.type-key', [
               h('span.type', node.type),
-              h('a.node', {
+              h('a', {
+                classList: selection() === node.id ? ['node', 'selected'] : ['node'],
                 href: `#${node.id}`
               },
                 h('span.name', node.label)
               )
             ]),
+            when(node.unsaved, h('span', '✎')),
             h('span.buttons', [
               when(node.open, h('button.add', _click(addNode, [node]), 'add' )),
               when(!isDraft(node.id), h('button.clone', _click(cloneNode, [node]), 'clone' )),
@@ -104,7 +106,6 @@ module.exports = function(ssb, drafts, root) {
     let drain
     pull(
       ssb.cms.branches(root, {live: true, sync: true}),
-      pull.through(console.log),
       pull.filter( x=>{
         if (x.sync) {
           syncedCb(null)
@@ -112,11 +113,53 @@ module.exports = function(ssb, drafts, root) {
         }
         return true
       }),
-      pull.map( ({key, value})=>{
-        return makeNode(key, value)
-      }),
-      drain = pull.drain( (node)=>{
-        mutantArray.push(node)
+
+      drain = pull.drain( ({key, value}) => {
+        let revRoot = value.content && value.content.revisionRoot || key
+        // do we have a child for that revRoot yet?
+        let child = mutantArray.find( x=> x.id === revRoot )
+        if (!child) {
+          let node = makeNode(revRoot, value)
+          node.unsaved.set(isDraft(key))
+          node.head =  node.tail = key
+          node.queue = []
+          node.revBranch = value.content && value.content.revisionBranch
+          return mutantArray.push(node)
+        }
+        // we have a child for that revRoot already,
+        // Can we fit the new puzzle piece on one end or
+        // the other?
+        function fit(node) {
+          let success = false
+          node.queue = node.queue.filter( x => {
+            let revBranch = x.value.content && x.value.content.revisionBranch
+            // does it fit before the node?
+            if (node.revBranch === x.key) {
+              success = true
+              node.revBranch = revBranch
+              node.tail = key
+              return false
+            } else {
+              // does it fit after the node?
+              if (revBranch === node.head) {
+                success = true
+                node.msg.set(x.value)
+                node.unsaved.set(isDraft(x.key))
+                if (!isDraft(x.key)) {
+                  node.head = x.key
+                }
+                return false
+              }
+            }
+            return true
+          })
+          return success
+        }
+        child.queue.push({key, value})
+        while(fit(child) && child.queue.length);
+
+        // TODO: handle forks
+        // TODO: handle re-parenting
       }, (err)=>{
         console.log('stream ended', err)
       })
@@ -128,7 +171,15 @@ module.exports = function(ssb, drafts, root) {
     let dict = Dict(msg)
     let label = computed([dict], x=>x.content && x.content.name)
     let type = computed([dict], x=>x.content && x.content.type)
-    let node = Struct({msg: dict, label, type, open: false, loaded: false, children: MutantArray()})
+    let node = Struct({
+      msg: dict, 
+      label,
+      type,
+      open: false,
+      unsaved: false,
+      loaded: false,
+      children: MutantArray()
+    })
     node.id = (msg.content && msg.content.revisionRoot) || key
     let abortStream
     node.open( (isOpen)=> {
@@ -154,7 +205,6 @@ module.exports = function(ssb, drafts, root) {
 
     function r(children, nodePath, cb) {
       let child = children.find( x=>x.id === nodePath[0])
-      console.log('- path', nodePath, '\nchild', child)
       if (!child) return cb(new Error(`tree node not found at path: $(nodePath.join(' -> '))}`))
       nodePath.shift()
       if (!nodePath.length) return cb(null, child)
@@ -187,7 +237,6 @@ module.exports = function(ssb, drafts, root) {
   })
 
   function ancestors(msg, result, cb) {
-    console.log('msg', msg)
     let branch = msg.content && msg.content.branch
     if (branch === config.sbot.cms.root) return cb(null, result)
     if (branch) {
@@ -201,7 +250,7 @@ module.exports = function(ssb, drafts, root) {
   
   selection( (id)=>{
     if (!id) return
-    // TODO: fastpath for when the TreeNode is rendered
+    // TODO: fastpath for when the TreeNode is already rendered
     ssb.cms.getMessageOrDraft(id, (err, msg) => {
       if (err) return console.error(err)
       let treeNodeId = msg.content && msg.content.revisionRoot || id
@@ -210,7 +259,6 @@ module.exports = function(ssb, drafts, root) {
         ensureVisible(nodePath, ()=>{
           treeView.querySelectorAll('.treeView .selected').forEach( el => el.classList.remove('selected') )
           let el = treeView.querySelector(`a.node[href="#${id}"]`)
-          console.log('selected', el)
           if (el) el.classList.add('selected')
         })
       })
@@ -223,7 +271,20 @@ module.exports = function(ssb, drafts, root) {
     //cb(null, treeView)
   })
 
+  function findNode(key, children) {
+    let node = children.find( x=>x.id === key )
+    if (node) return node
+    children.find( x=>{
+      return node = findNode(key, x.children)
+    })
+    return node
+  }
+
   treeView.selection = selection
+  treeView.update = function(key, value) {
+    let node = findNode(key, roots)
+    if (node) node.msg.set(value)
+  }
   return treeView
 }
 
