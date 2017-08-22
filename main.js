@@ -210,14 +210,14 @@ module.exports = function(config, cb) {
       ssb.cms.getReduced(key, (err, msg)=>{
         console.log('reduced', err, msg)
         if (err) throw err  
-        let el = editor.renderPreviewEditor(msg)
+        let el = editor.renderPreviewEditor(msg, [key])
         fullscreenPreview.appendChild(el)
       })
     }
 
     function loadIntoEditor(text) {
       ignoreChanges = true
-      editor.setValue(text)
+      editor.setValue(text, tree.selection())
       editor.clean(true)
       editor.clearHistory()
       ignoreChanges = false

@@ -96,7 +96,7 @@ module.exports = function(ssb, drafts) {
   function branches(root, opts) {
     opts = opts || {}
     let sync = opts.sync ? 2 : 0
-    return pull(
+    let source = pull(
        many([
         root && ref.type(root) ? pull(
           ssb.links(Object.assign({}, opts, {
@@ -114,7 +114,10 @@ module.exports = function(ssb, drafts) {
         if (sync && x.sync) return (!--sync)
         return true
       })
-      //filterRevisions()
+    )
+    return opts.live ? source : pull(
+      source,
+      filterRevisions()
     )
   }
 

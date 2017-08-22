@@ -18,7 +18,6 @@ let renderMenu = ho(
   Menubar().renderItem
 )
 
-
 module.exports = function(parent, ssb, config) {
   config = config || {}
   let customRender = config.editor && config.editor.render || function () {}
@@ -72,7 +71,7 @@ module.exports = function(parent, ssb, config) {
   editor.on('changes', (e)=>change(e) )
 
   let previewEditor
-  function showPreviewEditor(value) {
+  function showPreviewEditor(value, key) {
     removePreviewEditor()
     // only render preview if our value is parsable JSON
     let msg
@@ -82,7 +81,7 @@ module.exports = function(parent, ssb, config) {
       console.error('parsing failed', value)
       return
     }
-    previewEditor = renderPreviewEditor(msg)
+    previewEditor = renderPreviewEditor(msg, [key])
     if (previewEditor) {
       previewContainer.appendChild(previewEditor)
     }
@@ -115,9 +114,9 @@ module.exports = function(parent, ssb, config) {
   return {
     change,
     clean: editor.clean,
-    setValue: (value) => {
+    setValue: (value, key) => {
       if (value && previewEditor) {
-        showPreviewEditor(value)
+        showPreviewEditor(value, key)
       }
       editor.setValue(value)
     },
@@ -127,7 +126,6 @@ module.exports = function(parent, ssb, config) {
     adjustSize: ()=>editor.show()
   }
 }
-
 
 module.exports.css = ()=>  `
   .editor-container {
@@ -141,6 +139,7 @@ module.exports.css = ()=>  `
     flex: 1 0 100%;
   }
   .editor-container.preview-wrapper {
+    background: #eee;
     overflow: scroll;
   }
   .editor-container>.toolbar {
