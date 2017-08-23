@@ -109,6 +109,10 @@ module.exports = function () {
         pl.read(db, Object.assign({}, opts, {min: `~BRANCH~${branch||""}`, max: `~BRANCH~${branch||""}~~`})),
         pull.asyncMap(function (e, cb) {
           if (e.sync) return cb(null, e)
+          if (e.type !== 'put') {
+            let key = e.key.substr(e.key.lastIndexOf('~')+1)
+            return cb(null, {key, value: null, type: e.type})
+          }
           db.get(e.value, function (err, value) {
             if (err) return cb(err)
             cb(null, {key: e.value, value: tryToParse(value)})

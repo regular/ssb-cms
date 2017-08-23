@@ -37,7 +37,6 @@ module.exports = function(ssb, drafts, root) {
     }
     let json = JSON.stringify(value, null, 2)
     drafts.create(JSON.stringify(value, null, 2), node.id, null, null, (err, key)=>{
-      console.log(`draft ${key} added:`, json)
     })
   }
 
@@ -45,19 +44,16 @@ module.exports = function(ssb, drafts, root) {
     let content = node.msg().content
     let json = JSON.stringify(node.msg(), null, 2)
     drafts.create(json, content.branch, null, null, (err, key)=>{
-      console.log(`draft ${key} added:`, json)
     })
   }
   
   function discardDraft(node) {
     drafts.remove(node.id, (err)=>{
       if (err) throw err
-      console.log('Removed draft', node.id)
     })
   }
 
   function html(node) {
-    //console.log('rendering ', node)
 
     function _click(handler, args) {
       return { 'ev-click': send( e => handler.apply(e, args) ) }
@@ -107,15 +103,13 @@ module.exports = function(ssb, drafts, root) {
     pull(
       ssb.cms.branches(root, {live: true, sync: true}),
       pull.filter( x=>{
-        if (x.sync) {
-          syncedCb(null)
-          return false
-        }
-        return true
+        if (x.sync) syncedCb(null)
+        return !x.sync
       }),
 
-      drain = pull.drain( ({key, value}) => {
-        let revRoot = value.content && value.content.revisionRoot || key
+      drain = pull.drain( (kv) => {
+        let {key, value} = kv
+        let revRoot = value && value.content && value.content.revisionRoot || key
         // do we have a child for that revRoot yet?
         let child = mutantArray.find( x=> x.id === revRoot )
         if (!child) {
@@ -127,6 +121,12 @@ module.exports = function(ssb, drafts, root) {
           return mutantArray.push(node)
         }
         // we have a child for that revRoot already,
+        // Is this a request to remove a draft?
+        if (kv.type === 'del') {
+          mutantArray.delete(child)
+          return
+        }
+
         // Can we fit the new puzzle piece on one end or
         // the other?
         function fit(node) {

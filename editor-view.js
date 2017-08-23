@@ -23,6 +23,10 @@ module.exports = function(parent, ssb, config) {
   let customRender = config.editor && config.editor.render || function () {}
 
   let renderPreviewEditor = ho(
+    function(value) {
+      if (typeof value === 'undefined') return h('span.undefined', '[undefined]')
+      if (value === null) return h('span.null', '[null]')
+    },
     customRender(ssb),
     source(),
     array(),
