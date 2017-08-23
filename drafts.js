@@ -4,17 +4,17 @@ const pull = require('pull-stream')
 const crypto = require('crypto')
 
 function tryToParse(value) {
+  let msg = value
   try {
-    let msg = JSON.parse(value.msgString)
+    msg = JSON.parse(value.msgString)
     // overwrite crucial values
-    let content = (msg.content = msg.content || {})
-    content.revisionRoot = value.revisionRoot
-    content.revisionBranch = value.revisionBranch
-    content.branch = value.branch
-    msg.draft = true
-    return msg
-  } catch(e) {}
-  return value
+  } catch(e) { }
+  let content = (msg.content = msg.content || {})
+  content.revisionRoot = value.revisionRoot
+  content.revisionBranch = value.revisionBranch
+  content.branch = value.branch
+  msg.draft = true
+  return msg
 }
 
 module.exports = function () {
