@@ -332,6 +332,7 @@ module.exports.css = function() {
     overflow: hidden;
   }
   .fullscreen-preview {
+    background-color: #1a1a1a;
     position: absolute;
   }
   .ui {

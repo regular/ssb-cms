@@ -124,7 +124,7 @@ module.exports = function(ssb, drafts) {
   function getPrototypeChain(key, result, cb) {
     getLatest(key, (err, msg)=>{
       if (err) return cb(err)
-      result.unshift(msg)
+      result.unshift({key, msg})
       let p
       if (p = msg.content.prototype) {
         if (result.indexOf(p) !== -1) return cb(new Error('Cyclic prototype chain'))
@@ -135,9 +135,14 @@ module.exports = function(ssb, drafts) {
   }
 
   function getReduced(key, cb) {
-    getPrototypeChain(key, [{}], (err, chain)=>{
+    getPrototypeChain(key, [], (err, chain)=>{
       if (err) return cb(err)
-      cb(null, deepAssign.apply(null, chain))
+      let msgs = chain.map( x=>x.msg)
+      msgs.unshift({})
+      let msg = deepAssign.apply(null, msgs)
+      msg.content = msg.content || {}
+      msg.content.prototype = chain.map( x=>x.key )
+      cb(null, msg)
     })
   }
   

@@ -113,6 +113,7 @@ module.exports = function(ssb, drafts, root) {
         // do we have a child for that revRoot yet?
         let child = mutantArray.find( x=> x.id === revRoot )
         if (!child) {
+          if (!value) return console.error('Trying to make a node without a value. This is bad.')
           let node = makeNode(revRoot, value)
           node.unsaved.set(isDraft(key))
           node.head =  node.tail = key
