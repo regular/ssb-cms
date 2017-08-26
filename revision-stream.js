@@ -61,13 +61,10 @@ function links(kv) {
 //  0 == there's no connection
 
 function isLinked(child, x) {
-  console.log('trying to fit', x.key)
   // does b fit before a?
   let aLinks = links(child)
   let bLinks = links(x)
-  console.log('mandatory links from', x.key, bLinks)
-  if (aLinks && includesAll(x.key, aLinks)) {
-    console.log(x.key, 'fits before', child.key)
+  if (includesAll(x.key, aLinks)) {
     return -1
   } else if (bLinks && includesAll(bLinks, child.heads)) {
     // does b fit at one (or more) of a's heads?
@@ -76,7 +73,6 @@ function isLinked(child, x) {
       // or it needs to have `valueBefireDraft` set.
       if (child.key !== x.key && !child.valueBeforeDraft) return 0
     }
-    console.log(x.key, 'fits behind', child.key)
     return +1
   }
   return 0
@@ -112,14 +108,11 @@ module.exports = function updates(opts) {
         let {key, value} = kv
 
         if (ignore.includes(key)) {
-          console.log('ingnoring', key)
           if (kv.type === 'del') ignore = ignore.filter( k => k !== key)
-          console.log('new ignore list', ignore)
           return
         }
         
       let revRoot = value && value.content && value.content.revisionRoot || key
-        console.log('key', key, 'revRoot', revRoot)
         // do we have a child for that revRoot yet?
         let child
         if (kv.type !== 'del') {
@@ -136,25 +129,20 @@ module.exports = function updates(opts) {
               queue: [],
               links: links(kv)
             }
-            console.log('new child', revRoot)
-            console.log('new child links to past', child.links)
             if (value.content['from-draft']) {
               // this message was created from a draft,
               // if we see that draft later (it might still exist)
               // we just ignore it
               ignore.push(value.content['from-draft'])
-              console.log('new ignore list', ignore)
             }
             if (!doBuffer) out.push(Object.assign({}, child))
             return
           }
         } else {
-          console.log('del', key)
           // This is a request to remove a draft
           // type === 'del' events have no `value` and therefor no
           // revRoot. We need to find the child that has this draft as a head
           let entry = Object.entries(children).find( ([k,v])=>includesAll(key, v.heads) )
-          console.log('child', entry)
           if (!entry) throw Error("Can't find child with draft", key)
           child = entry[1]
         }
@@ -173,7 +161,6 @@ module.exports = function updates(opts) {
               // then it creates a new head.
               if (links(x) && includesAll(links(x), child.internals)) {
                 child.heads = append(child.heads, x.key, {arrayResult: true})
-                console.log(x.key, 'fits internally, new heads', child.heads)
                 // TODO: overwrite node value, if claimed time is grater
                 if (!doBuffer) out.push(Object.assign({}, child))
                 return false
@@ -186,13 +173,11 @@ module.exports = function updates(opts) {
               // if we see that draft later (it might still exist)
               // we just ignore it
               ignore.push(x.value.content['from-draft'])
-              console.log('new ignore list', ignore)
             }
 
             if (pos === -1) { 
               success = true
               child.links = replace(child.links || [], x.key, links(x), {moveTo: child.internals})
-              console.log('new internals', child.internals)
               if (isDraft(child.tail)) {
                 child.valueBeforeDraft = x.value
               }
@@ -208,13 +193,8 @@ module.exports = function updates(opts) {
                 delete children[child.key]
                 if (!doBuffer) out.push(x)
               } else {
-                console.log('valueBeforeDraft', child.valueBeforeDraft)
-                console.log('heads before', child.heads)
-                console.log('internals before', child.internals)
                 child.internals = replace(child.internals, child.value.content.revisionBranch, [], {arrayResult: true})
                 child.heads = replace(child.heads, x.key, child.value.content.revisionBranch, {arrayResult: true})
-                console.log('heads after', child.heads)
-                console.log('internals after', child.internals)
                 child.value = child.valueBeforeDraft
                 delete child.valueBeforeDraft
                 child.unsaved = false
@@ -231,8 +211,6 @@ module.exports = function updates(opts) {
 
             child.internals = child.internals.slice() // copy array, in gets mutated in place by moveTo and that alters data we already pushed downstream.
             child.heads = replace(child.heads || [], links(x) || [], x.key, {arrayResult: true, moveTo: child.internals})
-            console.log('new internals', child.internals)
-            console.log('new heads:', child.heads)
             if (!doBuffer) out.push(Object.assign({}, child))
             return false // remove from queue
           })
@@ -241,7 +219,18 @@ module.exports = function updates(opts) {
         child.queue.push(kv)
         while(fit() && child.queue.length);
 
+        // TODO: option to emit pos: 'tail' messages.
+        // (Currently we only emit pos: 'head' messages, that
+        // update the node's state. (tail messages are needed for
+        // the revisions-view)
+
         // TODO: handle re-parenting
+        //  branch: <new parent's revisionRoot>
+        //  moved-from: <old parent's revisionRoot>
+        //
+        //  ssb.links( many(rel: branch, rel: moved-from)
+        //  If moved-from === ourBranch, put child key on ignoreRevRoot list, remove child, emit 'del' <child.key>
+ 
       }, (err)=>{
         out.end(err)
       })
