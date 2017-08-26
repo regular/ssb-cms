@@ -49,7 +49,7 @@ function append(container, wanted) {
 function links(kv) {
   if (kv.type === 'del') return [kv.key]
   let links = kv.value.content && kv.value.content.revisionBranch
-  links = append(links || [], kv.value.content && kv.value.content.fromDraft || [], {arrayResult: true})
+  links = append(links || [], kv.value.content && kv.value.content['from-draft'] || [], {arrayResult: true})
   return links
 }
 
@@ -84,6 +84,7 @@ module.exports = function updates(opts) {
   return function(read) {
     opts = opts || {}
     let children = []
+    let ignore = []
     let doBuffer = opts.sync // in sync mode, we buffer until we see a sync
     let drain
     let out = pushable(true, function (err) {
@@ -107,7 +108,15 @@ module.exports = function updates(opts) {
 
       drain = pull.drain( (kv) => {
         let {key, value} = kv
-        let revRoot = value && value.content && value.content.revisionRoot || key
+
+        if (ignore.includes(key)) {
+          console.log('ingnoring', key)
+          if (kv.type === 'del') ignore = ignore.filter( k => k !== key)
+          console.log('new ignore list', ignore)
+          return
+        }
+        
+      let revRoot = value && value.content && value.content.revisionRoot || key
         console.log('key', key, 'revRoot', revRoot)
         // do we have a child for that revRoot yet?
         let child
@@ -122,11 +131,17 @@ module.exports = function updates(opts) {
               heads: [key],
               tail: key,
               queue: [],
-              ignore: [],
               links: links(kv)
             }
             console.log('new child', revRoot)
             console.log('new child links to past', child.links)
+            if (value.content['from-draft']) {
+              // this message was created from a draft,
+              // if we see that draft later (it might still exist)
+              // we just ignore it
+              ignore.push(value.content['from-draft'])
+              console.log('new ignore list', ignore)
+            }
             if (!doBuffer) out.push(Object.assign({}, child))
             return
           }
@@ -142,11 +157,6 @@ module.exports = function updates(opts) {
         }
 
         // we have a child for that revRoot already
-        if (child.ignore.includes(key)) {
-          console.log('ingnoring', key)
-          child.ignore = child.ignore.filter( k => k !== key)
-          return
-        }
 
         // Can we fit one of the  unattached puzzle pieces on one end or
         // the other?
@@ -156,6 +166,14 @@ module.exports = function updates(opts) {
 
             let pos = isLinked(child, x)
             if (!pos) return true // keep in queue
+
+            if (x.value && x.value.content['from-draft']) {
+              // this message was created from a draft,
+              // if we see that draft later (it might still exist)
+              // we just ignore it
+              ignore.push(x.value.content['from-draft'])
+              console.log('new ignore list', ignore)
+            }
 
             if (pos === -1) { 
               success = true
@@ -193,12 +211,6 @@ module.exports = function updates(opts) {
             } else child.unsaved = false
             child.value = x.value
 
-            if (x.value.fromDraft) {
-              // this message was created from a draft,
-              // if we see that draft later (it might still exist)
-              // we just ignore it
-              child.ignore.push(x.value.fromDraft)
-            }
             child.heads = replace(child.heads || [], links(x) || [], x.key, {arrayResult: true})
             console.log('new heads:', child.heads)
             if (!doBuffer) out.push(Object.assign({}, child))

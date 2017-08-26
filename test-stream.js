@@ -450,3 +450,216 @@ test('draft-a1, del draft-a1, new a', (t)=>{
     })
   )
 })
+
+test('draft-a, del draft-a', (t)=>{
+  const kvs = [
+    { key: 'draft-a', value: {
+        content: {
+          text: 'foo'
+    } } },
+    { key: 'draft-a', type: 'del'  },
+  ]
+  pull(
+    pull.values(kvs),
+    s(),
+    pull.collect( (err, updates) => {
+      t.notOk(err)
+      t.equal(updates.length, 2)
+
+      t.deepEqual(updates[0].value.content, {
+        text: 'foo'
+      })
+      t.equal(updates[0].unsaved, true)
+      t.deepEqual(updates[0].heads, ['draft-a'])
+
+      t.equal(updates[1].type, 'del')
+      t.equal(updates[1].key, 'draft-a')
+
+      t.end()
+    })
+  )
+})
+
+test('draft-a, del draft-a, new a', (t)=>{
+  const kvs = [
+    { key: 'draft-a', value: {
+        content: {
+          text: 'foo'
+    } } },
+    { key: 'draft-a', type: 'del'  },
+    { key: 'a', value: {
+        content: {
+          text: 'bar'
+    } } },
+  ]
+  pull(
+    pull.values(kvs),
+    s(),
+    pull.collect( (err, updates) => {
+      t.notOk(err)
+      t.equal(updates.length, 3)
+
+      t.deepEqual(updates[0].value.content, {
+        text: 'foo'
+      })
+      t.equal(updates[0].unsaved, true)
+      t.deepEqual(updates[0].heads, ['draft-a'])
+
+      t.equal(updates[1].type, 'del')
+      t.equal(updates[1].key, 'draft-a')
+
+      t.deepEqual(updates[2].value.content, {
+        text: 'bar'
+      })
+      t.equal(updates[2].unsaved, false)
+      t.deepEqual(updates[2].heads, ['a'])
+      t.end()
+    })
+  )
+})
+
+test('draft-a, del draft-a, new a-from-draft-a', (t)=>{
+  const kvs = [
+    { key: 'draft-a', value: {
+        content: {
+          text: 'foo'
+    } } },
+    { key: 'draft-a', type: 'del'  },
+    { key: 'a', value: {
+        content: {
+          'from-draft': 'draft-a',
+          text: 'bar'
+    } } },
+  ]
+  pull(
+    pull.values(kvs),
+    s(),
+    pull.collect( (err, updates) => {
+      t.notOk(err)
+      t.equal(updates.length, 3)
+
+      t.deepEqual(updates[0].value.content, {
+        text: 'foo'
+      })
+      t.equal(updates[0].unsaved, true)
+      t.deepEqual(updates[0].heads, ['draft-a'])
+
+      t.equal(updates[1].type, 'del')
+      t.equal(updates[1].key, 'draft-a')
+
+      t.deepEqual(updates[2].value.content, {
+        'from-draft': 'draft-a',
+        text: 'bar'
+      })
+      t.equal(updates[2].unsaved, false)
+      t.deepEqual(updates[2].heads, ['a'])
+      t.end()
+    })
+  )
+})
+
+test('draft-a, new a-from-draft-a, del draft-a', (t)=>{
+  const kvs = [
+    { key: 'draft-a', value: {
+        content: {
+          text: 'foo'
+    } } },
+    { key: 'a', value: {
+        content: {
+          'from-draft': 'draft-a',
+          text: 'bar'
+    } } },
+    { key: 'draft-a', type: 'del'  },
+  ]
+  pull(
+    pull.values(kvs),
+    s(),
+    pull.collect( (err, updates) => {
+      t.notOk(err)
+      t.equal(updates.length, 2)
+
+      t.deepEqual(updates[0].value.content, {
+        text: 'foo'
+      })
+      t.equal(updates[0].unsaved, true)
+      t.deepEqual(updates[0].heads, ['draft-a'])
+
+      t.deepEqual(updates[1].value.content, {
+        'from-draft': 'draft-a',
+        text: 'bar'
+      })
+      t.equal(updates[1].unsaved, false)
+      t.deepEqual(updates[1].heads, ['a'])
+      t.end()
+    })
+  )
+})
+
+test('new a-from-draft-a, draft-a, del draft-a', (t)=>{
+  const kvs = [
+    { key: 'a', value: {
+        content: {
+          'from-draft': 'draft-a',
+          text: 'bar'
+    } } },
+    { key: 'draft-a', value: {
+        content: {
+          text: 'foo'
+    } } },
+    { key: 'draft-a', type: 'del'  },
+  ]
+  pull(
+    pull.values(kvs),
+    s(),
+    pull.collect( (err, updates) => {
+      t.notOk(err)
+      t.equal(updates.length, 1)
+
+      t.deepEqual(updates[0].value.content, {
+        'from-draft': 'draft-a',
+        text: 'bar'
+      })
+      t.equal(updates[0].unsaved, false)
+      t.deepEqual(updates[0].heads, ['a'])
+      t.end()
+    })
+  )
+})
+
+test('rev a1, new a-from-draft-a, draft-a, del draft-a', (t)=>{
+  const kvs = [
+    { key: 'a1', value: {
+        content: {
+          revisionRoot: 'a',
+          revisionBranch: 'a',
+          text: 'baz'
+    } } },
+    { key: 'a', value: {
+        content: {
+          'from-draft': 'draft-a',
+          text: 'bar'
+    } } },
+    { key: 'draft-a', value: {
+        content: {
+          text: 'foo'
+    } } },
+    { key: 'draft-a', type: 'del'  },
+  ]
+  pull(
+    pull.values(kvs),
+    s(),
+    pull.collect( (err, updates) => {
+      t.notOk(err)
+      t.equal(updates.length, 1)
+
+      t.deepEqual(updates[0].value.content, {
+        revisionRoot: 'a',
+        revisionBranch: 'a',
+        text: 'baz'
+      })
+      t.equal(updates[0].unsaved, false)
+      t.deepEqual(updates[0].heads, ['a1'])
+      t.end()
+    })
+  )
+})
