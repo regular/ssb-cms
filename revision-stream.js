@@ -49,16 +49,10 @@ function append(container, wanted) {
   return result
 }
 
-function links(kv, opts) {
-  opts = opts || {}
+function links(kv) {
   if (kv.type === 'del') return [kv.key]
   let links = kv.value.content && kv.value.content.revisionBranch
-  if (opts.fromDraft) {
-    links = append(links || [], kv.value.content && kv.value.content['from-draft'] || [], {arrayResult: true})
-  } else {
-    links = append(links || [], [], {arrayResult: true}) // just for arryifying
-  }
-  return links
+  return links && (Array.isArray(links) ? links : [links])
 }
 
 // Is there a causal link between a and b?
@@ -69,7 +63,7 @@ function links(kv, opts) {
 function isLinked(child, x) {
   console.log('trying to fit', x.key)
   // does b fit before a?
-  let aLinks = links(child, {fromDraft: true})
+  let aLinks = links(child)
   let bLinks = links(x)
   console.log('mandatory links from', x.key, bLinks)
   if (aLinks && includesAll(x.key, aLinks)) {
@@ -140,7 +134,7 @@ module.exports = function updates(opts) {
               internals: [],
               tail: key,
               queue: [],
-              links: links(kv, {fromDraft: true})
+              links: links(kv)
             }
             console.log('new child', revRoot)
             console.log('new child links to past', child.links)
@@ -197,7 +191,7 @@ module.exports = function updates(opts) {
 
             if (pos === -1) { 
               success = true
-              child.links = replace(child.links || [], x.key, links(x, {fromDraft: true}), {moveTo: child.internals})
+              child.links = replace(child.links || [], x.key, links(x), {moveTo: child.internals})
               console.log('new internals', child.internals)
               if (isDraft(child.tail)) {
                 child.valueBeforeDraft = x.value
@@ -236,7 +230,7 @@ module.exports = function updates(opts) {
             child.value = x.value
 
             child.internals = child.internals.slice() // copy array, in gets mutated in place by moveTo and that alters data we already pushed downstream.
-            child.heads = replace(child.heads || [], links(x, {fromDraft: true}) || [], x.key, {arrayResult: true, moveTo: child.internals})
+            child.heads = replace(child.heads || [], links(x) || [], x.key, {arrayResult: true, moveTo: child.internals})
             console.log('new internals', child.internals)
             console.log('new heads:', child.heads)
             if (!doBuffer) out.push(Object.assign({}, child))
