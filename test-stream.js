@@ -411,7 +411,7 @@ test('draft-a2, new a, rev a1, del draft-a2', (t)=>{
   )
 })
 
-test.skip('draft-a1, del draft-a1, new a', (t)=>{
+test('draft-a1, del draft-a1, new a', (t)=>{
   const kvs = [
     { key: 'draft-a1', value: {
         content: {

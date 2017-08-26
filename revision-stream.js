@@ -47,6 +47,7 @@ function append(container, wanted) {
 }
 
 function links(kv) {
+  if (kv.type === 'del') return [kv.key]
   let links = kv.value.content && kv.value.content.revisionBranch
   links = append(links || [], kv.value.content && kv.value.content.fromDraft || [], {arrayResult: true})
   return links
@@ -56,19 +57,23 @@ function links(kv) {
 // +1 == b fits after a (link from b to a)
 // -1 == b fits before a (link from a to b)
 //  0 == there's no connection
-//
 
 function isLinked(child, x) {
   console.log('trying to fit', x.key)
-  let bLinks = links(x)
   let aLinks = links(child)
+  let bLinks = links(x)
   console.log('links from', x.key, bLinks)
-  // does b fit before the a?
+  // does b fit before a?
   if (aLinks && includesAll(x.key, aLinks)) {
     console.log(x.key, 'fits before', child.key)
     return -1
   } else if (bLinks && includesAll(bLinks, child.heads)) {
     // does b fit at one (or more) of a's heads?
+    if (x.type === 'del') {
+      // to delete the draft it either needs to be the rev root,
+      // or it needs to have `valueBefireDraft` set.
+      if (child.key !== x.key && !child.valueBeforeDraft) return 0
+    }
     console.log(x.key, 'fits behind', child.key)
     return +1
   }
@@ -134,25 +139,12 @@ module.exports = function updates(opts) {
           console.log('child', entry)
           if (!entry) throw Error("Can't find child with draft", key)
           child = entry[1]
-          if (child.valueBeforeDraft) {
-            console.log('valueBeforeDraft', child.valueBeforeDraft)
-            console.log('heads before', child.heads)
-            child.heads = replace(child.heads, key, child.value.content.revisionBranch, {arrayResult: true})
-            console.log('heads after', child.heads)
-            child.value = child.valueBeforeDraft
-            delete child.valueBeforeDraft
-            child.unsaved = false
-            if (!doBuffer) out.push(Object.assign({}, child))
-          } else {
-            delete children[child.key]
-            if (!doBuffer) out.push(kv)
-          }
-          return
         }
 
         // we have a child for that revRoot already
         if (child.ignore.includes(key)) {
           console.log('ingnoring', key)
+          child.ignore = child.ignore.filter( k => k !== key)
           return
         }
 
@@ -161,8 +153,10 @@ module.exports = function updates(opts) {
         function fit() {
           let success = false
           child.queue = child.queue.filter( (x)=> {
+
             let pos = isLinked(child, x)
             if (!pos) return true // keep in queue
+
             if (pos === -1) { 
               success = true
               child.links = replace(child.links || [], x.key, links(x))
@@ -170,23 +164,44 @@ module.exports = function updates(opts) {
                 child.valueBeforeDraft = x.value
               }
               child.tail = x.key
-            } else {
-              // x fits after child
-              if (isDraft(x.key)) {
-                child.valueBeforeDraft = child.value
-                child.unsaved = true
-              } else child.unsaved = false
-              child.value = x.value
-              if (x.value.fromDraft) {
-                // this message was created from a draft,
-                // if we see that draft later (it might still exist)
-                // we just ignore it
-                child.ignore.push(x.value.fromDraft)
-              }
-              child.heads = replace(child.heads || [], links(x) || [], x.key, {arrayResult: true})
-              console.log('new heads:', child.heads)
-              if (!doBuffer) out.push(Object.assign({}, child))
+              return false // remove from queue
             }
+
+            // x fits after child
+
+            // is it a draft deletion?
+            if (x.type === 'del') {
+              if (x.key === child.key) {
+                delete children[child.key]
+                if (!doBuffer) out.push(x)
+              } else {
+                console.log('valueBeforeDraft', child.valueBeforeDraft)
+                console.log('heads before', child.heads)
+                child.heads = replace(child.heads, x.key, child.value.content.revisionBranch, {arrayResult: true})
+                console.log('heads after', child.heads)
+                child.value = child.valueBeforeDraft
+                delete child.valueBeforeDraft
+                child.unsaved = false
+                if (!doBuffer) out.push(Object.assign({}, child))
+              }
+              return false
+            }
+          
+            if (isDraft(x.key)) {
+              child.valueBeforeDraft = child.value
+              child.unsaved = true
+            } else child.unsaved = false
+            child.value = x.value
+
+            if (x.value.fromDraft) {
+              // this message was created from a draft,
+              // if we see that draft later (it might still exist)
+              // we just ignore it
+              child.ignore.push(x.value.fromDraft)
+            }
+            child.heads = replace(child.heads || [], links(x) || [], x.key, {arrayResult: true})
+            console.log('new heads:', child.heads)
+            if (!doBuffer) out.push(Object.assign({}, child))
             return false // remove from queue
           })
           return success
