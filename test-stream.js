@@ -558,6 +558,68 @@ test('draft-a, del draft-a, new a-from-draft-a', (t)=>{
   )
 })
 
+test('XXX new a, draft-a1, del draft-a1, rev a1-from-draft-a1', (t)=>{
+  const kvs = [
+    { key: 'a', value: {
+        content: {
+          text: 'a foo'
+    } } },
+    { key: 'draft-a1', value: {
+        content: {
+          revisionRoot: 'a',
+          revisionBranch: 'a',
+          text: 'draft foo'
+    } } },
+    { key: 'draft-a1', type: 'del'  },
+    { key: 'a1', value: {
+        content: {
+          'from-draft': 'draft-a',
+          revisionRoot: 'a',
+          revisionBranch: 'a',
+          text: 'bar'
+    } } },
+  ]
+  pull(
+    pull.values(kvs),
+    s(),
+    pull.collect( (err, updates) => {
+      t.notOk(err)
+      t.equal(updates.length, 4)
+
+      t.deepEqual(updates[0].value.content, {
+        text: 'a foo'
+      })
+      t.equal(updates[0].unsaved, false)
+      t.deepEqual(updates[0].heads, ['a'])
+
+      t.deepEqual(updates[1].value.content, {
+        revisionRoot: 'a',
+        revisionBranch: 'a',
+        text: 'draft foo'
+      })
+      t.equal(updates[1].unsaved, true)
+      t.deepEqual(updates[1].heads, ['draft-a1'])
+      t.deepEqual(updates[1].internals, ['a'])
+
+      t.deepEqual(updates[2].value.content, {
+        text: 'a foo'
+      })
+      t.deepEqual(updates[2].heads, ['a'])
+      t.deepEqual(updates[2].internals, [], 'no internals')
+
+      t.deepEqual(updates[3].value.content, {
+        'from-draft': 'draft-a',
+        revisionRoot: 'a',
+        revisionBranch: 'a',
+        text: 'bar'
+      })
+      t.equal(updates[3].unsaved, false)
+      t.deepEqual(updates[3].heads, ['a1'], 'heads')
+      t.deepEqual(updates[3].internals, ['a'], 'internals')
+      t.end()
+    })
+  )
+})
 test('draft-a, new a-from-draft-a, del draft-a', (t)=>{
   const kvs = [
     { key: 'draft-a', value: {
@@ -659,6 +721,128 @@ test('rev a1, new a-from-draft-a, draft-a, del draft-a', (t)=>{
       })
       t.equal(updates[0].unsaved, false)
       t.deepEqual(updates[0].heads, ['a1'])
+      t.end()
+    })
+  )
+})
+
+test('new a, rev a1, rev a2 (fork)', (t)=>{
+  const kvs = [
+    { key: 'a', value: {
+        content: {
+          text: 'foo'
+    } } },
+    { key: 'a1', value: {
+        content: {
+          revisionRoot: 'a',
+          revisionBranch: 'a',
+          text: 'bar'
+    } } },
+    { key: 'a2', value: {
+        content: {
+          revisionRoot: 'a',
+          revisionBranch: 'a',
+          text: 'baz'
+    } } },
+  ]
+  pull(
+    pull.values(kvs),
+    s(),
+    pull.collect( (err, updates) => {
+      t.notOk(err)
+      t.equal(updates.length, 3)
+
+      t.deepEqual(updates[0].value.content, {
+        text: 'foo'
+      })
+      t.equal(updates[0].unsaved, false)
+      t.deepEqual(updates[0].heads, ['a'])
+
+
+      t.deepEqual(updates[1].value.content, {
+        revisionRoot: 'a',
+        revisionBranch: 'a',
+        text: 'bar'
+      })
+      t.equal(updates[1].unsaved, false)
+      t.deepEqual(updates[1].heads, ['a1'])
+
+      t.deepEqual(updates[2].value.content, {
+        revisionRoot: 'a',
+        revisionBranch: 'a',
+        text: 'bar'
+      })
+      t.equal(updates[2].unsaved, false)
+      t.deepEqual(updates[2].heads, ['a1', 'a2'])
+
+      t.end()
+    })
+  )
+})
+
+test('new a, rev a1, rev a2 (fork), draft-a3 (merge)', (t)=>{
+  const kvs = [
+    { key: 'a', value: {
+        content: {
+          text: 'foo'
+    } } },
+    { key: 'a1', value: {
+        content: {
+          revisionRoot: 'a',
+          revisionBranch: 'a',
+          text: 'bar'
+    } } },
+    { key: 'a2', value: {
+        content: {
+          revisionRoot: 'a',
+          revisionBranch: 'a',
+          text: 'baz'
+    } } },
+    { key: 'draft-a3', value: {
+        content: {
+          revisionRoot: 'a',
+          revisionBranch: ['a1', 'a2'],
+          text: 'merged'
+    } } },
+  ]
+  pull(
+    pull.values(kvs),
+    s(),
+    pull.collect( (err, updates) => {
+      t.notOk(err)
+      t.equal(updates.length, 4)
+
+      t.deepEqual(updates[0].value.content, {
+        text: 'foo'
+      })
+      t.equal(updates[0].unsaved, false)
+      t.deepEqual(updates[0].heads, ['a'])
+
+
+      t.deepEqual(updates[1].value.content, {
+        revisionRoot: 'a',
+        revisionBranch: 'a',
+        text: 'bar'
+      })
+      t.equal(updates[1].unsaved, false)
+      t.deepEqual(updates[1].heads, ['a1'])
+
+      t.deepEqual(updates[2].value.content, {
+        revisionRoot: 'a',
+        revisionBranch: 'a',
+        text: 'bar'
+      })
+      t.equal(updates[2].unsaved, false)
+      t.deepEqual(updates[2].heads, ['a1', 'a2'])
+
+      t.deepEqual(updates[3].value.content, {
+        revisionRoot: 'a',
+        revisionBranch: ['a1', 'a2'],
+        text: 'merged'
+      })
+      t.equal(updates[3].unsaved, true)
+      t.deepEqual(updates[3].heads, ['draft-a3'])
+
       t.end()
     })
   )

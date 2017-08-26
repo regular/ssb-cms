@@ -25,6 +25,9 @@ function replace(container, unwanted, wanted, opts) {
     if (!Array.isArray(container)) container = [container]
     if (!Array.isArray(unwanted)) unwanted = [unwanted]
     if (!Array.isArray(wanted)) wanted = [wanted]
+    if (opts.moveTo) {
+      container.filter( x => unwanted.includes(x) ).forEach( x=>opts.moveTo.push(x) )
+    }
     result = container.filter( x => !unwanted.includes(x) ).concat(wanted)
   }
   if (opts.arrayResult) return result
@@ -46,10 +49,15 @@ function append(container, wanted) {
   return result
 }
 
-function links(kv) {
+function links(kv, opts) {
+  opts = opts || {}
   if (kv.type === 'del') return [kv.key]
   let links = kv.value.content && kv.value.content.revisionBranch
-  links = append(links || [], kv.value.content && kv.value.content['from-draft'] || [], {arrayResult: true})
+  if (opts.fromDraft) {
+    links = append(links || [], kv.value.content && kv.value.content['from-draft'] || [], {arrayResult: true})
+  } else {
+    links = append(links || [], [], {arrayResult: true}) // just for arryifying
+  }
   return links
 }
 
@@ -60,10 +68,10 @@ function links(kv) {
 
 function isLinked(child, x) {
   console.log('trying to fit', x.key)
-  let aLinks = links(child)
-  let bLinks = links(x)
-  console.log('links from', x.key, bLinks)
   // does b fit before a?
+  let aLinks = links(child, {fromDraft: true})
+  let bLinks = links(x)
+  console.log('mandatory links from', x.key, bLinks)
   if (aLinks && includesAll(x.key, aLinks)) {
     console.log(x.key, 'fits before', child.key)
     return -1
@@ -129,9 +137,10 @@ module.exports = function updates(opts) {
               value,
               unsaved: isDraft(key),
               heads: [key],
+              internals: [],
               tail: key,
               queue: [],
-              links: links(kv)
+              links: links(kv, {fromDraft: true})
             }
             console.log('new child', revRoot)
             console.log('new child links to past', child.links)
@@ -165,7 +174,18 @@ module.exports = function updates(opts) {
           child.queue = child.queue.filter( (x)=> {
 
             let pos = isLinked(child, x)
-            if (!pos) return true // keep in queue
+            if (!pos) {
+              // Does it link to one or more internal node?
+              // then it creates a new head.
+              if (links(x) && includesAll(links(x), child.internals)) {
+                child.heads = append(child.heads, x.key, {arrayResult: true})
+                console.log(x.key, 'fits internally, new heads', child.heads)
+                // TODO: overwrite node value, if claimed time is grater
+                if (!doBuffer) out.push(Object.assign({}, child))
+                return false
+              }
+              return true // keep in queue
+            }
 
             if (x.value && x.value.content['from-draft']) {
               // this message was created from a draft,
@@ -177,7 +197,8 @@ module.exports = function updates(opts) {
 
             if (pos === -1) { 
               success = true
-              child.links = replace(child.links || [], x.key, links(x))
+              child.links = replace(child.links || [], x.key, links(x, {fromDraft: true}), {moveTo: child.internals})
+              console.log('new internals', child.internals)
               if (isDraft(child.tail)) {
                 child.valueBeforeDraft = x.value
               }
@@ -195,8 +216,11 @@ module.exports = function updates(opts) {
               } else {
                 console.log('valueBeforeDraft', child.valueBeforeDraft)
                 console.log('heads before', child.heads)
+                console.log('internals before', child.internals)
+                child.internals = replace(child.internals, child.value.content.revisionBranch, [], {arrayResult: true})
                 child.heads = replace(child.heads, x.key, child.value.content.revisionBranch, {arrayResult: true})
                 console.log('heads after', child.heads)
+                console.log('internals after', child.internals)
                 child.value = child.valueBeforeDraft
                 delete child.valueBeforeDraft
                 child.unsaved = false
@@ -211,7 +235,9 @@ module.exports = function updates(opts) {
             } else child.unsaved = false
             child.value = x.value
 
-            child.heads = replace(child.heads || [], links(x) || [], x.key, {arrayResult: true})
+            child.internals = child.internals.slice() // copy array, in gets mutated in place by moveTo and that alters data we already pushed downstream.
+            child.heads = replace(child.heads || [], links(x, {fromDraft: true}) || [], x.key, {arrayResult: true, moveTo: child.internals})
+            console.log('new internals', child.internals)
             console.log('new heads:', child.heads)
             if (!doBuffer) out.push(Object.assign({}, child))
             return false // remove from queue
