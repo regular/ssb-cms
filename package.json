@@ -35,6 +35,7 @@
     "pull-file-reader": "^1.0.2",
     "pull-level": "^2.0.3",
     "pull-many": "^1.0.8",
+    "pull-pushable": "^2.1.1",
     "pull-stream": "^3.6.0",
     "raf": "^3.3.2",
     "setimmediate": "^1.0.5",
@@ -47,8 +48,9 @@
   },
   "devDependencies": {
     "brfs": "^1.4.3",
+    "budo": "^10.0.4",
     "envify": "^4.1.0",
     "jshint": "^2.9.5",
-    "budo": "^10.0.4"
+    "tape": "^4.8.0"
   }
 }
