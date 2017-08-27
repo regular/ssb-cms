@@ -83,7 +83,7 @@ module.exports = function updates(opts) {
     opts = opts || {}
     let children = []
     let ignore = []
-    let doBuffer = opts.sync // in sync mode, we buffer until we see a sync
+    let doBuffer = opts.bufferUntilSync // in sync mode, we buffer until we see a sync
     let drain
     let out = pushable(true, function (err) {
       console.log('out stream closed by client!', err)
@@ -91,14 +91,14 @@ module.exports = function updates(opts) {
     })
     pull(
       read,
-      pull.filter( x=>{
-        if (x.sync) {
+      pull.filter( kv =>{
+        if (kv.sync) {
           // push current children states
           if (doBuffer) {
-            children.forEach( c=> out.push(Object.assign({},c)) )
+            Object.values(children).forEach( c=> out.push(Object.assign({},c)) )
             doBuffer = false
           }
-          out.push(kv)
+          if (opts.sync) out.push(kv)
           return false
         }
         return true

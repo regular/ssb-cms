@@ -847,3 +847,67 @@ test('draft-a3 (merge), rev a1, rev a2 (fork), new a, del draft-a3', (t)=>{
     })
   )
 })
+
+test('buffer until sync: new a, rev b1, new b, sync, rev a1' , (t)=>{
+  const kvs = [
+    { key: 'a', value: {
+        content: {
+          text: 'original a'
+    } } },
+    { key: 'b1', value: {
+        content: {
+          revisionRoot: 'b',
+          revisionBranch: 'b',
+          text: 'revised b'
+    } } },
+    { key: 'b', value: {
+        content: {
+          text: 'original b'
+    } } },
+    {sync: true},
+    { key: 'a1', value: {
+        content: {
+          revisionRoot: 'a',
+          revisionBranch: 'a',
+          text: 'revised a'
+    } } },
+  ]
+  pull(
+    pull.values(kvs),
+    s({sync: true, bufferUntilSync: true}),
+    pull.collect( (err, updates) => {
+      t.notOk(err)
+      t.equal(updates.length, 4)
+
+      t.equal(updates[0].key, 'a')
+      t.deepEqual(updates[0].value.content, {
+        text: "original a"
+      })
+      t.equal(updates[0].unsaved, false)
+      t.deepEqual(updates[0].heads, ['a'])
+
+      t.equal(updates[1].key, 'b')
+      t.deepEqual(updates[1].value.content, {
+        revisionRoot: 'b',
+        revisionBranch: 'b',
+        text: "revised b"
+      })
+      t.equal(updates[1].unsaved, false)
+      t.deepEqual(updates[1].heads, ['b1'])
+
+      t.deepEqual(updates[2], {sync: true})
+
+      t.equal(updates[3].key, 'a')
+      t.deepEqual(updates[3].value.content, {
+        revisionRoot: 'a',
+        revisionBranch: 'a',
+        text: "revised a"
+      })
+      t.equal(updates[3].unsaved, false)
+      t.deepEqual(updates[3].heads, ['a1'])
+
+      t.end()
+    })
+  )
+})
+
