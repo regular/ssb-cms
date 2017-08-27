@@ -4,7 +4,8 @@
   "description": "",
   "main": "main.js",
   "scripts": {
-    "start": "ssb_ws_address=$(sbot ws.getAddress) budo index.js"
+    "start": "ssb_ws_address=$(sbot ws.getAddress) budo index.js",
+    "test": "tape test/*.js"
   },
   "browserify": {
     "transform": [

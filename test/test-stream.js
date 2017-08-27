@@ -1,6 +1,6 @@
 const test = require('tape')
 const pull = require('pull-stream')
-const s = require('./revision-stream')
+const s = require('../update-stream')
 const {includesAll, replace, append} = s
 
 test('includesAll', (t)=>{
