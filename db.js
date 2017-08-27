@@ -50,7 +50,6 @@ function filterRevisions() {
 module.exports = function(ssb, drafts) {
 
   function getMessageOrDraft(id, cb) {
-    console.log('getting', id)
     if (/^draft/.test(id)) drafts.get(id, cb)
     else ssb.get(id, cb)
   }

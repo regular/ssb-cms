@@ -106,7 +106,7 @@ module.exports = function(ssb, drafts, root) {
     let drain
     pull(
       ssb.cms.branches(root, {live: true, sync: true}),
-      updates({sync: true, bufferUntilSync: true}),
+      updates({live: true, sync: true, bufferUntilSync: true}),
       pull.filter( x=>{
         if (x.sync) syncedCb(null)
         return !x.sync
@@ -148,6 +148,7 @@ module.exports = function(ssb, drafts, root) {
         child.forked.set(kv.heads.length > 1)
         child.incomplete.set(kv.tail !== key)
       }, (err)=>{
+        if (err) throw err
         console.log('stream ended', err)
       })
     )

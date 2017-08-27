@@ -118,7 +118,10 @@ module.exports = function updates(opts) {
         if (kv.type !== 'del') {
           child = children[revRoot]
           if (!child) {
-            if (!value) throw new Error('Trying to make a node without a value.')
+            if (!value) {
+              console.error('Trying to make a node without a value.')
+              return
+            }
             child = children[revRoot] = {
               key: revRoot,
               value,

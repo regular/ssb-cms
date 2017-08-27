@@ -6,6 +6,7 @@ const getAvatar = require('ssb-avatar')
 const observable = require('observable')
 const obv = require('obv')
 
+const Status = require('./status-view')
 const Tree = require('./tree-view')
 const Editor = require('./editor-view')
 const Revs = require('./revs-view')
@@ -149,6 +150,9 @@ module.exports = function(config, cb) {
         e.preventDefault()
       }
     })
+
+    const status = Status(ssb, drafts, root)
+    menubar.querySelector('.middle').appendChild(status)
 
     const tree = Tree(ssb, drafts, root)
     treeColumn.appendChild(tree)
