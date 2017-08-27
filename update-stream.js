@@ -111,8 +111,8 @@ module.exports = function updates(opts) {
           if (kv.type === 'del') ignore = ignore.filter( k => k !== key)
           return
         }
-        
-      let revRoot = value && value.content && value.content.revisionRoot || key
+
+        let revRoot = value && value.content && value.content.revisionRoot || key
         // do we have a child for that revRoot yet?
         let child
         if (kv.type !== 'del') {
