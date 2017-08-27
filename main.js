@@ -325,6 +325,7 @@ module.exports.css = function() {
   Menubar.css() +
   Revs.css() +
   Editor.css() +
+  Status.css() +
   `
   body, html {
     height: 100%;

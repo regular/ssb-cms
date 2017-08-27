@@ -17,21 +17,46 @@ const pull = require('pull-stream')
 const updates = require('./update-stream')
 const config = require('../ssb-cms/config')
 
+function isDraft(id) {
+  return /^draft/.test(id)
+}
+
 module.exports = function(ssb, drafts, root) {
   let draftCount = Value(0)
   let draftWarning = Value(false)
 
+  let forkCount = Value(0)
+  let incompleteCount = Value(0)
+  let messageCount = Value(0)
+  let revisionCount = Value(0)
+
   function html() {
     return h('span.status', [
       h('span', [
-        'drafts:',
+        'Drafts:',
         h('span', draftCount),
-        when(draftWarning, h('span', {title: 'draft db corruption'}, '⚠')),
+        when(draftWarning, h('span', {title: 'draft db corruption'}, '⚠'))
+      ]),
+      h('span', [
+        'Objects:',
+        h('span', messageCount)
+      ]),
+      h('span', [
+        'Revisions:',
+        h('span', revisionCount)
+      ]),
+      h('span', [
+        'Forks:',
+        h('span', forkCount)
+      ]),
+      h('span', [
+        'Incomplete:',
+        h('span', incompleteCount)
       ])
     ])
   }
 
-  function streamDrafts() {
+  function watchDrafts() {
     let counts = {
       draft: 0,
       branch: 0,
@@ -62,37 +87,94 @@ module.exports = function(ssb, drafts, root) {
     )
   }
 
-  streamDrafts()
+  function watchMessages(root) {
+    let synced = false
 
-  /*
-  function messages(root, syncedCb) {
+    function f(obs) {
+      let list = {}
+      return function (key, state) {
+        let dirty = false
+        if (key && list[key] && !state) {
+          list[key] = false
+          dirty=true
+        }
+        if (key && !list[key] && state) {
+          list[key] = true
+          dirty = true
+        }
+        if (dirty && synced || !key) obs.set(Object.keys(list).length)
+      }
+    }
+
+    let forked = f(forkCount)
+    let incomplete = f(incompleteCount)
+    let message = f(messageCount)
+    let revision = f(revisionCount)
+
     pull(
       ssb.links({
+        live: true,
+        sync: true,
         rel: 'root',
         dest: root,
         keys: true,
         values: true
-      })),
+      }),
       updates({sync: true, bufferUntilSync: true}),
-      pull.filter( x=>{
-        if (x.sync) syncedCb(null)
+      pull.filter( x => {
+        if (x.sync) {
+          console.log('watch synced')
+          synced = true
+          // update observers
+          forked()
+          incomplete()
+          message()
+          revision()
+        }
         return !x.sync
       }),
 
-      drain = pull.drain( (kv) => {
+      pull.drain( kv => {
+        console.log('watch', kv)
+        let {key, value} = kv
         if (kv.type === 'del') return
-        unsaved(key, kv.unsaved)
-        forked(kv.heads.length > 1)
-        incomplete(key, kv.tail !== kv.key)
-      }, (err)=>{
+        if (isDraft(key)) return
+
+        let content = value.content
+        let revRoot = content && content.revisionRoot
+        let revBranch = content && content.revisionBranch
+        let isMessage = !revRoot || revRoot === key
+        let isRevision = revBranch && revBranch !== revRoot
+        
+        forked(key, kv.heads.length > 1)
+        incomplete(key, kv.tail !== key)
+        message(key, isMessage)
+        kv.internals.concat(kv.heads).forEach( k=>
+          revision(k, true)
+        )
+      }, (err) => {
         console.log('status message stream ended', err)
       })
     )
-    return drain.abort
   }
-  */
+
+  watchDrafts()
+  watchMessages(root)
+
   return html()
 }
 
 module.exports.css = ()=>  `
+  .menubar .status {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    height: 32px;
+    font-size: 12px;
+    padding-left: 1em;
+  }
+  .menubar .status>span {
+    width: 100px;
+    padding-right: 5px;
+  }
 `
