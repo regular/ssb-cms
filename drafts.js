@@ -98,7 +98,7 @@ module.exports = function () {
         if (value.branch) msg.content.branch = value.branch
         if (value.revisionRoot) msg.content.revisionRoot = value.revisionRoot
         if (value.revisionBranch) msg.content.revisionBranch = value.revisionBranch
-        // return cb(null, {key: '%LSJi4fsIbXNSNhlDEnRJFTBqdXWasegtUAKcclhmbXk=.sha256', value: msg})
+        msg.content['from-draft'] = key
         ssb.publish(msg.content, cb)
       })
     },
