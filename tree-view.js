@@ -16,6 +16,8 @@ const resolve = require('mutant/resolve')
 const pull = require('pull-stream')
 const ref = require('ssb-ref')
 
+const updates = require('./update-stream')
+
 const config = require('../ssb-cms/config')
 
 function isDraft(id) {
@@ -85,7 +87,9 @@ module.exports = function(ssb, drafts, root) {
                 h('span.name', node.label)
               )
             ]),
-            when(node.unsaved, h('span', '✎')),
+            when(node.unsaved, h('span', {title: 'draft'}, '✎')),
+            when(node.forked, h('span', {title: 'conflicting updates, plese merge'}, '⑃')),
+            when(node.incomplete, h('span', {title: 'incomplete history'}, '⚠')),
             h('span.buttons', [
               when(node.open, h('button.add', _click(addNode, [node]), 'add' )),
               when(!isDraft(node.id), h('button.clone', _click(cloneNode, [node]), 'clone' )),
@@ -102,6 +106,7 @@ module.exports = function(ssb, drafts, root) {
     let drain
     pull(
       ssb.cms.branches(root, {live: true, sync: true}),
+      updates({sync: true, bufferUntilSync: true}),
       pull.filter( x=>{
         if (x.sync) syncedCb(null)
         return !x.sync
@@ -109,58 +114,39 @@ module.exports = function(ssb, drafts, root) {
 
       drain = pull.drain( (kv) => {
         let {key, value} = kv
-        let revRoot = value && value.content && value.content.revisionRoot || key
         // do we have a child for that revRoot yet?
-        let child = mutantArray.find( x=> x.id === revRoot )
-        if (!child) {
-          if (!value) return console.error('Trying to make a node without a value. This is bad.')
-          let node = makeNode(revRoot, value)
-          node.unsaved.set(isDraft(key))
-          node.head =  node.tail = key
-          node.queue = []
-          node.revBranch = value.content && value.content.revisionBranch
-          return mutantArray.push(node)
-        }
-        // we have a child for that revRoot already,
+        let child = mutantArray.find( x=> x.id === key )
+  
         // Is this a request to remove a draft?
         if (kv.type === 'del') {
-          mutantArray.delete(child)
+          if (child) {
+            mutantArray.delete(child)
+          } else console.error('Request to delete non-existing child', key)
           return
         }
 
-        // Can we fit the new puzzle piece on one end or
-        // the other?
-        function fit(node) {
-          let success = false
-          node.queue = node.queue.filter( x => {
-            let revBranch = x.value.content && x.value.content.revisionBranch
-            // does it fit before the node?
-            if (node.revBranch === x.key) {
-              success = true
-              node.revBranch = revBranch
-              node.tail = key
-              return false
-            } else {
-              // does it fit after the node?
-              if (revBranch === node.head) {
-                success = true
-                node.msg.set(x.value)
-                node.unsaved.set(isDraft(x.key))
-                if (!isDraft(x.key)) {
-                  node.head = x.key
-                }
-                return false
-              }
-            }
-            return true
-          })
-          return success
-        }
-        child.queue.push({key, value})
-        while(fit(child) && child.queue.length);
+        if (!child) {
+          if (!value) return console.error('Trying to make a node without a value. This is bad.')
+          child = makeNode(key, value)
 
-        // TODO: handle forks
-        // TODO: handle re-parenting
+          // if this is a new child that was just created from a draft,
+          // make sure to get rid of the draft
+          let fromDraft = value.content && value.content['from-draft']
+          let draftWasSelected = false
+          if (fromDraft) {
+            let draft = mutantArray.find( x=> x.id === fromDraft )
+            draftWasSelected = selection() == draft
+            if (draft) mutantArray.delete(draft)
+          }
+          mutantArray.push(child)
+          //if (draftWasSelected) selection(key)
+        } else {
+          child.msg.set(value)
+        }
+
+        child.unsaved.set(kv.unsaved)
+        child.forked.set(kv.heads.length > 1)
+        child.incomplete.set(kv.tail !== key)
       }, (err)=>{
         console.log('stream ended', err)
       })
@@ -179,9 +165,11 @@ module.exports = function(ssb, drafts, root) {
       open: false,
       unsaved: false,
       loaded: false,
+      forked: false,
+      incomplete: true,
       children: MutantArray()
     })
-    node.id = (msg.content && msg.content.revisionRoot) || key
+    node.id = key
     let abortStream
     node.open( (isOpen)=> {
       if (isOpen) {
