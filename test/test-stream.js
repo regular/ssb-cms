@@ -2,6 +2,7 @@ const test = require('tape')
 const pull = require('pull-stream')
 const s = require('../update-stream')
 const {includesAll, replace, append} = s
+const {inspect} = require('util')
 
 test('includesAll', (t)=>{
   t.ok(includesAll(1, 1))
@@ -730,19 +731,21 @@ test('rev a1, new a-from-draft-a, draft-a, del draft-a', (t)=>{
   )
 })
 
-test('new a, rev a1, rev a2 (fork), draft-a3 (merge)', (t)=>{
+test('new a, rev a1, rev a2 (fork, a2 wins), draft-a3 (merge)', (t)=>{
   const kvs = [
     { key: 'a', value: {
         content: {
           text: 'foo'
     } } },
     { key: 'a1', value: {
+        timestamp: 1,
         content: {
           revisionRoot: 'a',
           revisionBranch: 'a',
           text: 'bar'
     } } },
     { key: 'a2', value: {
+        timestamp: 2,
         content: {
           revisionRoot: 'a',
           revisionBranch: 'a',
@@ -768,7 +771,6 @@ test('new a, rev a1, rev a2 (fork), draft-a3 (merge)', (t)=>{
       t.equal(updates[0].unsaved, false)
       t.deepEqual(heads(updates[0]), ['a'])
 
-
       t.deepEqual(updates[1].value.content, {
         revisionRoot: 'a',
         revisionBranch: 'a',
@@ -780,7 +782,7 @@ test('new a, rev a1, rev a2 (fork), draft-a3 (merge)', (t)=>{
       t.deepEqual(updates[2].value.content, {
         revisionRoot: 'a',
         revisionBranch: 'a',
-        text: 'bar'
+        text: 'baz'
       })
       t.equal(updates[2].unsaved, false)
       t.deepEqual(heads(updates[2]), ['a1', 'a2'])
@@ -798,6 +800,139 @@ test('new a, rev a1, rev a2 (fork), draft-a3 (merge)', (t)=>{
   )
 })
 
+test('new a, rev a1, rev a2 (fork, a1 wins), draft-a3 (merge)', (t)=>{
+  const kvs = [
+    { key: 'a', value: {
+        content: {
+          text: 'foo'
+    } } },
+    { key: 'a1', value: {
+        timestamp: 2,
+        content: {
+          revisionRoot: 'a',
+          revisionBranch: 'a',
+          text: 'bar'
+    } } },
+    { key: 'a2', value: {
+        timestamp: 1,
+        content: {
+          revisionRoot: 'a',
+          revisionBranch: 'a',
+          text: 'baz'
+    } } },
+    { key: 'draft-a3', value: {
+        content: {
+          revisionRoot: 'a',
+          revisionBranch: ['a1', 'a2'],
+          text: 'merged'
+    } } },
+  ]
+  pull(
+    pull.values(kvs),
+    s(),
+    pull.collect( (err, updates) => {
+      t.notOk(err)
+      t.equal(updates.length, 3)
+
+      t.deepEqual(updates[0].value.content, {
+        text: 'foo'
+      })
+      t.equal(updates[0].unsaved, false)
+      t.deepEqual(heads(updates[0]), ['a'])
+
+      t.deepEqual(updates[1].value.content, {
+        revisionRoot: 'a',
+        revisionBranch: 'a',
+        text: 'bar'
+      })
+      t.equal(updates[1].unsaved, false)
+      t.deepEqual(heads(updates[1]), ['a1'])
+
+      t.deepEqual(updates[2].value.content, {
+        revisionRoot: 'a',
+        revisionBranch: ['a1', 'a2'],
+        text: 'merged'
+      })
+      t.equal(updates[2].unsaved, true)
+      t.deepEqual(heads(updates[2]), ['draft-a3'])
+
+      t.end()
+    })
+  )
+})
+
+test('allRevisions=true: new a, rev a1, rev a2 (fork, a1 wins), draft-a3 (merge)', (t)=>{
+  const kvs = [
+    { key: 'a', value: {
+        content: {
+          text: 'foo'
+    } } },
+    { key: 'a1', value: {
+        timestamp: 2,
+        content: {
+          revisionRoot: 'a',
+          revisionBranch: 'a',
+          text: 'bar'
+    } } },
+    { key: 'a2', value: {
+        timestamp: 1,
+        content: {
+          revisionRoot: 'a',
+          revisionBranch: 'a',
+          text: 'baz'
+    } } },
+    { key: 'draft-a3', value: {
+        content: {
+          revisionRoot: 'a',
+          revisionBranch: ['a1', 'a2'],
+          text: 'merged'
+    } } },
+  ]
+  pull(
+    pull.values(kvs),
+    s({allRevisions: true}),
+    pull.collect( (err, updates) => {
+      t.notOk(err)
+      t.equal(updates.length, 4)
+
+      console.log(inspect(updates, {depth: 5}))
+
+      t.deepEqual(updates[0].value.content, {
+        text: 'foo'
+      })
+      t.equal(updates[0].unsaved, false)
+      t.deepEqual(heads(updates[0]), ['a'])
+
+      t.deepEqual(updates[1].value.content, {
+        revisionRoot: 'a',
+        revisionBranch: 'a',
+        text: 'bar'
+      })
+      t.equal(updates[1].unsaved, false)
+      t.deepEqual(heads(updates[1]), ['a1'])
+
+      t.equal(updates[2].revision, 'a2')
+      t.deepEqual(updates[2].pos, {before: 'a1', after: ['a']})
+      t.deepEqual(updates[2].value.content, {
+        revisionRoot: 'a',
+        revisionBranch: 'a',
+        text: 'bar'
+      })
+      t.equal(updates[2].unsaved, false)
+      t.deepEqual(heads(updates[2]), ['a1','a2'])
+
+      t.deepEqual(updates[3].value.content, {
+        revisionRoot: 'a',
+        revisionBranch: ['a1', 'a2'],
+        text: 'merged'
+      })
+      t.equal(updates[3].unsaved, true)
+      t.deepEqual(heads(updates[3]), ['draft-a3'])
+
+      t.end()
+    })
+  )
+})
 test('draft-a3 (merge), rev a1, rev a2 (fork), new a, del draft-a3', (t)=>{
   const kvs = [
     { key: 'draft-a3', value: {

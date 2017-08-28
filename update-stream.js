@@ -203,10 +203,26 @@ module.exports = function updates(opts) {
               if (links(x) && includesAll(links(x), child.internals)) {
                 //child.heads = append(child.heads, x.key, {arrayResult: true})
                 addHead(child, x.key, x.value.timestamp)
-                // TODO: overwrite node value, if claimed time is grater
+                // Overwrite node value, if claimed time is grater
                 console.log('internal link, added head, new heads', child.heads)
                 ignoreDraft(x.value)
-                if (!doBuffer) out.push(Object.assign({revision: kv.key, pos: links(x)}, child))
+                
+                let heads = Object.keys(child.heads).sort( (a,b)=>{
+                  return child.heads[a] - child.heads[b]
+                })
+                let headIndex = heads.indexOf(x.key)
+                if (headIndex === heads.length - 1) {
+                  // this is the latest head
+                  child.value = x.value
+                  if (!doBuffer) out.push(Object.assign({revision: x.key, pos: 'tail'}, child))
+                } else {
+                  // not the latest head, do not change node value
+                  if (opts.allRevisions) {
+                    let pos = {before: heads[headIndex+1], after: links(x)}
+                    if (headIndex>0) pos.after.push(heads[headIndex=1])
+                    if (!doBuffer) out.push(Object.assign({revision: x.key, pos}, child))
+                  }
+                }
                 return false
               }
               console.log('keep in queue')
@@ -269,8 +285,10 @@ module.exports = function updates(opts) {
           })
           return success
         }
+
         child.queue.push(kv)
         while(fit() && child.queue.length);
+        console.log('queue', child.queue) 
 
         // TODO: option to emit pos: 'tail' messages.
         // (Currently we only emit pos: 'head' messages, that
