@@ -911,3 +911,66 @@ test('buffer until sync: new a, rev b1, new b, sync, rev a1' , (t)=>{
   )
 })
 
+test('allRevisions=true: rev a1, draft-a2, new a-from-draft-a, draft-a, del draft-a', (t)=>{
+  const kvs = [
+    { key: 'a1', value: {
+        content: {
+          revisionRoot: 'a',
+          revisionBranch: 'a',
+          text: 'baz'
+    } } },
+    { key: 'draft-a2', value: {
+        content: {
+          revisionRoot: 'a',
+          revisionBranch: 'a1',
+          text: 'revised'
+    } } },
+    { key: 'a', value: {
+        content: {
+          'from-draft': 'draft-a',
+          text: 'bar'
+    } } },
+    { key: 'draft-a', value: {
+        content: {
+          text: 'foo'
+    } } },
+    { key: 'draft-a', type: 'del'  },
+  ]
+  pull(
+    pull.values(kvs),
+    s({allRevisions: true}),
+    pull.collect( (err, updates) => {
+      t.notOk(err)
+      console.log(updates)
+      t.equal(updates.length, 3)
+
+      t.deepEqual(updates[0].value.content, {
+        revisionRoot: 'a',
+        revisionBranch: 'a',
+        text: 'baz'
+      })
+      t.equal(updates[0].unsaved, false)
+      t.deepEqual(updates[0].heads, ['a1'])
+
+      t.deepEqual(updates[1].value.content, {
+        revisionRoot: 'a',
+        revisionBranch: 'a1',
+        text: 'revised'
+      })
+      t.equal(updates[1].unsaved, true)
+      t.deepEqual(updates[1].heads, ['draft-a2'])
+
+      t.equal(updates[2].pos, 'tail')
+      // the value doesn't change!
+      t.deepEqual(updates[2].value.content, {
+        revisionRoot: 'a',
+        revisionBranch: 'a1',
+        text: 'revised'
+      })
+      t.equal(updates[2].unsaved, true)
+      t.deepEqual(updates[2].heads, ['draft-a2'])
+
+      t.end()
+    })
+  )
+})

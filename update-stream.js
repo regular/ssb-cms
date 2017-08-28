@@ -5,6 +5,12 @@ function isDraft(id) {
   return /^draft/.test(id)
 }
 
+function debug(child) {
+  console.log('new heads:', child.heads)
+  console.log('new tail:', child.tail)
+  console.log('new links:', child.links)
+}
+
 function includesAll(needle, haystack) {
   if (!needle) return true
   if (!haystack) return false
@@ -50,6 +56,7 @@ function append(container, wanted) {
 }
 
 function links(kv) {
+  if (kv.links) return kv.links
   if (kv.type === 'del') return [kv.key]
   let links = kv.value.content && kv.value.content.revisionBranch
   return links && (Array.isArray(links) ? links : [links])
@@ -65,9 +72,11 @@ function isLinked(child, x) {
   let aLinks = links(child)
   let bLinks = links(x)
   if (includesAll(x.key, aLinks)) {
+    console.log(`${x.key} fits before ${aLinks}`)
     return -1
   } else if (bLinks && includesAll(bLinks, child.heads)) {
     // does b fit at one (or more) of a's heads?
+    console.log(`${x.key} fits after ${child.heads}`)
     if (x.type === 'del') {
       // to delete the draft it either needs to be the rev root,
       // or it needs to have `valueBefireDraft` set.
@@ -79,16 +88,28 @@ function isLinked(child, x) {
 }
 
 module.exports = function updates(opts) {
-  return function(read) {
-    opts = opts || {}
-    let children = []
-    let ignore = []
-    let doBuffer = opts.bufferUntilSync // in sync mode, we buffer until we see a sync
-    let drain
-    let out = pushable(true, function (err) {
-      console.log('out stream closed by client!', err)
-      drain.abort(err)
-    })
+  opts = opts || {}
+  let children = {}
+  let ignore = []
+  let doBuffer = opts.bufferUntilSync // in sync mode, we buffer until we see a sync
+  let drain
+
+  function ignoreDraft(msg) {
+    if (msg.content['from-draft']) {
+      // this message was created from a draft,
+      // if we see that draft later (it might still exist)
+      // we just ignore it
+      ignore.push(msg.content['from-draft'])
+      console.log('ignore', ignore)
+    }
+  }
+
+  let out = pushable(true, function (err) {
+    console.log('out stream closed by client!', err)
+    drain.abort(err)
+  })
+
+  let through = function(read) {
     pull(
       read,
       pull.filter( kv =>{
@@ -106,9 +127,11 @@ module.exports = function updates(opts) {
 
       drain = pull.drain( (kv) => {
         let {key, value} = kv
+        console.log('incoming', kv)
 
         if (ignore.includes(key)) {
           if (kv.type === 'del') ignore = ignore.filter( k => k !== key)
+          console.log('ignored', key)
           return
         }
 
@@ -122,6 +145,7 @@ module.exports = function updates(opts) {
               console.error('Trying to make a node without a value.')
               return
             }
+            console.log('new', revRoot)
             child = children[revRoot] = {
               key: revRoot,
               value,
@@ -132,13 +156,9 @@ module.exports = function updates(opts) {
               queue: [],
               links: links(kv)
             }
-            if (value.content['from-draft']) {
-              // this message was created from a draft,
-              // if we see that draft later (it might still exist)
-              // we just ignore it
-              ignore.push(value.content['from-draft'])
-            }
-            if (!doBuffer) out.push(Object.assign({}, child))
+            debug(child)
+            ignoreDraft(value)
+            if (!doBuffer) out.push(Object.assign({revision: kv.key}, child))
             return
           }
         } else {
@@ -165,18 +185,16 @@ module.exports = function updates(opts) {
               if (links(x) && includesAll(links(x), child.internals)) {
                 child.heads = append(child.heads, x.key, {arrayResult: true})
                 // TODO: overwrite node value, if claimed time is grater
-                if (!doBuffer) out.push(Object.assign({}, child))
+                console.log('internal link, added head, new heads', child.heads)
+                ignoreDraft(x.value)
+                if (!doBuffer) out.push(Object.assign({revision: kv.key, pos: links(x)}, child))
                 return false
               }
+              console.log('keep in queue')
               return true // keep in queue
             }
 
-            if (x.value && x.value.content['from-draft']) {
-              // this message was created from a draft,
-              // if we see that draft later (it might still exist)
-              // we just ignore it
-              ignore.push(x.value.content['from-draft'])
-            }
+            if (x.value) ignoreDraft(x.value)
 
             if (pos === -1) { 
               success = true
@@ -185,6 +203,8 @@ module.exports = function updates(opts) {
                 child.valueBeforeDraft = x.value
               }
               child.tail = x.key
+              debug(child)
+              if (opts.allRevisions && !doBuffer) out.push(Object.assign({revision: kv.key, pos: 'tail'}, child))
               return false // remove from queue
             }
 
@@ -201,7 +221,8 @@ module.exports = function updates(opts) {
                 child.value = child.valueBeforeDraft
                 delete child.valueBeforeDraft
                 child.unsaved = false
-                if (!doBuffer) out.push(Object.assign({}, child))
+                debug(child)
+                if (!doBuffer) out.push(Object.assign({type: 'revert'}, child))
               }
               return false
             }
@@ -214,7 +235,8 @@ module.exports = function updates(opts) {
 
             child.internals = child.internals.slice() // copy array, in gets mutated in place by moveTo and that alters data we already pushed downstream.
             child.heads = replace(child.heads || [], links(x) || [], x.key, {arrayResult: true, moveTo: child.internals})
-            if (!doBuffer) out.push(Object.assign({}, child))
+            debug(child)
+            if (!doBuffer) out.push(Object.assign({revision: x.key}, child))
             return false // remove from queue
           })
           return success
@@ -240,6 +262,8 @@ module.exports = function updates(opts) {
     )
     return out.source
   }
+  through.get = (key) => children[key]
+  return through
 }
 
 module.exports.includesAll = includesAll
