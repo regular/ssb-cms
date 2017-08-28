@@ -36,6 +36,10 @@ test('append', (t)=>{
   t.end()
 })
 
+function heads(kv) {
+  return Object.keys(kv.heads).sort()
+}
+
 test('new a, new b', (t)=>{
   const kvs = [
     { key: 'a', value: {
@@ -56,13 +60,13 @@ test('new a, new b', (t)=>{
         text: "hello"
       })
       t.equal(updates[0].unsaved, false)
-      t.deepEqual(updates[0].heads, ['a'])
+      t.deepEqual(heads(updates[0]), ['a'])
 
       t.deepEqual(updates[1].value.content, {
         text: "world"
       })
       t.equal(updates[1].unsaved, false)
-      t.deepEqual(updates[1].heads, ['b'])
+      t.deepEqual(heads(updates[1]), ['b'])
       t.end()
     })
   )
@@ -96,14 +100,14 @@ test('new a, new b, rev b1', (t)=>{
         text: "hello"
       })
       t.equal(updates[0].unsaved, false)
-      t.deepEqual(updates[0].heads, ['a'])
+      t.deepEqual(heads(updates[0]), ['a'])
 
       t.equal(updates[1].key, 'b')
       t.deepEqual(updates[1].value.content, {
         text: "world"
       })
       t.equal(updates[1].unsaved, false)
-      t.deepEqual(updates[1].heads, ['b'])
+      t.deepEqual(heads(updates[1]), ['b'])
 
       t.equal(updates[2].key, 'b')
       t.deepEqual(updates[2].value.content, {
@@ -112,7 +116,7 @@ test('new a, new b, rev b1', (t)=>{
         text: "foo"
       })
       t.equal(updates[2].unsaved, false)
-      t.deepEqual(updates[2].heads, ['b1'])
+      t.deepEqual(heads(updates[2]), ['b1'])
 
       t.end()
     })
@@ -148,7 +152,7 @@ test('new a, rev b1, new b', (t)=>{
         text: "hello"
       })
       t.equal(updates[0].unsaved, false)
-      t.deepEqual(updates[0].heads, ['a'])
+      t.deepEqual(heads(updates[0]), ['a'])
 
       t.equal(updates[1].key, 'b')
       t.deepEqual(updates[1].value.content, {
@@ -157,7 +161,7 @@ test('new a, rev b1, new b', (t)=>{
         text: "foo"
       })
       t.equal(updates[1].unsaved, false)
-      t.deepEqual(updates[1].heads, ['b1'])
+      t.deepEqual(heads(updates[1]), ['b1'])
 
       t.end()
     })
@@ -194,7 +198,7 @@ test('new a, rev a1, draft a2', (t)=>{
         text: "hello"
       })
       t.equal(updates[0].unsaved, false)
-      t.deepEqual(updates[0].heads, ['a'])
+      t.deepEqual(heads(updates[0]), ['a'])
 
       t.equal(updates[1].key, 'a')
       t.deepEqual(updates[1].value.content, {
@@ -203,7 +207,7 @@ test('new a, rev a1, draft a2', (t)=>{
         text: "world"
       })
       t.equal(updates[1].unsaved, false)
-      t.deepEqual(updates[1].heads, ['a1'])
+      t.deepEqual(heads(updates[1]), ['a1'])
 
       t.equal(updates[2].key, 'a')
       t.deepEqual(updates[2].value.content, {
@@ -212,7 +216,7 @@ test('new a, rev a1, draft a2', (t)=>{
         text: "foo"
       })
       t.equal(updates[2].unsaved, true)
-      t.deepEqual(updates[2].heads, ['draft-a2'])
+      t.deepEqual(heads(updates[2]), ['draft-a2'])
 
       t.end()
     })
@@ -252,7 +256,7 @@ test('draft-a2, new a, rev a1', (t)=>{
         text: "foo"
       })
       t.equal(updates[0].unsaved, true)
-      t.deepEqual(updates[0].heads, ['draft-a2'])
+      t.deepEqual(heads(updates[0]), ['draft-a2'])
 
       t.end()
     })
@@ -292,7 +296,7 @@ test('draft-a2, rev a1, new a', (t)=>{
         text: "foo"
       })
       t.equal(updates[0].unsaved, true)
-      t.deepEqual(updates[0].heads, ['draft-a2'])
+      t.deepEqual(heads(updates[0]), ['draft-a2'])
 
       t.end()
     })
@@ -331,7 +335,7 @@ test('new a, rev a1, draft a2, del draft a2', (t)=>{
         text: "hello"
       })
       t.equal(updates[0].unsaved, false)
-      t.deepEqual(updates[0].heads, ['a'])
+      t.deepEqual(heads(updates[0]), ['a'])
 
       t.equal(updates[1].key, 'a')
       t.deepEqual(updates[1].value.content, {
@@ -340,7 +344,7 @@ test('new a, rev a1, draft a2, del draft a2', (t)=>{
         text: "world"
       })
       t.equal(updates[1].unsaved, false)
-      t.deepEqual(updates[1].heads, ['a1'])
+      t.deepEqual(heads(updates[1]), ['a1'])
       
       t.equal(updates[2].key, 'a')
       t.deepEqual(updates[2].value.content, {
@@ -349,7 +353,7 @@ test('new a, rev a1, draft a2, del draft a2', (t)=>{
         text: "foo"
       })
       t.equal(updates[2].unsaved, true)
-      t.deepEqual(updates[2].heads, ['draft-a2'])
+      t.deepEqual(heads(updates[2]), ['draft-a2'])
 
       t.equal(updates[3].key, 'a')
       t.deepEqual(updates[3].value.content, {
@@ -358,7 +362,7 @@ test('new a, rev a1, draft a2, del draft a2', (t)=>{
         text: "world"
       })
       t.equal(updates[3].unsaved, false)
-      t.deepEqual(updates[3].heads, ['a1'])
+      t.deepEqual(heads(updates[3]), ['a1'])
 
       t.end()
     })
@@ -438,13 +442,13 @@ test('draft-a1, del draft-a1, new a', (t)=>{
         text: 'foo'
       })
       t.equal(updates[0].unsaved, true)
-      t.deepEqual(updates[0].heads, ['draft-a1'])
+      t.deepEqual(heads(updates[0]), ['draft-a1'])
 
       t.deepEqual(updates[1].value.content, {
         text: 'hello'
       })
       t.equal(updates[1].unsaved, false)
-      t.deepEqual(updates[1].heads, ['a'])
+      t.deepEqual(heads(updates[1]), ['a'])
 
       t.end()
     })
@@ -470,7 +474,7 @@ test('draft-a, del draft-a', (t)=>{
         text: 'foo'
       })
       t.equal(updates[0].unsaved, true)
-      t.deepEqual(updates[0].heads, ['draft-a'])
+      t.deepEqual(heads(updates[0]), ['draft-a'])
 
       t.equal(updates[1].type, 'del')
       t.equal(updates[1].key, 'draft-a')
@@ -503,7 +507,7 @@ test('draft-a, del draft-a, new a', (t)=>{
         text: 'foo'
       })
       t.equal(updates[0].unsaved, true)
-      t.deepEqual(updates[0].heads, ['draft-a'])
+      t.deepEqual(heads(updates[0]), ['draft-a'])
 
       t.equal(updates[1].type, 'del')
       t.equal(updates[1].key, 'draft-a')
@@ -512,7 +516,7 @@ test('draft-a, del draft-a, new a', (t)=>{
         text: 'bar'
       })
       t.equal(updates[2].unsaved, false)
-      t.deepEqual(updates[2].heads, ['a'])
+      t.deepEqual(heads(updates[2]), ['a'])
       t.end()
     })
   )
@@ -542,7 +546,7 @@ test('draft-a, del draft-a, new a-from-draft-a', (t)=>{
         text: 'foo'
       })
       t.equal(updates[0].unsaved, true)
-      t.deepEqual(updates[0].heads, ['draft-a'])
+      t.deepEqual(heads(updates[0]), ['draft-a'])
 
       t.equal(updates[1].type, 'del')
       t.equal(updates[1].key, 'draft-a')
@@ -552,7 +556,7 @@ test('draft-a, del draft-a, new a-from-draft-a', (t)=>{
         text: 'bar'
       })
       t.equal(updates[2].unsaved, false)
-      t.deepEqual(updates[2].heads, ['a'])
+      t.deepEqual(heads(updates[2]), ['a'])
       t.end()
     })
   )
@@ -590,7 +594,7 @@ test('XXX new a, draft-a1, del draft-a1, rev a1-from-draft-a1', (t)=>{
         text: 'a foo'
       })
       t.equal(updates[0].unsaved, false)
-      t.deepEqual(updates[0].heads, ['a'])
+      t.deepEqual(heads(updates[0]), ['a'])
 
       t.deepEqual(updates[1].value.content, {
         revisionRoot: 'a',
@@ -598,13 +602,13 @@ test('XXX new a, draft-a1, del draft-a1, rev a1-from-draft-a1', (t)=>{
         text: 'draft foo'
       })
       t.equal(updates[1].unsaved, true)
-      t.deepEqual(updates[1].heads, ['draft-a1'])
+      t.deepEqual(heads(updates[1]), ['draft-a1'])
       t.deepEqual(updates[1].internals, ['a'])
 
       t.deepEqual(updates[2].value.content, {
         text: 'a foo'
       })
-      t.deepEqual(updates[2].heads, ['a'])
+      t.deepEqual(heads(updates[2]), ['a'])
       t.deepEqual(updates[2].internals, [], 'no internals')
 
       t.deepEqual(updates[3].value.content, {
@@ -614,7 +618,7 @@ test('XXX new a, draft-a1, del draft-a1, rev a1-from-draft-a1', (t)=>{
         text: 'bar'
       })
       t.equal(updates[3].unsaved, false)
-      t.deepEqual(updates[3].heads, ['a1'], 'heads')
+      t.deepEqual(heads(updates[3]), ['a1'], 'heads')
       t.deepEqual(updates[3].internals, ['a'], 'internals')
       t.end()
     })
@@ -644,14 +648,14 @@ test('draft-a, new a-from-draft-a, del draft-a', (t)=>{
         text: 'foo'
       })
       t.equal(updates[0].unsaved, true)
-      t.deepEqual(updates[0].heads, ['draft-a'])
+      t.deepEqual(heads(updates[0]), ['draft-a'])
 
       t.deepEqual(updates[1].value.content, {
         'from-draft': 'draft-a',
         text: 'bar'
       })
       t.equal(updates[1].unsaved, false)
-      t.deepEqual(updates[1].heads, ['a'])
+      t.deepEqual(heads(updates[1]), ['a'])
       t.end()
     })
   )
@@ -682,7 +686,7 @@ test('new a-from-draft-a, draft-a, del draft-a', (t)=>{
         text: 'bar'
       })
       t.equal(updates[0].unsaved, false)
-      t.deepEqual(updates[0].heads, ['a'])
+      t.deepEqual(heads(updates[0]), ['a'])
       t.end()
     })
   )
@@ -720,7 +724,7 @@ test('rev a1, new a-from-draft-a, draft-a, del draft-a', (t)=>{
         text: 'baz'
       })
       t.equal(updates[0].unsaved, false)
-      t.deepEqual(updates[0].heads, ['a1'])
+      t.deepEqual(heads(updates[0]), ['a1'])
       t.end()
     })
   )
@@ -762,7 +766,7 @@ test('new a, rev a1, rev a2 (fork), draft-a3 (merge)', (t)=>{
         text: 'foo'
       })
       t.equal(updates[0].unsaved, false)
-      t.deepEqual(updates[0].heads, ['a'])
+      t.deepEqual(heads(updates[0]), ['a'])
 
 
       t.deepEqual(updates[1].value.content, {
@@ -771,7 +775,7 @@ test('new a, rev a1, rev a2 (fork), draft-a3 (merge)', (t)=>{
         text: 'bar'
       })
       t.equal(updates[1].unsaved, false)
-      t.deepEqual(updates[1].heads, ['a1'])
+      t.deepEqual(heads(updates[1]), ['a1'])
 
       t.deepEqual(updates[2].value.content, {
         revisionRoot: 'a',
@@ -779,7 +783,7 @@ test('new a, rev a1, rev a2 (fork), draft-a3 (merge)', (t)=>{
         text: 'bar'
       })
       t.equal(updates[2].unsaved, false)
-      t.deepEqual(updates[2].heads, ['a1', 'a2'])
+      t.deepEqual(heads(updates[2]), ['a1', 'a2'])
 
       t.deepEqual(updates[3].value.content, {
         revisionRoot: 'a',
@@ -787,7 +791,7 @@ test('new a, rev a1, rev a2 (fork), draft-a3 (merge)', (t)=>{
         text: 'merged'
       })
       t.equal(updates[3].unsaved, true)
-      t.deepEqual(updates[3].heads, ['draft-a3'])
+      t.deepEqual(heads(updates[3]), ['draft-a3'])
 
       t.end()
     })
@@ -833,7 +837,7 @@ test('draft-a3 (merge), rev a1, rev a2 (fork), new a, del draft-a3', (t)=>{
         text: 'merged'
       })
       t.equal(updates[0].unsaved, true)
-      t.deepEqual(updates[0].heads, ['draft-a3'])
+      t.deepEqual(heads(updates[0]), ['draft-a3'])
 
       t.deepEqual(updates[1].value.content, {
         revisionRoot: 'a',
@@ -841,7 +845,7 @@ test('draft-a3 (merge), rev a1, rev a2 (fork), new a, del draft-a3', (t)=>{
         text: 'bar'
       })
       t.equal(updates[1].unsaved, false)
-      t.deepEqual(updates[1].heads, ['a1', 'a2'])
+      t.deepEqual(heads(updates[1]), ['a1', 'a2'])
 
       t.end()
     })
@@ -884,7 +888,7 @@ test('buffer until sync: new a, rev b1, new b, sync, rev a1' , (t)=>{
         text: "original a"
       })
       t.equal(updates[0].unsaved, false)
-      t.deepEqual(updates[0].heads, ['a'])
+      t.deepEqual(heads(updates[0]), ['a'])
 
       t.equal(updates[1].key, 'b')
       t.deepEqual(updates[1].value.content, {
@@ -893,7 +897,7 @@ test('buffer until sync: new a, rev b1, new b, sync, rev a1' , (t)=>{
         text: "revised b"
       })
       t.equal(updates[1].unsaved, false)
-      t.deepEqual(updates[1].heads, ['b1'])
+      t.deepEqual(heads(updates[1]), ['b1'])
 
       t.deepEqual(updates[2], {sync: true})
 
@@ -904,7 +908,7 @@ test('buffer until sync: new a, rev b1, new b, sync, rev a1' , (t)=>{
         text: "revised a"
       })
       t.equal(updates[3].unsaved, false)
-      t.deepEqual(updates[3].heads, ['a1'])
+      t.deepEqual(heads(updates[3]), ['a1'])
 
       t.end()
     })
@@ -950,7 +954,7 @@ test('allRevisions=true: rev a1, draft-a2, new a-from-draft-a, draft-a, del draf
         text: 'baz'
       })
       t.equal(updates[0].unsaved, false)
-      t.deepEqual(updates[0].heads, ['a1'])
+      t.deepEqual(heads(updates[0]), ['a1'])
 
       t.deepEqual(updates[1].value.content, {
         revisionRoot: 'a',
@@ -958,7 +962,7 @@ test('allRevisions=true: rev a1, draft-a2, new a-from-draft-a, draft-a, del draf
         text: 'revised'
       })
       t.equal(updates[1].unsaved, true)
-      t.deepEqual(updates[1].heads, ['draft-a2'])
+      t.deepEqual(heads(updates[1]), ['draft-a2'])
 
       t.equal(updates[2].pos, 'tail')
       // the value doesn't change!
@@ -968,7 +972,7 @@ test('allRevisions=true: rev a1, draft-a2, new a-from-draft-a, draft-a, del draf
         text: 'revised'
       })
       t.equal(updates[2].unsaved, true)
-      t.deepEqual(updates[2].heads, ['draft-a2'])
+      t.deepEqual(heads(updates[2]), ['draft-a2'])
 
       t.end()
     })

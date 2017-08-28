@@ -5,10 +5,27 @@ function isDraft(id) {
   return /^draft/.test(id)
 }
 
+function forEach(arrOrVal, f) {
+  if (typeof arrOrVal === 'undefined') return
+  if (arrOrVal === null) return
+  if (!Array.isArray(arrOrVal)) arrOrVal = [arrOrVal]
+  arrOrVal.forEach(f)
+}
+
+
 function debug(child) {
   console.log('new heads:', child.heads)
   console.log('new tail:', child.tail)
   console.log('new links:', child.links)
+}
+
+function addHead(child, h, timestamp) {
+  child.heads = Object.assign({}, child.heads, {[h]: timestamp})
+}
+
+function removeHead(child, h) {
+  child.heads = Object.assign({}, child.heads)
+  delete child.heads[h]
 }
 
 function includesAll(needle, haystack) {
@@ -74,7 +91,7 @@ function isLinked(child, x) {
   if (includesAll(x.key, aLinks)) {
     console.log(`${x.key} fits before ${aLinks}`)
     return -1
-  } else if (bLinks && includesAll(bLinks, child.heads)) {
+  } else if (bLinks && includesAll(bLinks, Object.keys(child.heads))) {
     // does b fit at one (or more) of a's heads?
     console.log(`${x.key} fits after ${child.heads}`)
     if (x.type === 'del') {
@@ -150,7 +167,7 @@ module.exports = function updates(opts) {
               key: revRoot,
               value,
               unsaved: isDraft(key),
-              heads: [key],
+              heads: {[key]: value.timestamp},
               internals: [],
               tail: key,
               queue: [],
@@ -165,7 +182,7 @@ module.exports = function updates(opts) {
           // This is a request to remove a draft
           // type === 'del' events have no `value` and therefor no
           // revRoot. We need to find the child that has this draft as a head
-          let entry = Object.entries(children).find( ([k,v])=>includesAll(key, v.heads) )
+          let entry = Object.entries(children).find( ([k,v])=>includesAll(key, Object.keys(v.heads)) )
           if (!entry) throw Error("Can't find child with draft", key)
           child = entry[1]
         }
@@ -180,10 +197,12 @@ module.exports = function updates(opts) {
 
             let pos = isLinked(child, x)
             if (!pos) {
+              console.log('internals', child.internals)
               // Does it link to one or more internal node?
               // then it creates a new head.
               if (links(x) && includesAll(links(x), child.internals)) {
-                child.heads = append(child.heads, x.key, {arrayResult: true})
+                //child.heads = append(child.heads, x.key, {arrayResult: true})
+                addHead(child, x.key, x.value.timestamp)
                 // TODO: overwrite node value, if claimed time is grater
                 console.log('internal link, added head, new heads', child.heads)
                 ignoreDraft(x.value)
@@ -217,7 +236,11 @@ module.exports = function updates(opts) {
                 if (!doBuffer) out.push(x)
               } else {
                 child.internals = replace(child.internals, child.value.content.revisionBranch, [], {arrayResult: true})
-                child.heads = replace(child.heads, x.key, child.value.content.revisionBranch, {arrayResult: true})
+                //child.heads = replace(child.heads, x.key, child.value.content.revisionBranch, {arrayResult: true})
+                removeHead(child, x.key)
+                forEach(child.value.content.revisionBranch, h=>{
+                  addHead(child, h, child.value.timestamp)
+                })
                 child.value = child.valueBeforeDraft
                 delete child.valueBeforeDraft
                 child.unsaved = false
@@ -233,8 +256,13 @@ module.exports = function updates(opts) {
             } else child.unsaved = false
             child.value = x.value
 
-            child.internals = child.internals.slice() // copy array, in gets mutated in place by moveTo and that alters data we already pushed downstream.
-            child.heads = replace(child.heads || [], links(x) || [], x.key, {arrayResult: true, moveTo: child.internals})
+            child.internals = child.internals.slice() // copy array, it gets mutated in place by moveTo and that alters data we already pushed downstream.
+            //child.heads = replace(child.heads || [], links(x) || [], x.key, {arrayResult: true, moveTo: child.internals})
+            links(x).forEach( l=>{
+              child.internals.push(l)
+              removeHead(child, l)
+            })
+            addHead(child, x.key, x.value.timestamp)
             debug(child)
             if (!doBuffer) out.push(Object.assign({revision: x.key}, child))
             return false // remove from queue
