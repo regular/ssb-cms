@@ -91,6 +91,7 @@ function updateGraph(entries) {
       let otherEntry = entries.find( x=> (x.revision || x.key) == b)
       let dx = otherEntry.cx - e.cx
       fx += dx * .001
+      otherEntry.vx += -fx
     })
     e.vx += fx
     e.cx += e.vx
