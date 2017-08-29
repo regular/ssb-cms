@@ -1,6 +1,8 @@
 const pull = require('pull-stream')
 const pushable = require('pull-pushable')
 
+function log() {}
+
 function isDraft(id) {
   return /^draft/.test(id)
 }
@@ -14,9 +16,9 @@ function forEach(arrOrVal, f) {
 
 
 function debug(child) {
-  console.log('new heads:', child.heads)
-  console.log('new tail:', child.tail)
-  console.log('new links:', child.links)
+  log('new heads:', child.heads)
+  log('new tail:', child.tail)
+  log('new links:', child.links)
 }
 
 function addHead(child, h, timestamp) {
@@ -89,11 +91,11 @@ function isLinked(child, x) {
   let aLinks = links(child)
   let bLinks = links(x)
   if (includesAll(x.key, aLinks)) {
-    console.log(`${x.key} fits before ${aLinks}`)
+    log(`${x.key} fits before ${aLinks}`)
     return -1
   } else if (bLinks && includesAll(bLinks, Object.keys(child.heads))) {
     // does b fit at one (or more) of a's heads?
-    console.log(`${x.key} fits after ${child.heads}`)
+    log(`${x.key} fits after ${child.heads}`)
     if (x.type === 'del') {
       // to delete the draft it either needs to be the rev root,
       // or it needs to have `valueBefireDraft` set.
@@ -117,12 +119,12 @@ module.exports = function updates(opts) {
       // if we see that draft later (it might still exist)
       // we just ignore it
       ignore.push(msg.content['from-draft'])
-      console.log('ignore', ignore)
+      log('ignore', ignore)
     }
   }
 
   let out = pushable(true, function (err) {
-    console.log('out stream closed by client!', err)
+    log('out stream closed by client!', err)
     drain.abort(err)
   })
 
@@ -144,11 +146,11 @@ module.exports = function updates(opts) {
 
       drain = pull.drain( (kv) => {
         let {key, value} = kv
-        console.log('incoming', kv)
+        log('incoming', kv)
 
         if (ignore.includes(key)) {
           if (kv.type === 'del') ignore = ignore.filter( k => k !== key)
-          console.log('ignored', key)
+          log('ignored', key)
           return
         }
 
@@ -162,7 +164,7 @@ module.exports = function updates(opts) {
               console.error('Trying to make a node without a value.')
               return
             }
-            console.log('new', revRoot)
+            log('new', revRoot)
             child = children[revRoot] = {
               key: revRoot,
               value,
@@ -197,14 +199,14 @@ module.exports = function updates(opts) {
 
             let pos = isLinked(child, x)
             if (!pos) {
-              console.log('internals', child.internals)
+              log('internals', child.internals)
               // Does it link to one or more internal node?
               // then it creates a new head.
               if (links(x) && includesAll(links(x), child.internals)) {
                 //child.heads = append(child.heads, x.key, {arrayResult: true})
                 addHead(child, x.key, x.value.timestamp)
                 // Overwrite node value, if claimed time is grater
-                console.log('internal link, added head, new heads', child.heads)
+                log('internal link, added head, new heads', child.heads)
                 ignoreDraft(x.value)
                 
                 let heads = Object.keys(child.heads).sort( (a,b)=>{
@@ -225,7 +227,7 @@ module.exports = function updates(opts) {
                 }
                 return false
               }
-              console.log('keep in queue')
+              log('keep in queue')
               return true // keep in queue
             }
 
@@ -288,12 +290,7 @@ module.exports = function updates(opts) {
 
         child.queue.push(kv)
         while(fit() && child.queue.length);
-        console.log('queue', child.queue) 
-
-        // TODO: option to emit pos: 'tail' messages.
-        // (Currently we only emit pos: 'head' messages, that
-        // update the node's state. (tail messages are needed for
-        // the revisions-view)
+        log('queue', child.queue) 
 
         // TODO: handle re-parenting
         //  branch: <new parent's revisionRoot>

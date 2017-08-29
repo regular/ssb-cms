@@ -116,6 +116,7 @@ module.exports = function () {
       return pull(
         pl.read(db, Object.assign({}, opts, {min: `~REVROOT~${root||""}`, max: `~REVROOT~${root||""}~~`})),
         pull.asyncMap(function (e, cb) {
+          if (e.sync) cb(null, e)
           db.get(e.value, function (err, value) {
             if (err) return cb(err)
             value = JSON.parse(value)

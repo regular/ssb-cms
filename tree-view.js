@@ -145,7 +145,7 @@ module.exports = function(ssb, drafts, root) {
         }
 
         child.unsaved.set(kv.unsaved)
-        child.forked.set(kv.heads.length > 1)
+        child.forked.set(Object.keys(kv.heads).length > 1)
         child.incomplete.set(kv.tail !== key)
       }, (err)=>{
         if (err) throw err

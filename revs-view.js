@@ -1,179 +1,213 @@
-const h = require('hyperscript')
-const ho = require('hyperobj')
+require('setimmediate')
+const h = require('mutant/html-element')
 const observable = require('observable')
-const tag = require('hyperobj-tree/tag')
 const ref = require('ssb-ref')
 const pull = require('pull-stream')
 const many = require('pull-many')
-const filter = require('hyperobj-tree/filter')
-const ssbSort = require('ssb-sort')
-const htime = require('human-time')
-const ssbAvatar = require('ssb-avatar')
-const memo = require('asyncmemo')
-const lru = require('hashlru')
+
+const updateStream = require('./update-stream')
+
+function arr(v) {
+  if (typeof v === 'undefined') return []
+  if (v === null) return []
+  if (Array.isArray(v)) return v
+  return [v]
+}
+
+function insert(key, kv, entries, pos) {
+  let error = ()=> {throw new Error(`Couldn't place ${key} ${pos}`)}
+  let after = arr(pos.after).slice()
+  let before = arr(pos.before)
+  // slide down the array until we are behind everything listed in `after`
+  let i = 0
+  while(after.length && i<entries.length) {
+    let r = entries[i].revision || entries[i].key
+    if (before.includes(r)) error()
+    // jshint -W083
+    if (after.includes(r)) after = after.filter( x=> x !== r )
+    // jshint +W083
+  }
+  if (after.length) error()
+
+  // now slide down further, until we either hit an entry of `before`
+  // or the next timestamp is greaten than ours
+  while(i<entries.length) {
+    let r = entries[i].revision || entries[i].key
+    if (before.includes(r)) break
+    if (entries[i].value.timestamp > kv.value.timestamp) break
+    ++i
+  }
+  return entries.slice(0, i).concat([kv]).concat(entries.slice(i))
+}
+
+function drawLine(ctx, x1, y1, x2, y2) {
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.strokeStyle = '#003300';
+  ctx.stroke();
+}
+
+function drawCircle(context, centerX, centerY, radius) {
+  context.beginPath();
+  context.arc(centerX, centerY, radius, 0, 2 * Math.PI, false);
+  context.fillStyle = 'green';
+  context.fill();
+  context.lineWidth = 5;
+  context.strokeStyle = '#003300';
+  context.stroke();
+}
+
+function drawGraph(canvas, entries) {
+  let ctx = canvas.getContext('2d')
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  entries.forEach( (e, i)=> {
+    drawCircle(ctx, e.cx, e.cy, 10)
+  })
+  entries.forEach( (e, i)=> {
+    arr(e.value.content.revisionBranch).forEach( (b)=>{
+      let otherEntry
+      otherEntry = entries.find( x=> (x.revision || x.key) == b)
+      drawLine(ctx, e.cx, e.cy, otherEntry.cx, otherEntry.cy)
+    })
+  })
+}
+
+function updateGraph(entries) {
+  entries.forEach( (e)=> {
+    let fx = 0
+    entries.forEach( (other)=> {
+      if (e === other) return
+      let dx = other.cx - e.cx
+      //let dy = other.cy - e.cy
+      if (dx === 0) {
+        fx += .01
+      } else {
+        fx += -1000/dx * 0.0000001
+      }
+    })
+    arr(e.value.content.revisionBranch).forEach( (b)=>{
+      let otherEntry = entries.find( x=> (x.revision || x.key) == b)
+      let dx = otherEntry.cx - e.cx
+      fx += dx * .001
+    })
+    e.vx += fx
+    e.cx += e.vx
+  })
+}
+
+function makeGraph(entries) {
+  const entryHeight = 64
+  const height = entries.length * entryHeight
+  const width = 200
+  let canvas = h('canvas', {
+    width, height
+  })
+  let ctx = canvas.getContext('2d')
+  entries.forEach( (e, i)=> {
+    e.vx = 0
+    e.cx = 100
+    e.cy = entryHeight * (i + 0.5)
+  })
+  entries.forEach( (e, i)=> {
+    arr(e.value.content.revisionBranch).forEach( (b)=>{
+      let otherEntry
+      otherEntry = entries.find( x=> (x.revision || x.key) == b)
+    })
+  })
+  return canvas
+}
 
 module.exports = function(ssb, drafts, me, blobsRoot) {
   let revs = h('.revs')
-  let msgEls = {}
-
-  let getAvatar = memo({cache: lru(50)}, function (id, cb) {
-    ssbAvatar(ssb, me, id, (err, about)=>{
-      if (err) return cb(err)
-      let name = about.name
-      if (!/^@/.test(name)) name = '@' + name
-      let imageUrl = `${blobsRoot}/${about.image}`
-      cb(null, {name, imageUrl})
-    })
-  })
-
   revs.selection = observable.signal()
 
   revs.selection( (id)=>{
-    let el = msgEls[id]
     revs.querySelectorAll('.selected').forEach( el => el.classList.remove('selected') )
-    if (el) el.querySelector('.node').classList.add('selected')
+    //if (el) el.querySelector('.node').classList.add('selected')
   })
 
-  function revisionsByRoot(root) {
+  function revisionsByRoot(key) {
+    let get = /^draft/.test(key) ? drafts.get : ssb.get
     return pull(
       many([
-        root && ref.type(root) ?
-          ssb.links({
-            rel: 'revisionRoot',
-            dest: root,
-            keys: true,
-            values: true
-          })
-        : pull.empty(),
-        drafts.byRevisionRoot(root)
-      ])
+        pull(
+          pull.once(key),
+          pull.asyncMap(get),
+          pull.map( value => {return {key, value}})
+        ),
+        ssb.links({
+          rel: 'revisionRoot',
+          live: true,
+          sync: true,
+          dest: key,
+          keys: true,
+          values: true
+        }),
+        drafts.byRevisionRoot(key, {
+          live: true,
+          sync: true
+        })
+      ]),
+      (()=>{
+        let expectedSyncs = 2
+        return pull.filter( (kv)=>{
+          if (kv.sync) return --expectedSyncs <= 0
+          return true
+        })
+      })(),
+      updateStream({
+        sync: true,
+        allRevisions: true,
+        bufferUntilSync: false
+      })
     )
   }
 
-  function safeParse(s) {
-    try {
-      return JSON.parse(s)
-    } catch(e) {}
-    return {}
-  }
-
-  var render = ho(
-    function(msg, kp) {
-      if (!msg.key || !msg.value) return
-      let content = msg.value.content || safeParse(msg.value.msgString).content
-      let value = {type: 'msg-node', id: msg.key, value: msg.value, content}
-      return this.call(this, value, kp)
-    },
-
-    function(msgNode, kp) {
-      if (!msgNode.type || msgNode.type !== 'msg-node') return
-      kp = kp || []
-      let value = msgNode.value || {}
-      let id = msgNode.id
-      let isDraft = value.draft
-      return h('.rev',
-        this.call(this, id, kp.concat(['key'])), ' ',
-        this.call(this, isDraft ? me : value.author, kp.concat(['author'])), ' ',
-        !isDraft ?
-          this.call(this, new Date(value.timestamp), kp.concat(['date']))
-        : h('em', 'draft')
-      )
-    },
-
-    function(date, kp) {
-      if (date instanceof Date) return h('span.timestamp',
-        htime(date)
-      )
-    },
-
-    function(feed, kp) {
-      if (!ref.isFeedId(feed)) return
-      let text = document.createTextNode(feed.substr(0, 7) + '…')
-      let img = h('img')
-      getAvatar(feed, (err, avatar) => {
-        if (err) return console.error(err)
-        text.nodeValue = avatar.name
-        img.setAttribute('src', avatar.imageUrl)
-      })
-      return [img, h('a.author', text)]
-    },
-
-    filter( value => h('a.node', {
-      onclick: function(e)  {
-        revs.selection(value)
-        e.preventDefault()
-      }
-    }, tag(8)('⚬ ' + value.substr(0,6))), ref.isMsgId),
-
-    filter( value => h('a.node.draft', {
-      onclick: function(e)  {
-        revs.selection(value)
-        e.preventDefault()
-      }
-    }, tag(8)('⚬ draft')), (value) => /^draft/.test(value) )
-  )
-
   revs.root = observable.signal()
 
-  revs.add = (msg) => {
-    if (msgEls[msg.key]) throw new Error('msg already added')
-    let el = render(msg)
-    msgEls[msg.key] = el
-    revs.appendChild(el)
-  }
-
-  revs.remove = (key) => {
-    let el = msgEls[key]
-    if (!el) return
-    delete msgEls[key]
-    revs.removeChild(el)
-  }
-
-  revs.update = (key, value, newKey) => {
-    newKey = newKey || key
-    let oldEl = msgEls[key]
-    if (!oldEl) throw new Error(`msg not present: ${key}`)
-    let el = render({key: newKey, value})
-    revs.insertBefore(el, oldEl)
-    revs.removeChild(oldEl)
-    delete msgEls[key]
-    msgEls[newKey] = el
-  }
-
   let revisions
+  let drain
+  let entries
+  let canvas
+  let timer
   revs.root( id => {
-    // reset state
-    while (revs.firstChild) revs.removeChild(revs.firstChild)
-    if (revisions) {
-      // abort previous stream
-      let _revisions = revisions
-      revisions = null
-      _revisions(true, function (err) {
-        if (err && err !== true) console.error(err)
-      })
-    }
+    if (drain) drain.abort()
+    revisions = null
+    drain = null
     revs.selection(null)
-    msgEls = {}
-
+    if (timer) clearInterval(timer)
+    timer = null
+    if (canvas) {
+      revs.removeChild(canvas)
+      camvas = null
+    }
+    entries = []
     if (!id) return
-    let get = /^draft/.test(id) ? drafts.get : ssb.get
-    let msgs = []
-    get(id, (err, value)=>{
-      if (err) return console.error(err) // TODO: indicate missing message?
-      if (revs.root() !== id) return // aborted
-      let msg = {key: id, value: value}
-      revs.add(msg)
-      msgs.push(msg)
-    })
     revisions = pull(
       revisionsByRoot(id),
-      pull.drain( (msg)=>{
-        revs.add(msg)
-        msgs.push(msg)
+      drain = pull.drain( (kv)=>{
+        if (kv.sync) {
+          console.log(entries)
+          revs.appendChild(canvas = makeGraph(entries))
+          drawGraph(canvas, entries)
+          timer = setInterval( ()=>{
+            updateGraph(entries)
+            drawGraph(canvas, entries)
+            return true
+          }, 100)
+          return
+        }
+        let key = kv.revision || kv.key
+        let pos = kv.pos || 'head'
+        console.log('- RevView:', pos, key, kv.heads)
+        if (pos === 'head') entries.push(kv)
+        else if (pos === 'tail') entries.unshift(kv)
+        else insert(key, kv, entries, pos)
       }, (err)=>{
-        if (err) return console.error(err)
-        let latest = ssbSort.heads(msgs)[0]
-        revs.selection(latest)
+        if (err) throw err
+        //revs.selection(latest)
       })
     )
   })
@@ -181,6 +215,7 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
   return revs
 }
 
+module.exports.insert = insert
 module.exports.css = ()=> `
   .rev {
     font-size: 11px;

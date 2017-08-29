@@ -146,7 +146,7 @@ module.exports = function(ssb, drafts, root) {
         let isMessage = !revRoot || revRoot === key
         let isRevision = revBranch && revBranch !== revRoot
         
-        forked(key, kv.heads.length > 1)
+        forked(key, Object.keys(kv.heads).length > 1)
         incomplete(key, kv.tail !== key)
         message(key, isMessage)
         kv.internals.concat(kv.heads).forEach( k=>
