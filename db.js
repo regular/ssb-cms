@@ -61,13 +61,34 @@ module.exports = function(ssb, drafts) {
     get(id, cb)
   }
 
+  function filterSync(sync) {
+    return pull.filter( x => {
+      // only pass through the last expected sync
+      if (sync && x.sync) {
+        return (!--sync)
+      }
+      return true
+    })
+  }
+
+  function uniqueKeys() {
+    let seenKeys = [] // TODO: use a Set here?
+    return pull.filter( x => {
+      if (x.key) {
+        if (seenKeys.includes(x.key)) {
+          return false
+        }
+        seenKeys.push(x.key)
+      }
+      return true
+    })
+  }
+
   function branches(root, opts) {
     if (!root) throw new Error('Missing argument: root')
-    let seenKeys = [] // TODO: use a Set here?
     opts = opts || {}
-    let sync = opts.sync ? (ref.isMsg(root) ? 2 : 1) : 0
-    console.log(`expect ${sync} syncs`)
-    let source = pull(
+    let syncCount = opts.sync ? (ref.isMsg(root) ? 2 : 1) : 0
+    return pull(
       many([
         ref.isMsg(root) ? pull(
           ssb.links(Object.assign({}, opts, {
@@ -79,49 +100,36 @@ module.exports = function(ssb, drafts) {
         ) : pull.empty(),
         drafts.byBranch(root, opts)
       ]),
-      pull.filter( x => {
-        // only let the last expected sync pass through
-        if (x.key) {
-          if (seenKeys.includes(x.key)) return false
-          seenKeys.push(x.key)
-        }
-        
-        if (sync && x.sync) {
-          return (!--sync)
-        }
-        return true
-      })
+      uniqueKeys(),
+      // TODO: do we actually need to de-duplicate the keys?
+      // Why?
+      filterSync(syncCount)
     )
-    return source
   }
 
   function revisions(root, opts) {
     if (!root) throw new Error('Missing argument: root')
     opts = opts || {}
-    let sync = opts.sync ? (ref.isMsg(root) ? 2 : 1) : 0
+    let syncCount = opts.sync ? (ref.isMsg(root) ? 2 : 1) : 0
     return pull(
       many([
         pull(
           pull.once(root),
           pull.asyncMap(getMessageOrDraft),
-          pull.map( value => {return {key, value}})
+          pull.map( value => {return {key: root, value}})
         ),
         ref.isMsg(root) ? pull(
           ssb.links(Object.assign({}, opts, {
             rel: 'revisionRoot',
-            dest: key,
+            dest: root,
             keys: true,
             values: true
           }))
         ) : pull.empty(),
         drafts.byRevisionRoot(root, opts)
       ]),
-      pull.unique('key'),
-      pull.filter( x => {
-        // only let the last expected sync pass through
-        if (sync && x.sync) return (!--sync)
-        return true
-      })
+      filterSync(syncCount),
+      uniqueKeys()
     )
   }
 
