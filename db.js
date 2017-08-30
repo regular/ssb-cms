@@ -4,6 +4,9 @@ const many = require('pull-many')
 const ssbSort = require('ssb-sort')
 const deepAssign = require('deep-assign')
 
+const {isDraft} = require('./util')
+
+// TODO: replace by update-stream
 function filterRevisions() {
   // return only latest revisions
   return function (read) {
@@ -47,18 +50,88 @@ function filterRevisions() {
     }
   }
 }
+
 module.exports = function(ssb, drafts) {
 
   function getMessageOrDraft(id, cb) {
-    if (/^draft/.test(id)) drafts.get(id, cb)
-    else ssb.get(id, cb)
+    let get
+    if (isDraft(id)) get = drafts.get
+    else if (ref.isMsg(id)) get = ssb.get
+    else throw new Error(`getMessageOrDraft: invalid id: ${id}`)
+    get(id, cb)
   }
+
+  function branches(root, opts) {
+    if (!root) throw new Error('Missing argument: root')
+    let seenKeys = [] // TODO: use a Set here?
+    opts = opts || {}
+    let sync = opts.sync ? (ref.isMsg(root) ? 2 : 1) : 0
+    console.log(`expect ${sync} syncs`)
+    let source = pull(
+      many([
+        ref.isMsg(root) ? pull(
+          ssb.links(Object.assign({}, opts, {
+            rel: 'branch',
+            dest: root,
+            keys: true,
+            values: true
+          }))
+        ) : pull.empty(),
+        drafts.byBranch(root, opts)
+      ]),
+      pull.filter( x => {
+        // only let the last expected sync pass through
+        if (x.key) {
+          if (seenKeys.includes(x.key)) return false
+          seenKeys.push(x.key)
+        }
+        
+        if (sync && x.sync) {
+          return (!--sync)
+        }
+        return true
+      })
+    )
+    return source
+  }
+
+  function revisions(root, opts) {
+    if (!root) throw new Error('Missing argument: root')
+    opts = opts || {}
+    let sync = opts.sync ? (ref.isMsg(root) ? 2 : 1) : 0
+    return pull(
+      many([
+        pull(
+          pull.once(root),
+          pull.asyncMap(getMessageOrDraft),
+          pull.map( value => {return {key, value}})
+        ),
+        ref.isMsg(root) ? pull(
+          ssb.links(Object.assign({}, opts, {
+            rel: 'revisionRoot',
+            dest: key,
+            keys: true,
+            values: true
+          }))
+        ) : pull.empty(),
+        drafts.byRevisionRoot(root, opts)
+      ]),
+      pull.unique('key'),
+      pull.filter( x => {
+        // only let the last expected sync pass through
+        if (sync && x.sync) return (!--sync)
+        return true
+      })
+    )
+  }
+
+  /// -- TODO: refactor below this line
   
   // get latest revision of given revisionRoot
   // (including drafts)
   function getLatest(key, cb) {
     if (!key) return cb(new Error('no key specified'))
-    if (/^draft/.test(key)) return drafts.get(key, cb)
+    if (isDraft(key)) return drafts.get(key, cb)
     pull(
       many([
         pull(
@@ -92,34 +165,6 @@ module.exports = function(ssb, drafts) {
     )
   }
 
-  function branches(root, opts) {
-    opts = opts || {}
-    let sync = opts.sync ? 2 : 0
-    let source = pull(
-       many([
-        root && ref.type(root) ? pull(
-          ssb.links(Object.assign({}, opts, {
-            rel: 'branch',
-            dest: root,
-            keys: true,
-            values: true
-          })),
-          pull.unique('key')
-        ) : pull.empty(),
-        drafts.byBranch(root, opts)
-      ]),
-      pull.filter( x => {
-        // only let the last expected sync pass through
-        if (sync && x.sync) return (!--sync)
-        return true
-      })
-    )
-    return opts.live ? source : pull(
-      source,
-      filterRevisions()
-    )
-  }
-
   function getPrototypeChain(key, result, cb) {
     getLatest(key, (err, msg)=>{
       if (err) return cb(err)
@@ -150,6 +195,7 @@ module.exports = function(ssb, drafts) {
     getLatest,
     getPrototypeChain: function (key, cb) {getPrototypeChain(key, [], cb)},
     getReduced,
-    branches
+    branches,
+    revisions
   }
 }
