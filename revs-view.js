@@ -76,16 +76,25 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
   }
 
   let sortStream = SortStream(ssb, drafts)
+  let mutantArray = MutantArray()
 
   function streamRevisions(id, syncCb) {
     console.log('streaming sorted revisions of', id)
     let drain
     let entries
+    let synced = false
     pull(
       sortStream(id),
       drain = pull.drain( _entries =>{
-        if (_entries.sync) return syncCb(null, entries)
+        if (_entries.sync) {
+          synced = true
+          mutantArray.set(entries)
+          return syncCb(null, entries)
+        }
         entries = _entries
+        if (synced) {
+          mutantArray.set(entries)
+        }
       }, (err)=>{
         if (err) throw err
         console.log('stream ended', err)
@@ -94,7 +103,6 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
     return drain.abort
   }
 
-  let mutantArray = MutantArray()
   let containerEl = h('.revs', MutantMap(mutantArray, html))
   let abort
 
@@ -120,7 +128,6 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
     abort = streamRevisions(id, (err, entries)=>{
       if (err) throw err
       console.log('revisions synced')
-      mutantArray.set(entries)
       if (entries.length) {
         selection.set(entries[entries.length - 1].id)
       } else selection.set(null)

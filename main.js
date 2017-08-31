@@ -174,7 +174,8 @@ module.exports = function(config, cb) {
     let isRevisionDraft = computed([revs.selection], isDraft)
     let isPublishable = computed(
       [isNewDraft, isRevisionDraft],
-      (newDraft, revDraft) => newDraft || revDraft)
+      (newDraft, revDraft) => newDraft || revDraft
+    )
     isPublishable( (isPublishable)=>{
       discardButton.disabled = !isPublishable
       saveButton.disabled = !isPublishable
@@ -191,7 +192,7 @@ module.exports = function(config, cb) {
       }
       if (ref.isMsg(revRoot) || isDraft(revRoot)) {
         let unsubsribe = revs.ready( (ready)=>{
-          if (ready && rev && ref.isMsg(rev)) {
+          if (ready && rev && (ref.isMsg(rev) || isDraft(rev)) ) {
             revs.selection.set(rev)
             unsubsribe()
           }
@@ -331,8 +332,6 @@ module.exports = function(config, cb) {
     }
 
     editor.clean( (isClean)=>{
-      // TODO
-      return
       if (!isClean && !ignoreChanges && !isRevisionDraft() && !isNewDraft()) {
         // first edit: create new revision draft
         let msgString = editor.getValue()
@@ -343,21 +342,25 @@ module.exports = function(config, cb) {
           function gotBranch(branch) {
             drafts.create(msgString, branch, revisionRoot, revisionBranch, (err, key, value)=>{
               if (err) return console.error(err)
+              // TODO: revs live stream
               //revs.add({key, value})
               ignoreRevsSelectionChanges = true
-              revs.selection(key)
+              revs.selection.set(key)
               ignoreRevsSelectionChanges = false
               //tree.update(tree.selection(), value)
             })
           }
           if (branch) return gotBranch(branch)
+          /*
           getMessageBranch(revisionRoot, (err, branch)=>{
             if (err) console.error(err)
             gotBranch(branch)
           })
+          */
         })
       }
     })
+
     if (cb) cb(null, ssb, drafts, root)
   })
 }
