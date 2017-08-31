@@ -23,6 +23,7 @@ const config = require('../ssb-cms/config')
 module.exports = function(ssb, drafts, root) {
 
   let selection = Value()
+  let ready = Value(false)
 
   function addNode(node) {
     let content = node.msg().content
@@ -213,16 +214,6 @@ module.exports = function(ssb, drafts, root) {
     return r(roots, nodePath, cb)
   }
 
-  // TODO: this moves to main
-  function setSelectionFromURL(newURL) {
-    let fragment = newURL.substr(newURL.indexOf('#') + 1)
-    if (ref.isMsg(fragment) || isDraft(fragment)) {
-      selection.set(fragment)
-    }
-  }
-  window.addEventListener('hashchange', (e)=>{
-    setSelectionFromURL(e.newURL)
-  })
 
   function ancestors(msg, result, cb) {
     let branch = msg.content && msg.content.branch
@@ -254,9 +245,8 @@ module.exports = function(ssb, drafts, root) {
   })
 
   streamChildren(root, roots, (err)=>{
-    if (err) return cb(err)
-    setSelectionFromURL(window.location.href)
-    //cb(null, treeView)
+    if (err) throw err
+    ready.set(true)
   })
 
   function findNode(key, children) {
@@ -269,6 +259,7 @@ module.exports = function(ssb, drafts, root) {
   }
 
   treeView.selection = selection
+  treeView.ready = ready
   treeView.update = function(key, value) {
     let node = findNode(key, roots)
     if (node) node.msg.set(value)

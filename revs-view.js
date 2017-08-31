@@ -30,6 +30,8 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
 
   let selection = Value()
   let root = Value()
+  let currRoot = null
+  let ready = Value(false)
 
   function discardDraft(node) {
     drafts.remove(node.id, (err)=>{
@@ -62,7 +64,9 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
       h('img.avatar', {src: authorAvatarUrl}),
       h('span.author', authorName),
       h('span.timestamp', htime(new Date(entry.value.timestamp))),
-      h('span.node', entry.id.substr(0,8)),
+      h('a.node', {
+        href: `#${root()}:${entry.id}`
+      },entry.id.substr(0,8)),
       when(isDraft(entry.id), h('span', {title: 'draft'}, '✎')),
       // TODO when(entry.forked, h('span', {title: 'conflicting updates, plese merge'}, '⑃')),
       h('span.buttons', [
@@ -96,15 +100,19 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
 
   selection( id => {
     console.log('rev selected', id)
-    // containerEl.querySelectorAll('.selected').forEach( el => el.classList.remove('selected') )
-    // if (el) el.querySelector('.node').classList.add('selected')
   })
 
   root( id => {
-    console.log('rev root', id)
+    if (currRoot === id) {
+      ready.set(true)
+      return
+    }
+    console.log('NEW rev root', id)
+    currRoot = id
     if (abort) abort()
     abort = null
     selection.set(null)
+    ready.set(false)
     entries = []
     mutantArray.clear()
     if (!id) return
@@ -116,11 +124,13 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
       if (entries.length) {
         selection.set(entries[entries.length - 1].id)
       } else selection.set(null)
+      ready.set(true)
     })
   })
 
   containerEl.selection = selection
   containerEl.root = root
+  containerEl.ready = ready
 
   return containerEl
 }
@@ -145,6 +155,7 @@ module.exports.css = ()=> `
   .rev .node {
     order: 3;
     margin: 8px 32px;
+    color: #6b6969;
   }
   .rev img {
     margin: 0 8px;

@@ -6,6 +6,7 @@ const computed = require('mutant/computed')
 const pull = require('pull-stream')
 const ssbClient = require('ssb-client')
 const getAvatar = require('ssb-avatar')
+const ref = require('ssb-ref')
 
 // TODO: use mutant
 const observable = require('observable')
@@ -177,6 +178,36 @@ module.exports = function(config, cb) {
     isPublishable( (isPublishable)=>{
       discardButton.disabled = !isPublishable
       saveButton.disabled = !isPublishable
+    })
+
+    function setSelectionFromURL(newURL) {
+      let fragment = newURL.substr(newURL.indexOf('#') + 1)
+      let revRoot, rev
+      if (fragment.indexOf(':') !== -1) {
+        [revRoot, rev] = fragment.split(':')
+      } else {
+        revRoot = fragment
+        rev = null
+      }
+      if (ref.isMsg(revRoot) || isDraft(revRoot)) {
+        let unsubsribe = revs.ready( (ready)=>{
+          if (ready && rev && ref.isMsg(rev)) {
+            revs.selection.set(rev)
+            unsubsribe()
+          }
+        })
+        tree.selection.set(revRoot)
+      }
+    }
+  
+    tree.ready( (ready)=>{
+      if (ready) {
+        setSelectionFromURL(window.location.href)
+      }
+    })
+
+    window.addEventListener('hashchange', (e)=>{
+      setSelectionFromURL(e.newURL)
     })
 
     function cleanupRevision(key, value) {
