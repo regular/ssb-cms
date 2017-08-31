@@ -274,7 +274,7 @@ module.exports = function updates(opts) {
                 delete child.valueBeforeDraft
                 child.unsaved = false
                 debug(child)
-                if (!doBuffer) push(Object.assign({type: 'revert'}, child))
+                if (!doBuffer) push(Object.assign({type: 'revert', remove: x.key}, child))
               }
               return false
             }
