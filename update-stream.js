@@ -2,7 +2,9 @@ const pull = require('pull-stream')
 const pushable = require('pull-pushable')
 const {isDraft} = require('./util')
 
-function log() {}
+function log() {
+  console.log.apply(console, arguments)
+}
 
 function forEach(arrOrVal, f) {
   if (typeof arrOrVal === 'undefined') return
@@ -221,7 +223,7 @@ module.exports = function updates(opts) {
                 if (headIndex === heads.length - 1) {
                   // this is the latest head
                   child.value = x.value
-                  if (!doBuffer) push(Object.assign({revision: x.key, pos: 'tail'}, child))
+                  if (!doBuffer) push(Object.assign({revision: x.key, pos: 'head'}, child))
                 } else {
                   // not the latest head, do not change node value
                   if (opts.allRevisions) {
