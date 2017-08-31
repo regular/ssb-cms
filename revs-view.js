@@ -1,222 +1,107 @@
 require('setimmediate')
 const h = require('mutant/html-element')
-const observable = require('observable')
-const ref = require('ssb-ref')
+const Value = require('mutant/value')
+const MutantArray = require('mutant/array')
+const MutantMap = require('mutant/map')
+const computed = require('mutant/computed')
+const when = require('mutant/when')
+const send = require('mutant/send')
+
 const pull = require('pull-stream')
-const many = require('pull-many')
 
-const updateStream = require('./update-stream')
-
-function arr(v) {
-  if (typeof v === 'undefined') return []
-  if (v === null) return []
-  if (Array.isArray(v)) return v
-  return [v]
-}
-
-function insert(key, kv, entries, pos) {
-  let error = ()=> {throw new Error(`Couldn't place ${key} ${pos}`)}
-  let after = arr(pos.after).slice()
-  let before = arr(pos.before)
-  // slide down the array until we are behind everything listed in `after`
-  let i = 0
-  while(after.length && i<entries.length) {
-    let r = entries[i].revision || entries[i].key
-    if (before.includes(r)) error()
-    // jshint -W083
-    if (after.includes(r)) after = after.filter( x=> x !== r )
-    // jshint +W083
-  }
-  if (after.length) error()
-
-  // now slide down further, until we either hit an entry of `before`
-  // or the next timestamp is greaten than ours
-  while(i<entries.length) {
-    let r = entries[i].revision || entries[i].key
-    if (before.includes(r)) break
-    if (entries[i].value.timestamp > kv.value.timestamp) break
-    ++i
-  }
-  return entries.slice(0, i).concat([kv]).concat(entries.slice(i))
-}
-
-function drawLine(ctx, x1, y1, x2, y2) {
-  ctx.beginPath();
-  ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
-  ctx.strokeStyle = '#003300';
-  ctx.stroke();
-}
-
-function drawCircle(context, centerX, centerY, radius) {
-  context.beginPath();
-  context.arc(centerX, centerY, radius, 0, 2 * Math.PI, false);
-  context.fillStyle = 'green';
-  context.fill();
-  context.lineWidth = 5;
-  context.strokeStyle = '#003300';
-  context.stroke();
-}
-
-function drawGraph(canvas, entries) {
-  let ctx = canvas.getContext('2d')
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  entries.forEach( (e, i)=> {
-    drawCircle(ctx, e.cx, e.cy, 10)
-  })
-  entries.forEach( (e, i)=> {
-    arr(e.value.content.revisionBranch).forEach( (b)=>{
-      let otherEntry
-      otherEntry = entries.find( x=> (x.revision || x.key) == b)
-      drawLine(ctx, e.cx, e.cy, otherEntry.cx, otherEntry.cy)
-    })
-  })
-}
-
-function updateGraph(entries) {
-  entries.forEach( (e)=> {
-    let fx = 0
-    entries.forEach( (other)=> {
-      if (e === other) return
-      let dx = other.cx - e.cx
-      //let dy = other.cy - e.cy
-      if (dx === 0) {
-        fx += .01
-      } else {
-        fx += -1000/dx * 0.0000001
-      }
-    })
-    arr(e.value.content.revisionBranch).forEach( (b)=>{
-      let otherEntry = entries.find( x=> (x.revision || x.key) == b)
-      let dx = otherEntry.cx - e.cx
-      fx += dx * .001
-      otherEntry.vx += -fx
-    })
-    e.vx += fx
-    e.cx += e.vx
-  })
-}
-
-function makeGraph(entries) {
-  const entryHeight = 64
-  const height = entries.length * entryHeight
-  const width = 200
-  let canvas = h('canvas', {
-    width, height
-  })
-  let ctx = canvas.getContext('2d')
-  entries.forEach( (e, i)=> {
-    e.vx = 0
-    e.cx = 100
-    e.cy = entryHeight * (i + 0.5)
-  })
-  entries.forEach( (e, i)=> {
-    arr(e.value.content.revisionBranch).forEach( (b)=>{
-      let otherEntry
-      otherEntry = entries.find( x=> (x.revision || x.key) == b)
-    })
-  })
-  return canvas
-}
+const {isDraft, arr} = require('./util')
+const SortStream = require('./sort-stream')
 
 module.exports = function(ssb, drafts, me, blobsRoot) {
-  let revs = h('.revs')
-  revs.selection = observable.signal()
 
-  revs.selection( (id)=>{
-    revs.querySelectorAll('.selected').forEach( el => el.classList.remove('selected') )
-    //if (el) el.querySelector('.node').classList.add('selected')
-  })
+  let selection = Value()
+  let root = Value()
 
-  function revisionsByRoot(key) {
-    let get = /^draft/.test(key) ? drafts.get : ssb.get
-    return pull(
-      many([
-        pull(
-          pull.once(key),
-          pull.asyncMap(get),
-          pull.map( value => {return {key, value}})
-        ),
-        ssb.links({
-          rel: 'revisionRoot',
-          live: true,
-          sync: true,
-          dest: key,
-          keys: true,
-          values: true
-        }),
-        drafts.byRevisionRoot(key, {
-          live: true,
-          sync: true
-        })
-      ]),
-      (()=>{
-        let expectedSyncs = 2
-        return pull.filter( (kv)=>{
-          if (kv.sync) return --expectedSyncs <= 0
-          return true
-        })
-      })(),
-      updateStream({
-        sync: true,
-        allRevisions: true,
-        bufferUntilSync: false
-      })
-    )
+  function discardDraft(node) {
+    drafts.remove(node.id, (err)=>{
+      if (err) throw err
+    })
   }
 
-  revs.root = observable.signal()
+  function html(entry) {
 
-  let revisions
-  let drain
-  let entries
-  let canvas
-  let timer
-  revs.root( id => {
-    if (drain) drain.abort()
-    revisions = null
-    drain = null
-    revs.selection(null)
-    if (timer) clearInterval(timer)
-    timer = null
-    if (canvas) {
-      revs.removeChild(canvas)
-      camvas = null
+    function _click(handler, args) {
+      return { 'ev-click': send( e => handler.apply(e, args) ) }
     }
-    entries = []
-    if (!id) return
-    revisions = pull(
-      revisionsByRoot(id),
-      drain = pull.drain( (kv)=>{
-        if (kv.sync) {
-          console.log(entries)
-          revs.appendChild(canvas = makeGraph(entries))
-          drawGraph(canvas, entries)
-          timer = setInterval( ()=>{
-            updateGraph(entries)
-            drawGraph(canvas, entries)
-            return true
-          }, 100)
-          return
-        }
-        let key = kv.revision || kv.key
-        let pos = kv.pos || 'head'
-        console.log('- RevView:', pos, key, kv.heads)
-        if (pos === 'head') entries.push(kv)
-        else if (pos === 'tail') entries.unshift(kv)
-        else insert(key, kv, entries, pos)
+
+    return h('li', [
+      h('div', {
+        classList: isDraft(entry.id) ? ['draft', 'revision'] : ['revision']
+      }, [
+        h('a', {
+          classList: computed([selection], sel => sel === entry.id ? ['selected'] : []),
+          href: `#${entry.id}`
+        }, [entry.id.substr(0,8)])
+      ]),
+      when(isDraft(entry.id), h('span', {title: 'draft'}, '✎')),
+      // TODO when(entry.forked, h('span', {title: 'conflicting updates, plese merge'}, '⑃')),
+      h('span.buttons', [
+        when(isDraft(entry.id), h('button.discard', _click(discardDraft, [entry]), 'discard' ))
+      ])
+    ])
+  }
+
+  let sortStream = SortStream(ssb, drafts)
+
+  function streamRevisions(id, syncCb) {
+    console.log('streaming sorted revisions of', id)
+    let drain
+    let entries
+    pull(
+      sortStream(id),
+      drain = pull.drain( _entries =>{
+        if (_entries.sync) return syncCb(null, entries)
+        entries = _entries
       }, (err)=>{
         if (err) throw err
-        //revs.selection(latest)
+        console.log('stream ended', err)
       })
     )
+    return drain.abort
+  }
+
+  let mutantArray = MutantArray()
+  let containerEl = h('.revs',
+    h('ul', MutantMap(mutantArray, html))
+  )
+  let abort
+
+  selection( id => {
+    console.log('rev selected', id)
+    // containerEl.querySelectorAll('.selected').forEach( el => el.classList.remove('selected') )
+    // if (el) el.querySelector('.node').classList.add('selected')
   })
 
-  return revs
+  root( id => {
+    console.log('rev root', id)
+    if (abort) abort()
+    abort = null
+    selection.set(null)
+    entries = []
+    mutantArray.clear()
+    if (!id) return
+
+    abort = streamRevisions(id, (err, entries)=>{
+      if (err) throw err
+      console.log('revisions synced')
+      mutantArray.set(entries)
+      if (entries.length) {
+        selection.set(entries[entries.length - 1].id)
+      } else selection.set(null)
+    })
+  })
+
+  containerEl.selection = selection
+  containerEl.root = root
+
+  return containerEl
 }
 
-module.exports.insert = insert
 module.exports.css = ()=> `
   .rev {
     font-size: 11px;
