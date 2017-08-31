@@ -17,12 +17,8 @@ const pull = require('pull-stream')
 const ref = require('ssb-ref')
 
 const updates = require('./update-stream')
-
+const {isDraft} = require('./util')
 const config = require('../ssb-cms/config')
-
-function isDraft(id) {
-  return /^draft/.test(id)
-}
 
 module.exports = function(ssb, drafts, root) {
 
@@ -39,6 +35,7 @@ module.exports = function(ssb, drafts, root) {
     }
     let json = JSON.stringify(value, null, 2)
     drafts.create(JSON.stringify(value, null, 2), node.id, null, null, (err, key)=>{
+      if (err) throw err
     })
   }
 
@@ -46,6 +43,7 @@ module.exports = function(ssb, drafts, root) {
     let content = node.msg().content
     let json = JSON.stringify(node.msg(), null, 2)
     drafts.create(json, content.branch, null, null, (err, key)=>{
+      if (err) throw err
     })
   }
   
