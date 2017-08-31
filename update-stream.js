@@ -3,7 +3,7 @@ const pushable = require('pull-pushable')
 const {isDraft} = require('./util')
 
 function log() {
-  console.log.apply(console, arguments)
+  //console.log.apply(console, arguments)
 }
 
 function forEach(arrOrVal, f) {
@@ -127,24 +127,28 @@ module.exports = function updates(opts) {
   })
 
   function push(o) {
-    console.log('update-stream pushes', o)
+    log('update-stream pushes', o)
     out.push(o)
+  }
+
+  function flush() {
+    if (doBuffer) {
+      log('update-stream: unbuffering')
+      Object.values(children).forEach( c => push(Object.assign({}, c)) )
+      doBuffer = false
+    }
   }
 
   let through = function(read) {
     pull(
       read,
       pull.through( kv=>{
-        console.log('update-stream reads', JSON.stringify(kv))
+        log('update-stream reads', JSON.stringify(kv))
       }),
       pull.filter( kv =>{
         if (kv.sync) {
           // push current children states
-          if (doBuffer) {
-            console.log('update-stream: unbuffering')
-            Object.values(children).forEach( c => push(Object.assign({}, c)) )
-            doBuffer = false
-          }
+          flush()
           if (opts.sync) push(kv)
           return false
         }
@@ -307,6 +311,7 @@ module.exports = function updates(opts) {
         //  If moved-from === ourBranch, put child key on ignoreRevRoot list, remove child, emit 'del' <child.key>
  
       }, (err)=>{
+        flush()
         out.end(err)
       })
     )
