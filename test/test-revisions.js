@@ -9,7 +9,7 @@ test('revisions of draft', (t)=>{
 
   const db = DB({
     get: (key) => {
-      t.fail("Don't adk ssb for drafts")
+      t.fail("Don't ask ssb for drafts")
     },
     links: (opts) => {
       t.fail("Don't adk ssb for drafts")
@@ -27,13 +27,39 @@ test('revisions of draft', (t)=>{
   db.revisions('draft-a', {foo: 'bar'})
 })
 
+test("revisions of draft: don't push sync before original message", (t)=>{
+
+  const db = DB({}, {
+    get: (key, cb) => {
+      setTimeout( ()=>{
+        cb(null, {bar: 'baz'})
+      }, 1)
+    },
+    byRevisionRoot: (root, opts) => {
+      return pull.values([{foo: 'bar'}, {sync: true}])
+    }
+  })
+
+  pull(
+    db.revisions('draft-a', {sync: true, live: true}),
+    pull.collect( (err, items)=>{
+      t.notOk(err)
+      t.deepEqual(items, [
+        {foo: 'bar'},
+        {key: 'draft-a', value: { bar: 'baz' } },
+        {sync: true}])
+      t.end()
+    })
+  )
+})
+
 test('revisions of draft (live): sync comes through', (t)=>{
   const db = DB({
     get: (key) => {
-      t.fail("Don't adk ssb for drafts")
+      t.fail("Don't ask ssb for drafts")
     },
     links: (opts) => {
-      t.fail("Don't adk ssb for drafts")
+      t.fail("Don't ask ssb for drafts")
     }
   }, {
     get: (key, cb) => {

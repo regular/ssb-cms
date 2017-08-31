@@ -1113,3 +1113,29 @@ test('allRevisions=true: rev a1, draft-a2, new a-from-draft-a, draft-a, del draf
     })
   )
 })
+
+
+test('test with real data', (t)=>{
+  const kvs = [
+{"key":"%3C1+","value":{"timestamp":1502706465607,"content":{"revisionRoot":"%7ep0","revisionBranch":"%7ep0"}}},
+{"key":"%d6PL","value":{"timestamp":1502719542665,"content":{"revisionRoot":"%7ep0","revisionBranch":"%3C1+"}}},
+{"key":"%tPlH","value":{"timestamp":1502728897852,"content":{"revisionRoot":"%7ep0","revisionBranch":"%7ep0"}}},
+{"key":"%eZe6","value":{"timestamp":1504007449007,"content":{"revisionRoot":"%7ep0","revisionBranch":"%3C1+"}}},
+{"key":"%7ep0","value":{"timestamp":1502695627867,"content":{}}}
+]
+
+  pull(
+    pull.values(kvs),
+    s({allRevisions: true}),
+    pull.through( (kv)=>{
+      console.log()
+      console.log(kv.revision)
+      console.log('- XX ', kv.pos && kv.pos.before || kv.pos, kv.pos && kv.pos.after)
+    }),
+    pull.collect( (err, updates) => {
+      t.notOk(err)
+      //console.log(updates)
+      t.end()
+    })
+  )
+})
