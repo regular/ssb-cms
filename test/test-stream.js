@@ -895,7 +895,7 @@ test('allRevisions=true: new a, rev a1, rev a2 (fork, a1 wins), draft-a3 (merge)
       t.notOk(err)
       t.equal(updates.length, 4)
 
-      console.log(inspect(updates, {depth: 5}))
+      //console.log(inspect(updates, {depth: 5}))
 
       t.deepEqual(updates[0].value.content, {
         text: 'foo'
@@ -916,7 +916,7 @@ test('allRevisions=true: new a, rev a1, rev a2 (fork, a1 wins), draft-a3 (merge)
       t.deepEqual(updates[2].value.content, {
         revisionRoot: 'a',
         revisionBranch: 'a',
-        text: 'bar'
+        text: 'baz' // changes because allRevisions is true
       })
       t.equal(updates[2].unsaved, false)
       t.deepEqual(heads(updates[2]), ['a1','a2'])
@@ -1080,7 +1080,7 @@ test('allRevisions=true: rev a1, draft-a2, new a-from-draft-a, draft-a, del draf
     s({allRevisions: true}),
     pull.collect( (err, updates) => {
       t.notOk(err)
-      console.log(updates)
+      //console.log(updates)
       t.equal(updates.length, 3)
 
       t.deepEqual(updates[0].value.content, {
@@ -1100,11 +1100,11 @@ test('allRevisions=true: rev a1, draft-a2, new a-from-draft-a, draft-a, del draf
       t.deepEqual(heads(updates[1]), ['draft-a2'])
 
       t.equal(updates[2].pos, 'tail')
-      // the value doesn't change!
+      // the revisions value is sent, because
+      // we specified allRevisions=true
       t.deepEqual(updates[2].value.content, {
-        revisionRoot: 'a',
-        revisionBranch: 'a1',
-        text: 'revised'
+        'from-draft': 'draft-a',
+      text: 'bar'
       })
       t.equal(updates[2].unsaved, true)
       t.deepEqual(heads(updates[2]), ['draft-a2'])
@@ -1114,15 +1114,15 @@ test('allRevisions=true: rev a1, draft-a2, new a-from-draft-a, draft-a, del draf
   )
 })
 
-
+/* TODO
 test('test with real data', (t)=>{
   const kvs = [
-{"key":"%3C1+","value":{"timestamp":1502706465607,"content":{"revisionRoot":"%7ep0","revisionBranch":"%7ep0"}}},
-{"key":"%d6PL","value":{"timestamp":1502719542665,"content":{"revisionRoot":"%7ep0","revisionBranch":"%3C1+"}}},
-{"key":"%tPlH","value":{"timestamp":1502728897852,"content":{"revisionRoot":"%7ep0","revisionBranch":"%7ep0"}}},
-{"key":"%eZe6","value":{"timestamp":1504007449007,"content":{"revisionRoot":"%7ep0","revisionBranch":"%3C1+"}}},
-{"key":"%7ep0","value":{"timestamp":1502695627867,"content":{}}}
-]
+    {"key":"%3C1+","value":{"timestamp":1502706465607,"content":{"revisionRoot":"%7ep0","revisionBranch":"%7ep0"}}},
+    {"key":"%d6PL","value":{"timestamp":1502719542665,"content":{"revisionRoot":"%7ep0","revisionBranch":"%3C1+"}}},
+    {"key":"%tPlH","value":{"timestamp":1502728897852,"content":{"revisionRoot":"%7ep0","revisionBranch":"%7ep0"}}},
+    {"key":"%eZe6","value":{"timestamp":1504007449007,"content":{"revisionRoot":"%7ep0","revisionBranch":"%3C1+"}}},
+    {"key":"%7ep0","value":{"timestamp":1502695627867,"content":{}}}
+  ]
 
   pull(
     pull.values(kvs),
@@ -1134,8 +1134,9 @@ test('test with real data', (t)=>{
     }),
     pull.collect( (err, updates) => {
       t.notOk(err)
-      //console.log(updates)
+      console.log(updates)
       t.end()
     })
   )
 })
+*/
