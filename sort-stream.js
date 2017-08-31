@@ -47,18 +47,27 @@ module.exports = function(ssb, drafts) {
         live: true,
         sync: true
       }),
+      pull.through( x=>{
+        console.log('RS ',x)
+      }),
       updateStream({
+        live: true,
         sync: true,
         allRevisions: true,
         bufferUntilSync: false
+      }),
+      pull.through( x=>{
+        console.log('US ',x)
       }),
       pull.map( (kv)=>{
         if (kv.sync) return kv
         let key = kv.revision || kv.key
         kv.id = key
         // Is this a request to remove a draft?
-        if (kv.type === 'del') {
-          let entry = entries.find( x=> x.id === key )
+        if (kv.type === 'del' || kv.type === 'revert') {
+          console.log('DRAFT DEL')
+          let id = kv.type === 'del' ? kv.key : kv.remove
+          let entry = entries.find( x=> x.id === id )
           if (entry) {
             entries = entries.filter( e=> e !== entry)
           } else console.error('Request to delete non-existing draft', key)
