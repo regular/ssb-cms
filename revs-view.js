@@ -8,11 +8,25 @@ const when = require('mutant/when')
 const send = require('mutant/send')
 
 const pull = require('pull-stream')
+const htime = require('human-time')
+const ssbAvatar = require('ssb-avatar')
+const memo = require('asyncmemo')
+const lru = require('hashlru')
 
 const {isDraft, arr} = require('./util')
 const SortStream = require('./sort-stream')
 
 module.exports = function(ssb, drafts, me, blobsRoot) {
+
+  let getAvatar = memo({cache: lru(50)}, function (id, cb) {
+    ssbAvatar(ssb, me, id, (err, about)=>{
+      if (err) return cb(err)
+      let name = about.name
+      if (!/^@/.test(name)) name = '@' + name
+      let imageUrl = `${blobsRoot}/${about.image}`
+      cb(null, {name, imageUrl})
+    })
+  })
 
   let selection = Value()
   let root = Value()
@@ -28,16 +42,27 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
     function _click(handler, args) {
       return { 'ev-click': send( e => handler.apply(e, args) ) }
     }
+    let authorAvatarUrl = Value()
+    let authorName = Value()
+    let feedId = isDraft(entry.id) ? me : entry.value.author
+    getAvatar(feedId, (err, avatar) =>{
+      if (err) return console.error(err)
+      authorAvatarUrl.set(avatar.imageUrl)
+      authorName.set(avatar.name)
+    })
 
-    return h('li', [
-      h('div', {
-        classList: isDraft(entry.id) ? ['draft', 'revision'] : ['revision']
-      }, [
-        h('a', {
-          classList: computed([selection], sel => sel === entry.id ? ['selected'] : []),
-          href: `#${entry.id}`
-        }, [entry.id.substr(0,8)])
-      ]),
+    return h('div', {
+      classList: computed([selection, isDraft(entry.id)], (sel, draft) => {
+        let cl = ['rev']
+        if (sel === entry.id) cl.push('selected')
+        if (draft) cl.push('draft')
+        return cl
+      })
+    }, [
+      h('img.avatar', {src: authorAvatarUrl}),
+      h('span.author', authorName),
+      h('span.timestamp', htime(new Date(entry.value.timestamp))),
+      h('span.node', entry.id.substr(0,8)),
       when(isDraft(entry.id), h('span', {title: 'draft'}, '✎')),
       // TODO when(entry.forked, h('span', {title: 'conflicting updates, plese merge'}, '⑃')),
       h('span.buttons', [
@@ -66,9 +91,7 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
   }
 
   let mutantArray = MutantArray()
-  let containerEl = h('.revs',
-    h('ul', MutantMap(mutantArray, html))
-  )
+  let containerEl = h('.revs', MutantMap(mutantArray, html))
   let abort
 
   selection( id => {
@@ -114,6 +137,10 @@ module.exports.css = ()=> `
     flex-wrap: wrap;
     max-height: 32px;
     align-content: flex-start;
+  }
+  .rev.selected {
+    color: #111110;
+    background: #b39254;
   }
   .rev .node {
     order: 3;

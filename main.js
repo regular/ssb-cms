@@ -1,8 +1,13 @@
-const pull = require('pull-stream')
-const h = require('hyperscript')
+require('setimmediate')
+const h = require('mutant/html-element')
 const ho = require('hyperobj')
+const Value = require('mutant/value')
+const computed = require('mutant/computed')
+const pull = require('pull-stream')
 const ssbClient = require('ssb-client')
 const getAvatar = require('ssb-avatar')
+
+// TODO: use mutant
 const observable = require('observable')
 const obv = require('obv')
 
@@ -13,6 +18,7 @@ const Revs = require('./revs-view')
 const Menubar = require('./renderers/menubar')
 const drafts = require('./drafts')()
 const DB = require('./db')
+const {isDraft} = require('./util')
 
 const modes = ['normal', 'translucent', 'no-ui']
 
@@ -117,23 +123,23 @@ module.exports = function(config, cb) {
     // three column layout
     let editorContainer, treeColumn, discardButton, saveButton
     uiContainer.appendChild(
-      h('.columns',
+      h('.columns', [
         treeColumn = h('.col.treeview'),
-        revisionsColumn = h('.col.revisions',
+        revisionsColumn = h('.col.revisions', [
           h('.toolbar')
-        ),
-        h('.col.editor-col',
+        ]),
+        h('.col.editor-col', [
           editorContainer = h('.editor-container'),
-          h('.buttons',
-            discardButton = h('button.discard', 'Discard Changes', {
-              onclick: discard
-            }),
-            saveButton = h('button.save', 'Publish', {
-              onclick: save
-            })
-          )
-        )
-      )
+          h('.buttons', [
+            discardButton = h('button.discard', {
+              'ev-click': discard
+            }, 'Discard Changes'),
+            saveButton = h('button.save', {
+              'ev-click': save
+            }, 'Publish' )
+          ])
+        ])
+      ])
     )
 
     const editor = Editor(editorContainer, ssb, config)
@@ -163,9 +169,9 @@ module.exports = function(config, cb) {
     const revs = Revs(ssb, drafts, me.value, config.blobsRoot)
     revisionsColumn.appendChild(h('.revs-container', revs))
 
-    let isNewDraft = observable.transform(tree.selection, id => /^draft/.test(id))
-    let isRevisionDraft = observable.transform(revs.selection, id => /^draft/.test(id))
-    let isPublishable = observable.compute(
+    let isNewDraft = computed([tree.selection], isDraft)
+    let isRevisionDraft = computed([revs.selection], isDraft)
+    let isPublishable = computed(
       [isNewDraft, isRevisionDraft],
       (newDraft, revDraft) => newDraft || revDraft)
     isPublishable( (isPublishable)=>{
@@ -174,6 +180,8 @@ module.exports = function(config, cb) {
     })
 
     function cleanupRevision(key, value) {
+      // TODO
+      return
       // if all edits have been undone, remove the revision
       if (value.revisionBranch) {
         ssb.get(value.revisionBranch, (err, val)=>{
@@ -196,7 +204,7 @@ module.exports = function(config, cb) {
     editor.change( ()=> {
       if (ignoreChanges) return
       let msgString = editor.getValue()
-      if (/^draft/.test(revs.selection())) {
+      if (isDraft(revs.selection())) {
         drafts.update( revs.selection(), msgString, (err)=>{
           if (err) throw err
           drafts.get( revs.selection(), (err, value)=>{
@@ -237,8 +245,9 @@ module.exports = function(config, cb) {
         drafts.remove(key)
         let msgString = JSON.stringify(result.value, null, 2)
         loadIntoEditor(msgString)
-        revs.update(key, result.value, result.key)
-        if (/^draft/.test(tree.selection())) {
+        // TODO
+        //revs.update(key, result.value, result.key)
+        if (isDraft(tree.selection())) {
           tree.update(tree.selection(), result.value, result.key)
         }
       })
@@ -256,7 +265,7 @@ module.exports = function(config, cb) {
         drafts.remove(key, (err)=>{
           if (err) throw err
         })
-        if (/^draft/.test(tree.selection())) {
+        if (isDraft(tree.selection())) {
           tree.remove(key)
         } else if (tree.selection() === value.revisionRoot) {
           ssb.get(value.revisionBranch, (err, value)=>{
@@ -269,7 +278,7 @@ module.exports = function(config, cb) {
       })
     }
 
-    tree.selection(revs.root)
+    tree.selection( id => revs.root.set(id))
 
     let ignoreRevsSelectionChanges = false
     revs.selection( (id) => {
@@ -291,6 +300,8 @@ module.exports = function(config, cb) {
     }
 
     editor.clean( (isClean)=>{
+      // TODO
+      return
       if (!isClean && !ignoreChanges && !isRevisionDraft() && !isNewDraft()) {
         // first edit: create new revision draft
         let msgString = editor.getValue()
@@ -301,7 +312,7 @@ module.exports = function(config, cb) {
           function gotBranch(branch) {
             drafts.create(msgString, branch, revisionRoot, revisionBranch, (err, key, value)=>{
               if (err) return console.error(err)
-              revs.add({key, value})
+              //revs.add({key, value})
               ignoreRevsSelectionChanges = true
               revs.selection(key)
               ignoreRevsSelectionChanges = false
