@@ -23,6 +23,20 @@ module.exports = function () {
     valueEncoding: 'utf8',
     keyEncoding: 'utf8'
   })
+
+  function processEntry(e, cb) {
+    if (e.sync) return cb(null, e)
+    if (e.type && e.type !== 'put') {
+      let key = e.key.substr(e.key.lastIndexOf('~')+1)
+      return cb(null, {key, value: null, type: e.type})
+    }
+    db.get(e.value, function (err, value) {
+      if (err) return cb(err)
+      value = JSON.parse(value)
+      cb(null, {key: e.value, value: tryToParse(value)})
+    })
+  }
+
   return {
     get: (key, cb) => {
       db.get(key, (err, value) => {
@@ -96,18 +110,7 @@ module.exports = function () {
       opts = opts || {}
       return pull(
         pl.read(db, Object.assign({}, opts, {min: `~BRANCH~${branch||""}`, max: `~BRANCH~${branch||""}~~`})),
-        pull.asyncMap(function (e, cb) {
-          if (e.sync) return cb(null, e)
-          if (e.type && e.type !== 'put') {
-            let key = e.key.substr(e.key.lastIndexOf('~')+1)
-            return cb(null, {key, value: null, type: e.type})
-          }
-          db.get(e.value, function (err, value) {
-            if (err) return cb(err)
-            value = JSON.parse(value)
-            cb(null, {key: e.value, value: tryToParse(value)})
-          })
-        })
+        pull.asyncMap(processEntry)
       )
     },
 
@@ -115,14 +118,7 @@ module.exports = function () {
       opts = opts || {}
       return pull(
         pl.read(db, Object.assign({}, opts, {min: `~REVROOT~${root||""}`, max: `~REVROOT~${root||""}~~`})),
-        pull.asyncMap(function (e, cb) {
-          if (e.sync) return cb(null, e)
-          db.get(e.value, function (err, value) {
-            if (err) return cb(err)
-            value = JSON.parse(value)
-            cb(null, {key: e.value, value: tryToParse(value)})
-          })
-        })
+        pull.asyncMap(processEntry)
       )
     },
 

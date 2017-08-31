@@ -30,7 +30,7 @@ module.exports = function(ssb, drafts) {
   function uniqueKeys() {
     let seenKeys = [] // TODO: use a Set here?
     return pull.filter( x => {
-      if (x.key) {
+      if (x.type !== 'del' && x.key) {
         if (seenKeys.includes(x.key)) {
           return false
         }
@@ -90,8 +90,8 @@ module.exports = function(ssb, drafts) {
         ) : pull.empty(),
         drafts.byRevisionRoot(root, opts)
       ]),
-      filterSync(syncCount),
-      uniqueKeys()
+      uniqueKeys(),
+      filterSync(syncCount)
     )
   }
 
