@@ -1,11 +1,8 @@
 const pull = require('pull-stream')
 const pushable = require('pull-pushable')
+const {isDraft} = require('./util')
 
 function log() {}
-
-function isDraft(id) {
-  return /^draft/.test(id)
-}
 
 function forEach(arrOrVal, f) {
   if (typeof arrOrVal === 'undefined') return
@@ -13,7 +10,6 @@ function forEach(arrOrVal, f) {
   if (!Array.isArray(arrOrVal)) arrOrVal = [arrOrVal]
   arrOrVal.forEach(f)
 }
-
 
 function debug(child) {
   log('new heads:', child.heads)
@@ -128,17 +124,26 @@ module.exports = function updates(opts) {
     drain.abort(err)
   })
 
+  function push(o) {
+    console.log('update-stream pushes', o)
+    out.push(o)
+  }
+
   let through = function(read) {
     pull(
       read,
+      pull.through( kv=>{
+        console.log('update-stream reads', JSON.stringify(kv))
+      }),
       pull.filter( kv =>{
         if (kv.sync) {
           // push current children states
           if (doBuffer) {
-            Object.values(children).forEach( c=> out.push(Object.assign({},c)) )
+            console.log('update-stream: unbuffering')
+            Object.values(children).forEach( c => push(Object.assign({}, c)) )
             doBuffer = false
           }
-          if (opts.sync) out.push(kv)
+          if (opts.sync) push(kv)
           return false
         }
         return true
@@ -177,7 +182,7 @@ module.exports = function updates(opts) {
             }
             debug(child)
             ignoreDraft(value)
-            if (!doBuffer) out.push(Object.assign({revision: kv.key}, child))
+            if (!doBuffer) push(Object.assign({revision: kv.key}, child))
             return
           }
         } else {
@@ -216,13 +221,13 @@ module.exports = function updates(opts) {
                 if (headIndex === heads.length - 1) {
                   // this is the latest head
                   child.value = x.value
-                  if (!doBuffer) out.push(Object.assign({revision: x.key, pos: 'tail'}, child))
+                  if (!doBuffer) push(Object.assign({revision: x.key, pos: 'tail'}, child))
                 } else {
                   // not the latest head, do not change node value
                   if (opts.allRevisions) {
                     let pos = {before: heads[headIndex+1], after: links(x)}
-                    if (headIndex>0) pos.after.push(heads[headIndex=1])
-                    if (!doBuffer) out.push(Object.assign({revision: x.key, pos}, child))
+                    if (headIndex>0) pos.after.push(heads[headIndex-1])
+                    if (!doBuffer) push(Object.assign({}, child, {revision: x.key, pos, value: kv.value}))
                   }
                 }
                 return false
@@ -241,7 +246,7 @@ module.exports = function updates(opts) {
               }
               child.tail = x.key
               debug(child)
-              if (opts.allRevisions && !doBuffer) out.push(Object.assign({revision: kv.key, pos: 'tail'}, child))
+              if (opts.allRevisions && !doBuffer) push(Object.assign({}, child, {revision: kv.key, pos: 'tail', value: kv.value}))
               return false // remove from queue
             }
 
@@ -251,7 +256,7 @@ module.exports = function updates(opts) {
             if (x.type === 'del') {
               if (x.key === child.key) {
                 delete children[child.key]
-                if (!doBuffer) out.push(x)
+                if (!doBuffer) push(x)
               } else {
                 child.internals = replace(child.internals, child.value.content.revisionBranch, [], {arrayResult: true})
                 //child.heads = replace(child.heads, x.key, child.value.content.revisionBranch, {arrayResult: true})
@@ -263,7 +268,7 @@ module.exports = function updates(opts) {
                 delete child.valueBeforeDraft
                 child.unsaved = false
                 debug(child)
-                if (!doBuffer) out.push(Object.assign({type: 'revert'}, child))
+                if (!doBuffer) push(Object.assign({type: 'revert'}, child))
               }
               return false
             }
@@ -282,7 +287,7 @@ module.exports = function updates(opts) {
             })
             addHead(child, x.key, x.value.timestamp)
             debug(child)
-            if (!doBuffer) out.push(Object.assign({revision: x.key}, child))
+            if (!doBuffer) push(Object.assign({revision: x.key}, child))
             return false // remove from queue
           })
           return success
