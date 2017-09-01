@@ -54,10 +54,21 @@ module.exports = function(ssb, drafts, root) {
     })
   }
 
+  function selectId(id) {
+    console.log(this, id)
+    // from https://stackoverflow.com/questions/11451353/how-to-select-the-text-of-a-span-on-click
+    selection = window.getSelection()
+    range = document.createRange()
+    this.innerText = id
+    range.selectNodeContents(this)
+    selection.removeAllRanges()
+    selection.addRange(range)
+  }
+
   function html(node) {
 
     function _click(handler, args) {
-      return { 'ev-click': send( e => handler.apply(e, args) ) }
+      return { 'ev-click': function(e) { handler.apply(this, args)  }}
     }
 
     return h('li', [
@@ -90,6 +101,10 @@ module.exports = function(ssb, drafts, root) {
             when(node.forked, h('span', {title: 'conflicting updates, plese merge'}, '⑃')),
             when(node.incomplete, h('span', {title: 'incomplete history'}, '⚠')),
             h('span.buttons', [
+              h('button.id', {
+                'ev-click': function(e) { selectId.apply(this, [node.id]) },
+                'ev-blur': function(e) { this.innerText = 'id' }
+              }, 'id' ),
               when(node.open, h('button.add', _click(addNode, [node]), 'add' )),
               when(!isDraft(node.id), h('button.clone', _click(cloneNode, [node]), 'clone' )),
               when(isDraft(node.id), h('button.discard', _click(discardDraft, [node]), 'discard' ))
@@ -356,6 +371,11 @@ module.exports.css = ()=>  `
     border-radius: 0;
     color: #777;
     padding: 0 .4em;
+  }
+
+  button.id {
+     max-width: 4em;
+     overflow: hidden;
   }
 
   .branch-header button:hover {
