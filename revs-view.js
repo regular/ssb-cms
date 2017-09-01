@@ -36,6 +36,11 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
   function discardDraft(node) {
     drafts.remove(node.id, (err)=>{
       if (err) throw err
+      let hash = document.location.hash
+      if (hash.indexOf(':') !== -1) {
+        document.location.hash = hash.split(':')[0]
+      }
+      selection.set('latest')
     })
   }
 
@@ -44,9 +49,10 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
     function _click(handler, args) {
       return { 'ev-click': send( e => handler.apply(e, args) ) }
     }
-    let authorAvatarUrl = Value()
-    let authorName = Value()
+
     let feedId = isDraft(entry.id) ? me : entry.value.author
+    let authorAvatarUrl = Value(null, {defaultValue: ""})
+    let authorName = Value(null, {defaultValue: feedId})
     getAvatar(feedId, (err, avatar) =>{
       if (err) return console.error(err)
       authorAvatarUrl.set(avatar.imageUrl)
@@ -55,6 +61,7 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
 
     return h('div', {
       classList: computed([selection, isDraft(entry.id)], (sel, draft) => {
+        console.log('sel', sel)
         let cl = ['rev']
         if (sel === entry.id) cl.push('selected')
         if (draft) cl.push('draft')
@@ -107,6 +114,9 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
   let abort
 
   selection( id => {
+    if (id === 'latest') {
+      return selection.set(mutantArray.get(mutantArray.getLength()-1).id)
+    }
     console.log('rev selected', id)
   })
 
@@ -128,9 +138,6 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
     abort = streamRevisions(id, (err, entries)=>{
       if (err) throw err
       console.log('revisions synced')
-      if (entries.length) {
-        selection.set(entries[entries.length - 1].id)
-      } else selection.set(null)
       ready.set(true)
     })
   })

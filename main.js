@@ -192,8 +192,12 @@ module.exports = function(config, cb) {
       }
       if (ref.isMsg(revRoot) || isDraft(revRoot)) {
         let unsubsribe = revs.ready( (ready)=>{
-          if (ready && rev && (ref.isMsg(rev) || isDraft(rev)) ) {
-            revs.selection.set(rev)
+          if (ready) {
+            if (rev && (ref.isMsg(rev) || isDraft(rev)) ) {
+              revs.selection.set(rev)
+            } else {
+              revs.selection.set('latest')
+            }
             unsubsribe()
           }
         })
