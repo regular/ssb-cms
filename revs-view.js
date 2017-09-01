@@ -115,7 +115,10 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
 
   selection( id => {
     if (id === 'latest') {
-      return selection.set(mutantArray.get(mutantArray.getLength()-1).id)
+      if (mutantArray.getLength() > 0) {
+        return selection.set(mutantArray.get(mutantArray.getLength()-1).id)
+      }
+      selection.set(null)
     }
     console.log('rev selected', id)
   })

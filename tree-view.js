@@ -51,6 +51,9 @@ module.exports = function(ssb, drafts, root) {
   function discardDraft(node) {
     drafts.remove(node.id, (err)=>{
       if (err) throw err
+      if (selection() === node.id) {
+        document.location.hash = ''
+      }
     })
   }
 

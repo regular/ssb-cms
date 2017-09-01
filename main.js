@@ -187,10 +187,11 @@ module.exports = function(config, cb) {
       if (fragment.indexOf(':') !== -1) {
         [revRoot, rev] = fragment.split(':')
       } else {
-        revRoot = fragment
+        revRoot = fragment || null // empty string -> null
         rev = null
       }
-      if (ref.isMsg(revRoot) || isDraft(revRoot)) {
+      console.log('FROM URL:', revRoot, rev)
+      if (!revRoot || ref.isMsg(revRoot) || isDraft(revRoot)) {
         let unsubsribe = revs.ready( (ready)=>{
           if (ready) {
             if (rev && (ref.isMsg(rev) || isDraft(rev)) ) {
@@ -212,6 +213,7 @@ module.exports = function(config, cb) {
     })
 
     window.addEventListener('hashchange', (e)=>{
+      console.log('HASH CHANGE')
       setSelectionFromURL(e.newURL)
     })
 
@@ -314,7 +316,10 @@ module.exports = function(config, cb) {
       })
     }
 
-    tree.selection( id => revs.root.set(id))
+    tree.selection( id => {
+      console.log('MAIN new revRoot', id)
+      revs.root.set(id)
+    })
 
     let ignoreRevsSelectionChanges = false
     revs.selection( (id) => {
