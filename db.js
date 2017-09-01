@@ -139,8 +139,78 @@ module.exports = function(ssb, drafts) {
       cb(null, msg)
     })
   }
+
+  // Use this general getter in custom renderers
+  // opts:
+  // - children: (default: false) returned object has a `children` property (MutantArray)
+  // - ignorePrototype: (default: false)
+  // - ignorePrototypeProperties: (default: false) don't include properties from prototypes
+  // - ignorePrototypeChildren: (default: false) don't include children from prototypes
+  function getObservable(key, opts) {
+    if (!key) throw new Error('no key specified')
+    opts = opts || {}
+
+    function findOrMake(kv, pool) {
+      if (!kv.value) return console.error('Trying to make a node without a value. This is bad.')
+      let node
+
+      if (pool) {
+        node = pool.find( x=> x.id === kv.kkey )
+  
+        // Is this a request to remove a draft?
+        if (kv.type === 'del') {
+          if (node) chlds.delete(node)
+          else console.error('Request to delete non-existing child', key)
+          return null
+        }
+        // if this is a new child that was just created from a draft,
+        // make sure to get rid of the draft
+        let fromDraft = kv.value.content && kv.value.content['from-draft']
+        if (poolfromDraft) {
+          let draft = pool.find( x=> x.id === fromDraft )
+          if (draft) pool.delete(draft)
+        }
+      }
+      if (!node) {
+        node = Dict()
+        pool.push(node)
+      }
+      return node
+    }
+
+    let observable = Dict()
+    let drain
+    let synced = false
+    if (opts.includeChildren) observable.children = MutantArray()
+    pull(
+      many([
+        revisions(key, opts),
+        opts.includeChildren ? branches(key, opts) : pull.empty()
+      ]),
+      uniqueKeys(),
+      updatesStream(Object.assign({}, opts, {bufferUntilSync: opts.live})),
+      pull.filter( x=>{
+        if (x.sync) synced = true
+        return !x.sync
+      }),
+      drain = pull.drain( (kv)=>{
+        if (kv.key === key) {
+          return observable.set(kv.value)
+        }
+        if (observable.children) {
+          // do we have a child for that revRoot yet?
+          child = findOrMake(kv, observable.children)
+          child.set(kv.value)
+        }
+      }, (err)=>{
+        console.error('get API stream ended', err)
+      })
+    )
+    return observable
+  }
   
   return {
+    getObservable,
     getMessageOrDraft,
     getLatest,
     getPrototypeChain: function (key, cb) {getPrototypeChain(key, [], cb)},
