@@ -295,23 +295,16 @@ module.exports = function(config, cb) {
       // if (!confirm('Discard changes?')) return
       let key = revs.selection()
       if (!key) return
-      drafts.get(key, (err, value)=>{
-        if (err) throw err
-        // select the previous revision
-        revs.selection(value.revisionBranch)
-        revs.remove(key)
-        drafts.remove(key, (err)=>{
-          if (err) throw err
-        })
-        if (isDraft(tree.selection())) {
-          tree.remove(key)
-        } else if (tree.selection() === value.revisionRoot) {
-          ssb.get(value.revisionBranch, (err, value)=>{
-            if (err) return console.error(err)
-            let c = value.content
-            if (typeof c !== 'string') value.content = JSON.stringify(value, null, 2)
-            tree.update(tree.selection(), value)
-          })
+      drafts.remove(key, (err)=>{
+        if (err) console.error(err)
+        let hash = document.location.hash
+        if (!isDraft(hash.substr(1))) { 
+          if (hash.indexOf(':') !== -1) {
+            document.location.hash = hash.split(':')[0]
+            revs.selection.set('latest')
+          }
+        } else {
+          document.location.hash = ''
         }
       })
     }

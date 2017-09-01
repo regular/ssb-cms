@@ -37,10 +37,14 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
     drafts.remove(node.id, (err)=>{
       if (err) throw err
       let hash = document.location.hash
-      if (hash.indexOf(':') !== -1) {
-        document.location.hash = hash.split(':')[0]
+      if (!isDraft(hash.substr(1))) { 
+        if (hash.indexOf(':') !== -1) {
+          document.location.hash = hash.split(':')[0]
+        }
+        selection.set('latest')
+      } else {
+        document.location.hash = ''
       }
-      selection.set('latest')
     })
   }
 
