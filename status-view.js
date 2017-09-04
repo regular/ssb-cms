@@ -76,9 +76,13 @@ module.exports = function(ssb, drafts, root) {
           return
         }
         let key = kv.key
+        // TODO: This is wrong!
+        // 'put' is used for updates, too, so
+        // count(put) - count(del) !== 0
+        console.log('WATCH', kv.type, key)
         if (key[0]==='~') key = key.substr(1)
         let t = key.split(/[~-]/)[0].toLowerCase()
-        counts[t] += (kv.type == 'del') ? -1 : 1
+        counts[t] += (kv.type === 'del') ? -1 : 1
         if (synced) {
           draftCount.set(counts.draft)
           draftWarning.set(counts.draft !== counts.branch || counts.draft !== counts.revroot)
@@ -135,7 +139,7 @@ module.exports = function(ssb, drafts, root) {
       }),
 
       pull.drain( kv => {
-        console.log('watch', kv)
+        //console.log('watch', kv)
         let {key, value} = kv
         if (kv.type === 'del') return
         if (isDraft(key)) return

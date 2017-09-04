@@ -48,7 +48,7 @@ module.exports = function(ssb, drafts) {
         sync: true
       }),
       pull.through( x=>{
-        console.log('RS ',x)
+        //console.log('RS ',x)
       }),
       updateStream({
         live: true,
@@ -57,7 +57,7 @@ module.exports = function(ssb, drafts) {
         bufferUntilSync: false
       }),
       pull.through( x=>{
-        console.log('US ',x)
+        //console.log('US ',x)
       }),
       pull.map( (kv)=>{
         if (kv.sync) return kv
@@ -65,7 +65,7 @@ module.exports = function(ssb, drafts) {
         kv.id = key
         // Is this a request to remove a draft?
         if (kv.type === 'del' || kv.type === 'revert') {
-          console.log('DRAFT DEL')
+          console.log('SS DRAFT DEL')
           let id = kv.type === 'del' ? kv.key : kv.remove
           let entry = entries.find( x=> x.id === id )
           if (entry) {

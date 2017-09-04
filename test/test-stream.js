@@ -1081,7 +1081,7 @@ test('allRevisions=true: rev a1, draft-a2, new a-from-draft-a, draft-a, del draf
     pull.collect( (err, updates) => {
       t.notOk(err)
       //console.log(updates)
-      t.equal(updates.length, 3)
+      t.equal(updates.length, 4)
 
       t.deepEqual(updates[0].value.content, {
         revisionRoot: 'a',
@@ -1108,6 +1108,8 @@ test('allRevisions=true: rev a1, draft-a2, new a-from-draft-a, draft-a, del draf
       })
       t.equal(updates[2].unsaved, true)
       t.deepEqual(heads(updates[2]), ['draft-a2'])
+
+      t.deepEqual(updates[3], {key: 'draft-a', type: 'del'})
 
       t.end()
     })
@@ -1140,3 +1142,83 @@ test('test with real data', (t)=>{
   )
 })
 */
+
+test('from-draft sets unsaved=false: new a, draft a2, rev a2, del draft a2', (t)=>{
+  const kvs = [
+    { key: 'a', value: {
+        content: {
+          text: 'hello'
+    } } },
+    { key: 'draft-a2', value: {
+        content: {
+          revisionRoot: 'a',
+          revisionBranch: 'a',
+          text: 'foo'
+    } } },
+    { key: 'a2', value: {
+        content: {
+          revisionRoot: 'a',
+          revisionBranch: 'a',
+          text: 'foo',
+          'from-draft': 'draft-a2'
+    } } },
+    { key: 'draft-a2', type: 'del'  },
+  ]
+  pull(
+    pull.values(kvs),
+    s(),
+    pull.collect( (err, updates) => {
+      t.notOk(err)
+      t.equal(updates.length, 3)
+
+      t.deepEqual(heads(updates[0]), ['a'])
+      t.deepEqual(heads(updates[1]), ['draft-a2'])
+      t.deepEqual(heads(updates[2]), ['a2'])
+      t.deepEqual(updates[2].value.content, { revisionRoot: 'a', revisionBranch: 'a', text: 'foo', 'from-draft': 'draft-a2' })
+      t.equal(updates[2].unsaved, false)
+      t.end()
+    })
+  )
+})
+
+test('allRevisions=true: pass through draft deletion: new a, draft a2, rev a2, del draft a2', (t)=>{
+  const kvs = [
+    { key: 'a', value: {
+        content: {
+          text: 'hello'
+    } } },
+    { key: 'draft-a2', value: {
+        content: {
+          revisionRoot: 'a',
+          revisionBranch: 'a',
+          text: 'foo'
+    } } },
+    { key: 'a2', value: {
+        content: {
+          revisionRoot: 'a',
+          revisionBranch: 'a',
+          text: 'foo',
+          'from-draft': 'draft-a2'
+    } } },
+    { key: 'draft-a2', type: 'del'  },
+  ]
+  pull(
+    pull.values(kvs),
+    s({allRevisions: true}),
+    pull.collect( (err, updates) => {
+      t.notOk(err)
+      t.equal(updates.length, 4)
+      console.log(updates)
+
+      t.deepEqual(heads(updates[0]), ['a'])
+      t.deepEqual(heads(updates[1]), ['draft-a2'])
+      t.deepEqual(heads(updates[2]), ['a2'])
+      t.deepEqual(updates[2].value.content, { revisionRoot: 'a', revisionBranch: 'a', text: 'foo', 'from-draft': 'draft-a2' })
+      t.equal(updates[2].unsaved, false)
+
+      t.deepEqual(updates[3], {key: 'draft-a2', type: 'del'})
+      t.end()
+    })
+  )
+})
+

@@ -3,7 +3,7 @@ const pushable = require('pull-pushable')
 const {isDraft} = require('./util')
 
 function log() {
-  //console.log.apply(console, arguments)
+  console.log.apply(console, arguments)
 }
 
 function forEach(arrOrVal, f) {
@@ -111,12 +111,15 @@ module.exports = function updates(opts) {
   let doBuffer = opts.bufferUntilSync // in sync mode, we buffer until we see a sync
   let drain
 
-  function ignoreDraft(msg) {
-    if (msg.content['from-draft']) {
+  function ignoreDraft(child, msg) {
+    let draft = msg.content && msg.content['from-draft']
+    if (draft) {
       // this message was created from a draft,
       // if we see that draft later (it might still exist)
       // we just ignore it
-      ignore.push(msg.content['from-draft'])
+      ignore.push(draft)
+      // Also, if this draft is a head, it no longer is!
+      removeHead(child, draft)
       log('ignore', ignore)
     }
   }
@@ -159,8 +162,14 @@ module.exports = function updates(opts) {
         let {key, value} = kv
         log('incoming', kv)
 
+
         if (ignore.includes(key)) {
-          if (kv.type === 'del') ignore = ignore.filter( k => k !== key)
+          if (kv.type === 'del') {
+            ignore = ignore.filter( k => k !== key)
+            if (opts.allRevisions) {
+              if (!doBuffer) push(kv)
+            }
+          }
           log('ignored', key)
           return
         }
@@ -187,17 +196,19 @@ module.exports = function updates(opts) {
               links: links(kv)
             }
             debug(child)
-            ignoreDraft(value)
+            ignoreDraft(child, value)
             if (!doBuffer) push(Object.assign({revision: kv.key}, child))
             return
           }
         } else {
+          console.log('US DEL')
           // This is a request to remove a draft
           // type === 'del' events have no `value` and therefor no
           // revRoot. We need to find the child that has this draft as a head
           let entry = Object.entries(children).find( ([k,v])=>includesAll(key, Object.keys(v.heads)) )
           if (!entry) throw Error("Can't find child with draft", key)
           child = entry[1]
+          console.log('US: del in', child)
         }
 
         // we have a child for that revRoot already
@@ -218,7 +229,7 @@ module.exports = function updates(opts) {
                 addHead(child, x.key, x.value.timestamp)
                 // Overwrite node value, if claimed time is grater
                 log('internal link, added head, new heads', child.heads)
-                ignoreDraft(x.value)
+                ignoreDraft(child, x.value)
                 
                 let heads = Object.keys(child.heads).sort( (a,b)=>{
                   return child.heads[a] - child.heads[b]
@@ -227,6 +238,9 @@ module.exports = function updates(opts) {
                 if (headIndex === heads.length - 1) {
                   // this is the latest head
                   child.value = x.value
+                  if (child.value.content && child.value.content['from-draft']) {
+                    child.unsaved = false
+                  }
                   if (!doBuffer) push(Object.assign({revision: x.key, pos: 'head'}, child))
                 } else {
                   // not the latest head, do not change node value
@@ -242,7 +256,7 @@ module.exports = function updates(opts) {
               return true // keep in queue
             }
 
-            if (x.value) ignoreDraft(x.value)
+            if (x.value) ignoreDraft(child, x.value)
 
             if (pos === -1) { 
               success = true

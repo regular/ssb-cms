@@ -58,7 +58,7 @@ module.exports = function(ssb, drafts, root) {
   }
 
   function selectId(id) {
-    console.log(this, id)
+    //console.log(this, id)
     // from https://stackoverflow.com/questions/11451353/how-to-select-the-text-of-a-span-on-click
     selection = window.getSelection()
     range = document.createRange()
@@ -130,6 +130,7 @@ module.exports = function(ssb, drafts, root) {
       }),
 
       drain = pull.drain( (kv) => {
+        console.log('TREE incoming', kv)
         let {key, value} = kv
         // do we have a child for that revRoot yet?
         let child = mutantArray.find( x=> x.id === key )

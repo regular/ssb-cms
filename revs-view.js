@@ -65,7 +65,7 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
 
     return h('div', {
       classList: computed([selection, isDraft(entry.id)], (sel, draft) => {
-        console.log('sel', sel)
+        //console.log('sel', sel)
         let cl = ['rev']
         if (sel === entry.id) cl.push('selected')
         if (draft) cl.push('draft')
@@ -90,7 +90,7 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
   let mutantArray = MutantArray()
 
   function streamRevisions(id, syncCb) {
-    console.log('streaming sorted revisions of', id)
+    //console.log('streaming sorted revisions of', id)
     let drain
     let entries
     let synced = false
@@ -132,7 +132,7 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
       ready.set(true)
       return
     }
-    console.log('NEW rev root', id)
+    //console.log('NEW rev root', id)
     currRoot = id
     if (abort) abort()
     abort = null
