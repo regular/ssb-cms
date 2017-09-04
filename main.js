@@ -202,7 +202,15 @@ module.exports = function(config, cb) {
             unsubsribe()
           }
         })
+        revs.root.set(revRoot)
         tree.selection.set(revRoot)
+
+        ssb.cms.getMessageOrDraft(rev || revRoot, (err, value) => {
+          if (err) throw err  // TODO
+          let msgString = value.msgString || JSON.stringify(value, null, 2)
+          loadIntoEditor(msgString)
+        })
+        updateFullscreenPreview(revRoot)
       }
     }
   
@@ -211,6 +219,11 @@ module.exports = function(config, cb) {
         setSelectionFromURL(window.location.href)
       }
     })
+
+    function setURL(revRoot, rev) {
+      console.log('setURL', revRoot, rev)
+      document.location.hash = `#${revRoot}:${rev}`
+    }
 
     window.addEventListener('hashchange', (e)=>{
       console.log('HASH CHANGE')
@@ -282,14 +295,7 @@ module.exports = function(config, cb) {
         if (err) throw err
         console.log('published', result)
         drafts.remove(key)
-        //let msgString = JSON.stringify(result.value, null, 2)
-        //loadIntoEditor(msgString)
         setURL(tree.selection(), result.key)
-        /* TODO: do we need this?
-        if (isDraft(tree.selection())) {
-          tree.update(tree.selection(), result.value, result.key)
-        }
-        */
       })
     }
 
@@ -311,35 +317,28 @@ module.exports = function(config, cb) {
       })
     }
 
+    /*
     tree.selection( id => {
       console.log('MAIN new revRoot', id)
       revs.root.set(id)
     })
+    */
 
     let ignoreRevsSelectionChanges = false
     // TODO: do this in response to URL hash updates
     // instead of revision selection change
+    /*
     revs.selection( (id) => {
       if (ignoreRevsSelectionChanges) return
       if (!id) return loadIntoEditor('')
-      ssb.cms.getMessageOrDraft(id, (err, value) => {
-        if (err) throw err  // TODO
-        let msgString = value.msgString || JSON.stringify(value, null, 2)
-        loadIntoEditor(msgString)
-      })
-      updateFullscreenPreview(id)
     })
+    */
 
     function getMessageBranch(id, cb) {
       ssb.cms.getMessageOrDraft(id, (err, value)=>{
         if (err) return cb(err)
         cb(null, value.content && value.content.branch || value.branch)
       })
-    }
-
-    function setURL(revRoot, rev) {
-      console.log('setURL', revRoot, rev)
-      document.location.hash = `#${revRoot}:${rev}`
     }
 
     editor.clean( (isClean)=>{
