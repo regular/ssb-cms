@@ -60,8 +60,8 @@ module.exports = function(ssb, drafts, root) {
   function selectId(id) {
     //console.log(this, id)
     // from https://stackoverflow.com/questions/11451353/how-to-select-the-text-of-a-span-on-click
-    selection = window.getSelection()
-    range = document.createRange()
+    let selection = window.getSelection()
+    let range = document.createRange()
     this.innerText = id
     range.selectNodeContents(this)
     selection.removeAllRanges()
