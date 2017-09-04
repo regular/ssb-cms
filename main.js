@@ -203,12 +203,17 @@ module.exports = function(config, cb) {
         revs.root.set(revRoot)
         tree.selection.set(revRoot)
 
-        ;(rev ? ssb.cms.getMessageOrDraft : ssb.cms.getLatest)(rev || revRoot, (err, value) => {
-          if (err) throw err  // TODO
-          let msgString = value.msgString || JSON.stringify(value, null, 2)
-          loadIntoEditor(msgString)
-        })
-        updateFullscreenPreview(revRoot)
+        if (rev || revRoot) {
+          ;(rev ? ssb.cms.getMessageOrDraft : ssb.cms.getLatest)(rev || revRoot, (err, value) => {
+            if (err) throw err  // TODO
+            let msgString = value.msgString || JSON.stringify(value, null, 2)
+            loadIntoEditor(msgString)
+          })
+        } else loadIntoEditor('')
+
+        if (revRoot) {
+          updateFullscreenPreview(revRoot)
+        }
       }
     }
   
