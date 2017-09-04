@@ -23,7 +23,7 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
       if (err) return cb(err)
       let name = about.name
       if (!/^@/.test(name)) name = '@' + name
-      let imageUrl = `${blobsRoot}/${about.image}`
+      let imageUrl = about.image ? `${blobsRoot}/${about.image}` : null
       cb(null, {name, imageUrl})
     })
   })
@@ -59,7 +59,7 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
     let authorName = Value(null, {defaultValue: feedId})
     getAvatar(feedId, (err, avatar) =>{
       if (err) return console.error(err)
-      authorAvatarUrl.set(avatar.imageUrl)
+      authorAvatarUrl.set(avatar.imageUrl || "")
       authorName.set(avatar.name)
     })
 
