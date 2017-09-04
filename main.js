@@ -8,10 +8,6 @@ const ssbClient = require('ssb-client')
 const getAvatar = require('ssb-avatar')
 const ref = require('ssb-ref')
 
-// TODO: use mutant
-const observable = require('observable')
-const obv = require('obv')
-
 const Status = require('./status-view')
 const Tree = require('./tree-view')
 const Editor = require('./editor-view')
@@ -27,8 +23,8 @@ module.exports = function(config, cb) {
   const root = config.sbot.cms && config.sbot.cms.root
   if (!root) throw new Error('Please specify a root node in your config. See ssb-cms README.md for details.')
 
-  let me = obv()
-  let sbot = obv()
+  let me = Value()
+  let sbot = Value()
 
   ssbClient(config.keys, {
     caps: config.sbot.caps,
@@ -65,20 +61,21 @@ module.exports = function(config, cb) {
     })
   })
 
-  let avatar = observable()
+  let avatar = Value({defaultValue: {name: "", imageUrl: ""}})
   me( (feed) => {
-    getAvatar(sbot.value, feed, feed, (err, result) => {
+    getAvatar(sbot(), feed, feed, (err, result) => {
       if (err) console.error(err)
       if (!result.image) return
-      avatar({
+      avatar.set({
         name: result.name,
         imageUrl:`${config.blobsRoot}/${result.image}`
       })
     })
   })
 
-  me.once( (feed) => {
-    const ssb = sbot.value
+  let unsubscribe = me( (feed) => {
+    unsubscribe()
+    const ssb = sbot()
 
     let renderMenu = ho(
       Menubar(),
@@ -113,6 +110,7 @@ module.exports = function(config, cb) {
     uiContainer.appendChild(menubar)
     menubar.activate('content')
 
+    // TODO: use observer in hyperscript
     avatar( (result)=>{
       if (!result) return
       let img = menubar.querySelector('[data-key=profile] img')
@@ -167,7 +165,7 @@ module.exports = function(config, cb) {
     revisionsColumn.querySelector('.toolbar').appendChild(
       h('span.selection', tree.selection)
     )
-    const revs = Revs(ssb, drafts, me.value, config.blobsRoot)
+    const revs = Revs(ssb, drafts, me(), config.blobsRoot)
     revisionsColumn.appendChild(h('.revs-container', revs))
 
     let isNewDraft = computed([tree.selection], isDraft)
