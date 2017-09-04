@@ -122,7 +122,9 @@ module.exports = function(parent, ssb, config) {
       if (value && previewEditor) {
         showPreviewEditor(value, key)
       }
+      let cursor = editor.getCursor()
       editor.setValue(value)
+      editor.setSelection(cursor, cursor)
     },
     getValue: editor.getValue.bind(editor),
     clearHistory: editor.clearHistory.bind(editor),

@@ -3,7 +3,7 @@ const pushable = require('pull-pushable')
 const {isDraft} = require('./util')
 
 function log() {
-  console.log.apply(console, arguments)
+  //console.log.apply(console, arguments)
 }
 
 function forEach(arrOrVal, f) {

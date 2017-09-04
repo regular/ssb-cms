@@ -203,7 +203,7 @@ module.exports = function(config, cb) {
         revs.root.set(revRoot)
         tree.selection.set(revRoot)
 
-        ssb.cms.getMessageOrDraft(rev || revRoot, (err, value) => {
+        ssb.cms.getLatest(rev || revRoot, (err, value) => {
           if (err) throw err  // TODO
           let msgString = value.msgString || JSON.stringify(value, null, 2)
           loadIntoEditor(msgString)
@@ -277,7 +277,7 @@ module.exports = function(config, cb) {
     }
 
     function loadIntoEditor(text) {
-      if (text === editor.getValue()) return
+      if (text == editor.getValue()) return
       ignoreChanges = true
       editor.setValue(text, tree.selection())
       editor.clean(true)
@@ -315,55 +315,23 @@ module.exports = function(config, cb) {
       })
     }
 
-    /*
-    tree.selection( id => {
-      console.log('MAIN new revRoot', id)
-      revs.root.set(id)
-    })
-    */
-
     let ignoreRevsSelectionChanges = false
-    // TODO: do this in response to URL hash updates
-    // instead of revision selection change
-    /*
-    revs.selection( (id) => {
-      if (ignoreRevsSelectionChanges) return
-      if (!id) return loadIntoEditor('')
-    })
-    */
-
-    function getMessageBranch(id, cb) {
-      ssb.cms.getMessageOrDraft(id, (err, value)=>{
-        if (err) return cb(err)
-        cb(null, value.content && value.content.branch || value.branch)
-      })
-    }
 
     editor.clean( (isClean)=>{
       if (!isClean && !ignoreChanges && !isRevisionDraft() && !isNewDraft()) {
         // first edit: create new revision draft
         let msgString = editor.getValue()
+        if (!msgString) return
         let revisionRoot = tree.selection()
         let revisionBranch = revs.selection()
-        // get the post branch so that the tree view can detect the revision
-        getMessageBranch(revisionBranch, (err, branch)=>{
-          function gotBranch(branch) {
-            drafts.create(msgString, branch, revisionRoot, revisionBranch, (err, key, value)=>{
-              if (err) return console.error(err)
-              ignoreRevsSelectionChanges = true
-              setURL(revisionRoot, key)
-              //revs.selection.set(key)
-              ignoreRevsSelectionChanges = false
-              //tree.update(tree.selection(), value)
-            })
-          }
-          if (branch) return gotBranch(branch)
-          /*
-          getMessageBranch(revisionRoot, (err, branch)=>{
-            if (err) console.error(err)
-            gotBranch(branch)
+      console.log("FIRST EDIT")
+        ssb.get(revs.root(), (err, msg)=>{
+          if (err) throw err
+          let branch = msg.content && msg.content.branch
+          drafts.create(msgString, branch, revisionRoot, revisionBranch, (err, key, value)=>{
+            if (err) return console.error(err)
+            setURL(revisionRoot, key)
           })
-          */
         })
       }
     })
