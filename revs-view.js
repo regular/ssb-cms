@@ -116,9 +116,12 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
 
   let containerEl = h('.revs', MutantMap(mutantArray, html))
   let abort
+  let selectedLatest = false
 
   selection( id => {
+    selectedLatest = false
     if (id === 'latest') {
+      selectedLatest = true
       if (mutantArray.getLength() > 0) {
         return selection.set(mutantArray.get(mutantArray.getLength()-1).id)
       }
@@ -127,6 +130,23 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
     console.log('rev selected', id)
   })
 
+  /*
+  mutantArray( ma => {
+    console.log('MA changed, selection is', selection())
+    if (isDraft(selection())) {
+      // maybe the draft was replaced after piblishing?
+      let newSel = ma.find( node => node.value.content && node.value.content['from-draft'] === selection())
+      if (newSel) {
+        console.log('draft was replaced by', newSel)
+        selection.set(newSel.revision)
+      }
+    }
+    //if (selectedLatest) {
+     // selection.set('latest')
+    //}
+  })
+  */
+
   root( id => {
     if (currRoot === id) {
       ready.set(true)
@@ -134,6 +154,7 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
     }
     //console.log('NEW rev root', id)
     currRoot = id
+
     if (abort) abort()
     abort = null
     selection.set(null)

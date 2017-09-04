@@ -266,6 +266,7 @@ module.exports = function(config, cb) {
     }
 
     function loadIntoEditor(text) {
+      if (text === editor.getValue()) return
       ignoreChanges = true
       editor.setValue(text, tree.selection())
       editor.clean(true)
@@ -281,13 +282,14 @@ module.exports = function(config, cb) {
         if (err) throw err
         console.log('published', result)
         drafts.remove(key)
-        let msgString = JSON.stringify(result.value, null, 2)
-        loadIntoEditor(msgString)
-        // TODO
-        //revs.update(key, result.value, result.key)
+        //let msgString = JSON.stringify(result.value, null, 2)
+        //loadIntoEditor(msgString)
+        setURL(tree.selection(), result.key)
+        /* TODO: do we need this?
         if (isDraft(tree.selection())) {
           tree.update(tree.selection(), result.value, result.key)
         }
+        */
       })
     }
 
@@ -315,6 +317,8 @@ module.exports = function(config, cb) {
     })
 
     let ignoreRevsSelectionChanges = false
+    // TODO: do this in response to URL hash updates
+    // instead of revision selection change
     revs.selection( (id) => {
       if (ignoreRevsSelectionChanges) return
       if (!id) return loadIntoEditor('')
@@ -333,6 +337,11 @@ module.exports = function(config, cb) {
       })
     }
 
+    function setURL(revRoot, rev) {
+      console.log('setURL', revRoot, rev)
+      document.location.hash = `#${revRoot}:${rev}`
+    }
+
     editor.clean( (isClean)=>{
       if (!isClean && !ignoreChanges && !isRevisionDraft() && !isNewDraft()) {
         // first edit: create new revision draft
@@ -344,10 +353,9 @@ module.exports = function(config, cb) {
           function gotBranch(branch) {
             drafts.create(msgString, branch, revisionRoot, revisionBranch, (err, key, value)=>{
               if (err) return console.error(err)
-              // TODO: revs live stream
-              //revs.add({key, value})
               ignoreRevsSelectionChanges = true
-              revs.selection.set(key)
+              setURL(revisionRoot, key)
+              //revs.selection.set(key)
               ignoreRevsSelectionChanges = false
               //tree.update(tree.selection(), value)
             })
