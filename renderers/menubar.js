@@ -16,8 +16,10 @@
  * It's the client's responsibility to reset the observable.
  */
 
-const h = require('hyperscript')
-const observable = require('observable')
+const h = require('mutant/html-element')
+const Value = require('mutant/value')
+const computed = require('mutant/computed')
+const when = require('mutant/when')
 
 module.exports = function(opts) {
   opts = opts || {}
@@ -27,49 +29,46 @@ module.exports = function(opts) {
     kp = kp || []
     renderItem = opts.renderItem || this
 
-    let left, right
-    let activeItem = observable()
+    let activeItem = Value()
 
-    let menubar = h('.menubar',
-      left = h('section.left'),
+    let menubar = h('.menubar', [
+      h('section.left', (value.left || []).map(makeItem)),
       h('section.middle'),
-      right = h('section.right')
-    )
-    ;(value.left || []).forEach( item => left.appendChild(makeItem(item)) )
-    ;(value.right || []).forEach( item => right.appendChild(makeItem(item)) )
+      h('section.right', (value.right || []).map(makeItem))
+    ])
 
-    activeItem( (el)=>{
-      [].slice.call(menubar.querySelectorAll('.menu-item')).forEach(
-        (item)=> item.classList.remove('active')
-      )
-      if (el) el.classList.add('active')
-    })
-    
     function makeItem(item) {
-      return h('section.menu-item' + (item.classes && item.classes.length ? '.' + item.classes.join('.') : ''),
-        renderItem.call(renderItem, item.value, kp.concat([item.key])),
+      let key = item.key
+      let el = h('section',
         {
-          "data-key": item.key,
-          onclick: function(e) {
-            activeItem(this)
+          classList: computed([activeItem], ae =>
+            ['menu-item'].concat(ae && ae.getAttribute('data-key') === key ? ['active'] : []).concat(item.classes || [])
+          ),
+          'ev-click': function(e) {
+            activeItem.set(this)
             e.stopPropagation()
+            e.preventDefault()
           }
-        }
+        },
+        renderItem.call(renderItem, item.value, kp.concat([item.key]))
       )
+      el.setAttribute("data-key", key)
+      return el
     }
 
     menubar.activeItem = activeItem
     menubar.activate = (key)=>{
-      activeItem(menubar.querySelector(`.menu-item[data-key=${key}]`))
+      let el = menubar.querySelector(`[data-key=${key}]`)
+      activeItem.set(el)
     }
     return menubar
   }
 
   render.renderItem = function(value, kp) {
-    let ret = []
-    if (value.icon) ret.push(h('img', {src: value.icon}))
-    if (value.label) ret.push(h('span', value.label))
-    return ret
+    return [
+      when(value.icon, h('img', {src: value.icon})),
+      when(value.label, h('span', value.label))
+    ]
   }
 
   return render
@@ -91,6 +90,7 @@ module.exports.css = function() {
     }
 
     .menu-item {
+      cursor: pointer;
       display: flex;
       flex-wrap: nowrap;
       justify-content: center;

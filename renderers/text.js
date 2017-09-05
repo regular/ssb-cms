@@ -1,7 +1,10 @@
-const h = require('hyperscript')
+const h = require('mutant/html-element')
+const Value = require('mutant/value')
+const computed = require('mutant/computed')
+const when = require('mutant/when')
+const send = require('mutant/send')
 const ho = require('hyperobj')
 const Menubar = require('./menubar')
-const md = require('ssb-marked')
 
 // we expect the value to have properties conforming to
 // ISO language codes (2 letters), e.g:
@@ -32,16 +35,17 @@ module.exports = function(opts) {
     }
 
     let el = h(tag, {
-      onclick: (e)=> {
+      'ev-click': e => {
         if (e.altKey) {
           makeEditable()
           e.preventDefault()
           e.stopPropagation()
         }
       }
-    })
-    el.innerHTML = transform(localizedText())
-    let editable = false 
+    }, 
+      transform(localizedText())
+    )
+    let editable = false
     let unsubscribe
 
     function makeEditable() {
