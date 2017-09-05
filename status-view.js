@@ -11,9 +11,9 @@ const computed = require('mutant/computed')
 const when = require('mutant/when')
 const send = require('mutant/send')
 const resolve = require('mutant/resolve')
-// --
-//
+
 const pull = require('pull-stream')
+const prettyBytes = require('pretty-bytes')
 const updates = require('./update-stream')
 const config = require('../ssb-cms/config')
 const {isDraft} = require('./util')
@@ -26,6 +26,10 @@ module.exports = function(ssb, drafts, root) {
   let incompleteCount = Value(0)
   let messageCount = Value(0)
   let revisionCount = Value(0)
+
+  let blobRefs = Value(0)
+  let blobsPresent = Value(0)
+  let blobBytes = Value(0)
 
   function html() {
     return h('span.status', [
@@ -49,6 +53,10 @@ module.exports = function(ssb, drafts, root) {
       h('span', [
         'Incomplete:',
         h('span', incompleteCount)
+      ]),
+      h('span', [
+        'Blobs:',
+        h('span', [' ', blobsPresent, ' / ', blobRefs, ' (', computed([blobBytes], b => prettyBytes(b)), ')'])
       ])
     ])
   }
@@ -167,11 +175,59 @@ module.exports = function(ssb, drafts, root) {
     )
   }
 
+  function watchBlobs() {
+    let synced = false
+    let refs = 0
+    let present = 0
+    let totalSize = 0
+    pull(
+      ssb.links({
+        live: true,
+        sync: true,
+        dest: '&'
+      }),
+      pull.filter( x => {
+        if (x.sync) {
+          console.log('blobs watch synced')
+          synced = true
+          blobRefs.set(refs)
+          blobsPresent.set(present)
+          blobBytes.set(totalSize)
+        }
+        return !x.sync
+      }),
+      pull.unique( x=>x.dest ),
+
+      pull.drain( kv => {
+        console.log('blobs watch', kv)
+        refs++
+        if (synced) {
+          blobRefs.set(refs)
+        }
+        ssb.blobs.size(kv.dest, (err, size) => {
+          console.log('blob size', kv.dest, err, size)
+          if (!err) {
+            present ++
+            totalSize += size
+            if (synced) {
+              blobsPresent.set(present)
+              blobBytes.set(totalSize)
+            }
+          }
+        })
+      }, (err) => {
+        console.log('blobs stream ended', err)
+      })
+    )
+  }
+
   watchDrafts()
   watchMessages(root)
+  watchBlobs()
 
   return html()
 }
+
 
 module.exports.css = ()=>  `
   .menubar .status {

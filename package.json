@@ -33,6 +33,7 @@
     "mutant": "^3.21.2",
     "observable": "^2.1.4",
     "obv": "0.0.1",
+    "pretty-bytes": "^4.0.2",
     "pull-file-reader": "^1.0.2",
     "pull-level": "^2.0.3",
     "pull-many": "^1.0.8",
