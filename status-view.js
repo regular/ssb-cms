@@ -131,6 +131,7 @@ module.exports = function(ssb, drafts, root) {
         keys: true,
         values: true
       }),
+      pull.through( kv => revision(kv.key, true) ),
       updates({sync: true, bufferUntilSync: true}),
       pull.filter( x => {
         if (x.sync) {
@@ -160,9 +161,6 @@ module.exports = function(ssb, drafts, root) {
         forked(key, Object.keys(kv.heads).length > 1)
         incomplete(key, kv.tail !== key)
         message(key, isMessage)
-        kv.internals.concat(kv.heads).forEach( k=>
-          revision(k, true)
-        )
       }, (err) => {
         console.log('status message stream ended', err)
       })
