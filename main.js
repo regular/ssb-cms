@@ -225,7 +225,7 @@ module.exports = function(config, cb) {
 
     function setURL(revRoot, rev) {
       console.log('setURL', revRoot, rev)
-      document.location.hash = `#${revRoot}:${rev}`
+      document.location.hash = `#${revRoot}${rev ? (':' + rev) : ''}`
     }
 
     window.addEventListener('hashchange', (e)=>{
@@ -298,7 +298,13 @@ module.exports = function(config, cb) {
         if (err) throw err
         console.log('published', result)
         drafts.remove(key)
-        setURL(tree.selection(), result.key)
+        let revRoot = result.value.content && result.value.content.revisionRoot
+        let revision = result.key
+        if (!revRoot || revRoot == result.key) {
+          revRoot = result.key
+          revision = null
+        }
+        setURL(revRoot, revision)
       })
     }
 
