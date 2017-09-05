@@ -124,9 +124,7 @@ module.exports = function(config, cb) {
     uiContainer.appendChild(
       h('.columns', [
         treeColumn = h('.col.treeview'),
-        revisionsColumn = h('.col.revisions', [
-          h('.toolbar')
-        ]),
+        revisionsColumn = h('.col.revisions'),
         h('.col.editor-col', [
           editorContainer = h('.editor-container'),
           h('.buttons', [
@@ -162,9 +160,6 @@ module.exports = function(config, cb) {
     const tree = Tree(ssb, drafts, root)
     treeColumn.appendChild(tree)
 
-    revisionsColumn.querySelector('.toolbar').appendChild(
-      h('span.selection', tree.selection)
-    )
     const revs = Revs(ssb, drafts, me(), config.blobsRoot)
     revisionsColumn.appendChild(h('.revs-container', revs))
 
@@ -393,7 +388,7 @@ module.exports.css = function() {
   .columns {
     display: flex;
     width: 100vw;
-    height: 100vh;
+    height: calc( 100vh - 32px );
     flex-flow: row nowrap;
     overflow: hidden;
   }
