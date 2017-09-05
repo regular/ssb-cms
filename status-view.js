@@ -16,10 +16,7 @@ const resolve = require('mutant/resolve')
 const pull = require('pull-stream')
 const updates = require('./update-stream')
 const config = require('../ssb-cms/config')
-
-function isDraft(id) {
-  return /^draft/.test(id)
-}
+const {isDraft} = require('./util')
 
 module.exports = function(ssb, drafts, root) {
   let draftCount = Value(0)
@@ -57,6 +54,7 @@ module.exports = function(ssb, drafts, root) {
   }
 
   function watchDrafts() {
+    let seen = new Set()
     let counts = {
       draft: 0,
       branch: 0,
@@ -76,13 +74,22 @@ module.exports = function(ssb, drafts, root) {
           return
         }
         let key = kv.key
-        // TODO: This is wrong!
-        // 'put' is used for updates, too, so
-        // count(put) - count(del) !== 0
-        console.log('WATCH', kv.type, key)
+        //console.log('WATCH', kv.type, key)
         if (key[0]==='~') key = key.substr(1)
         let t = key.split(/[~-]/)[0].toLowerCase()
-        counts[t] += (kv.type === 'del') ? -1 : 1
+        if (t === 'draft') {
+          if (!kv.type || kv.type == 'put') {
+            if (!seen.has(kv.key)) {
+              counts[t]++
+              seen.add(kv.key)
+            }
+          } else if (kv.type == 'del') {
+            counts[t]--
+            seen.delete(kv.key)
+          }
+        } else {
+          counts[t] += (kv.type === 'del') ? -1 : 1
+        }
         if (synced) {
           draftCount.set(counts.draft)
           draftWarning.set(counts.draft !== counts.branch || counts.draft !== counts.revroot)
