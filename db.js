@@ -2,7 +2,7 @@ const ref = require('ssb-ref')
 const pull = require('pull-stream')
 const many = require('pull-many')
 const ssbSort = require('ssb-sort')
-const deepAssign = require('deep-assign')
+const merge = require('lodash.merge')
 const updatesStream = require('./update-stream')
 
 const {isDraft} = require('./util')
@@ -133,8 +133,9 @@ module.exports = function(ssb, drafts) {
       if (err) return cb(err)
       let msgs = chain.map( x=>x.msg)
       msgs.unshift({})
-      let msg = deepAssign.apply(null, msgs)
+      let msg = merge.apply(null, msgs)
       msg.content = msg.content || {}
+      chain.pop() // remove original message
       msg.content.prototype = chain.map( x=>x.key )
       cb(null, msg)
     })

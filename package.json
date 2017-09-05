@@ -19,7 +19,6 @@
   "dependencies": {
     "asyncmemo": "^1.0.0",
     "codemirror": "^4.6.0",
-    "deep-assign": "^2.0.0",
     "hashlru": "^2.2.0",
     "human-time": "0.0.1",
     "hyperobj": "^1.0.2",
@@ -30,6 +29,7 @@
     "insert-css": "^0.2.0",
     "level-js": "^2.2.4",
     "levelup": "^1.3.8",
+    "lodash.merge": "^4.6.0",
     "mutant": "^3.21.2",
     "observable": "^2.1.4",
     "obv": "0.0.1",
