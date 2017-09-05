@@ -2,7 +2,6 @@ const h = require('mutant/html-element')
 const Value = require('mutant/value')
 const computed = require('mutant/computed')
 const when = require('mutant/when')
-const send = require('mutant/send')
 const ho = require('hyperobj')
 const Menubar = require('./menubar')
 
@@ -22,7 +21,7 @@ module.exports = function(opts) {
   return function render(value, kp) {
     const docLang = document.getElementsByTagName('html')[0].getAttribute('lang')
     const defaultLang = docLang || opts.defaultLanguage || 'en'
-    let lang = defaultLang
+    let lang = opts.langObservable || Value(defaultLang)
 
     if (opts.languages) {
       opts.languages.forEach( (l)=> {
@@ -30,9 +29,10 @@ module.exports = function(opts) {
       })
     }
 
-    function localizedText() {
+    let localizedText = computed([lang], lang => {
      return value[lang] || opts.defaultText || 'n/a' 
-    }
+    })
+    let transformedText = computed([localizedText], transform)
 
     let el = h(tag, {
       'ev-click': e => {
@@ -43,7 +43,7 @@ module.exports = function(opts) {
         }
       }
     }, 
-      transform(localizedText())
+      transformedText
     )
     let editable = false
     let unsubscribe
