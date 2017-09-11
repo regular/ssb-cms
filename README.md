@@ -11,17 +11,17 @@ Collaboratively maintaining a database of content requires manipulating and orga
 ![](http://pub.postpossessive.org/ssb-cms-ui.png)
 
 - left: a tree of posts
-- middle: (TODO) a tree of revisions for the post selected on the left
+- middle: a list of revisions for the post selected on the left
 - right: the post as json in a code editor (CodeMirror)
 
 ### Root
-One message is declared the `root` message in `config.cms.root`. WHen the application starts, it displays children of the root message as top-level nodes. With this config option, you can `chroot` clients into a subtree. TODO: if `config.cms.root` is an array, show the listed messages as top level objects. (not their children)
+One message is declared the `root` message in `config.cms.root`. WHen the application starts, it displays children of the root message as top-level nodes. With this config option, you can `chroot` clients into a subtree. TODO: toggle visibility of 1st level branches
 
 ### Tree view
 Nodes in the tree have expand/collapse triangles.
 
 ### Revisions
-TODO: Revisions are displayed as a "subway chart" (as in `git lola`).
+TODO: froks/merges are displayed as a "subway chart" (as in `git lola`).
 They show the time stamp (human time), the author's avatar and name and a dot representing the "commit" (a bit like github's fork graph, but vertically).
 
 ## Diffs
@@ -31,17 +31,17 @@ TODO: When two revisions are selected in the middle column, a diff of the two on
 The editor supports syntax highlighting JSON linting.
 
 ### Blobs
-TODO: Files that are dropped onto the editor are added as blobs and their hash is inserted into the text at the place where they were dropped. (or we just have a general drop target, because messing with CodeMirror is a bit annoying)
+Files that are dropped onto the editor are added as blobs and their hash is inserted into the text at the place where they were dropped.
 
 ### Status bar
 TODO: There's a status bar at the top that shows various tiny progress bars (like in Adobe Lightroom) for long-running async processes: sbot syncing, indexing, blob upload (may take long when sbot is remote)
 
 ### Drafts
-Add and Clone buttons in the tree add a draft for a new message. The draft is an ssb message content object stored in IndexDB (via level.js). There can by an unlimited number of drafts. They are displayed in the tree (done) and revision (todo) views, clearly marked as draft. A draft may contain invalid JSON. If it is selected in the tree it is loaded into the editor, like any other message and can be modified. Any modification is immediately stored in IndexDB. If the "Publish" button is pressed and hte message is valid JSON, it is published to ssb.
+Add and Clone buttons in the tree add a draft for a new message. The draft is an ssb message content object stored in IndexDB (via level.js). There can by an unlimited number of drafts. They are displayed in the tree and revision views, clearly marked as draft. A draft may contain invalid JSON. If it is selected in the tree it is loaded into the editor, like any other message and can be modified. Any modification is immediately stored in IndexDB. If the "Publish" button is pressed and hte message is valid JSON, it is published to ssb.
 
 > NOTE: Currently properties outside the `content` property are ignored when publishing. THe `content` part is passed to `sbot.publish`. The` branch` and `revisionRoot` proerties entered by the user are also ignored and overwritten by values corresponding to the position of the draft in the tree/revision history. (TODO/WIP what about `root` and `revisionBranch`?)
 
-TODO: Changing the text of a non-draft message in the editor automatically creates a new draft based off of the currently selected revision. (after the first keystroke, the draft is selected instead of the revision it is based on)
+Changing the text of a non-draft message in the editor automatically creates a new draft based off of the currently selected revision. (after the first keystroke, the draft is selected instead of the revision it is based on)
 
 ### Commit
 Below the editor is a "publish" button, it posts a new message to ssb. This new message might be a revision of an old one. 
@@ -65,7 +65,7 @@ elements they return.
 Renderers can be used to implement in-place editing of content. (e.g. content-editable divs, images are drag-targets). On creation, a renderer receives the ssb api, so it can access the network/database.
 TODO: A set of standard renderers are provided for `content.type` `post` and `about` messages. User can provide their own rendering functions to render custom content-tyes.
 
-TODO: Renderers either occupy the space of the editor (tabbed UI), or they render the entire view port _behind_ the ssb-cms UI. The user can switch between three modes:
+Renderers either occupy the space of the editor (tabbed UI), or they render the entire view port _behind_ the ssb-cms UI. By pressing Shift-Tab, users can  switch between three modes:
 
 - three-column layout with editor or renderer output on the right
 - translucent tree view and revision history UI on top of fullscreen renderer output
@@ -111,11 +111,17 @@ Copy this into a file at `~/.ssb-cms/config`
   },
   "master": [
   ],
+  "blobs": {
+    "legacy": false,
+    "sympathy": 10,
+    "max": 104857600
+  },
   "cms": {
     "root": "%Qmxp+xUtreDtsXk3E8cN05EoJ+dvRztfkdnOiAfGfmc=.sha256"
   }
 }
 ```
+
 
 ## Start sbot
 
