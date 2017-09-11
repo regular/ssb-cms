@@ -71,7 +71,7 @@ module.exports = function(opts) {
       el.parentElement.appendChild(menu)
       let menuHeight = menu.offsetHeight
       reposition()
-      menu.activate(lang)
+      menu.activate(lang())
 
       el.addEventListener('keyup', reposition)
           
