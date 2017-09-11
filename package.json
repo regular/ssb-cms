@@ -46,7 +46,8 @@
     "ssb-keys": "^7.0.10",
     "ssb-marked": "^0.7.2",
     "ssb-ref": "^2.7.1",
-    "ssb-sort": "^1.0.0"
+    "ssb-sort": "^1.0.0",
+    "traverse": "^0.6.6"
   },
   "devDependencies": {
     "brfs": "^1.4.3",

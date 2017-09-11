@@ -87,7 +87,11 @@ module.exports = function(config, cb) {
     )
     let menubar = renderMenu({
       type: 'menubar',
-      left: [{
+      left: [
+      {
+        key: 'status',
+        value: { label: 'Status' }
+      }, {
         key: 'activity',
         value: { label: 'Activity' }
       }, {
@@ -121,8 +125,9 @@ module.exports = function(config, cb) {
 
     // three column layout
     let editorContainer, treeColumn, discardButton, saveButton
+    let contentView, statusView
     uiContainer.appendChild(
-      h('.columns', [
+      contentView = h('.columns', [
         treeColumn = h('.col.treeview'),
         revisionsColumn = h('.col.revisions'),
         h('.col.editor-col', [
@@ -139,6 +144,21 @@ module.exports = function(config, cb) {
       ])
     )
 
+    uiContainer.appendChild(
+      statusView = h('div.statusView', {style: {display: 'none'}})
+    )
+
+    menubar.activeItem( item=>{
+      let key = item.getAttribute('data-key')
+      if (key === 'status') {
+        statusView.style.display = 'block'
+        contentView.style.display = 'none'
+      } else {
+        statusView.style.display = 'none'
+        contentView.style.display = 'flex'
+      }
+    })
+
     const editor = Editor(editorContainer, ssb, config)
 
     let mode = 0
@@ -154,7 +174,7 @@ module.exports = function(config, cb) {
       }
     })
 
-    const status = Status(ssb, drafts, root)
+    const status = Status(ssb, drafts, root, statusView)
     menubar.querySelector('.middle').appendChild(status)
 
     const tree = Tree(ssb, drafts, root)
@@ -368,6 +388,7 @@ module.exports.css = function() {
   }
   .ui {
     position: absolute;
+    width: 100%;
   }
   .menubar {
     font-size: 14px;

@@ -1,7 +1,6 @@
 // mutant
 require('setimmediate')
 const h = require('mutant/html-element')
-const MappedArray = require('mutant/mapped-array')
 const MutantMap = require('mutant/map')
 const Dict = require('mutant/dict')
 const Value = require('mutant/value')
@@ -11,14 +10,16 @@ const computed = require('mutant/computed')
 const when = require('mutant/when')
 const send = require('mutant/send')
 const resolve = require('mutant/resolve')
+const ref = require('ssb-ref')
 
 const pull = require('pull-stream')
+const traverse = require('traverse')
 const prettyBytes = require('pretty-bytes')
 const updates = require('./update-stream')
 const config = require('../ssb-cms/config')
 const {isDraft} = require('./util')
 
-module.exports = function(ssb, drafts, root) {
+module.exports = function(ssb, drafts, root, view) {
   let draftCount = Value(0)
   let draftWarning = Value(false)
 
@@ -30,6 +31,23 @@ module.exports = function(ssb, drafts, root) {
   let blobRefs = Value(0)
   let blobsPresent = Value(0)
   let blobBytes = Value(0)
+
+  let blobs = MutantArray()
+  view.appendChild(
+    h('section.blobs', [
+      h('h1', 'Blobs'),
+      h('table', MutantMap(blobs, b => h('tr', [
+        h('td', h('a', {
+          href: `${config.blobsRoot}/${b.id}`
+        }, b.id)),
+        h('td', {
+          style: {
+            background: computed([b.size], s => s==='missing' ? 'red' : 'unset')
+          }
+        },computed([b.size], s=>Number.isInteger(s) ? prettyBytes(s) : s))
+      ])))
+    ])
+  )
 
   function html() {
     return h('span.status', [
@@ -139,6 +157,7 @@ module.exports = function(ssb, drafts, root) {
         keys: true,
         values: true
       }),
+      pull.through( Blobs() ),
       pull.through( kv => revision(kv.key, true) ),
       updates({sync: true, bufferUntilSync: true}),
       pull.filter( x => {
@@ -175,55 +194,44 @@ module.exports = function(ssb, drafts, root) {
     )
   }
 
-  function watchBlobs() {
-    let synced = false
+  function Blobs() {
     let refs = 0
     let present = 0
     let totalSize = 0
-    pull(
-      ssb.links({
-        live: true,
-        sync: true,
-        dest: '&'
-      }),
-      pull.filter( x => {
-        if (x.sync) {
-          console.log('blobs watch synced')
-          synced = true
-          blobRefs.set(refs)
-          blobsPresent.set(present)
-          blobBytes.set(totalSize)
-        }
-        return !x.sync
-      }),
-      pull.unique( x=>x.dest ),
+    let knownBlobs = new Set() 
 
-      pull.drain( kv => {
-        console.log('blobs watch', kv)
-        refs++
-        if (synced) {
-          blobRefs.set(refs)
-        }
-        ssb.blobs.size(kv.dest, (err, size) => {
-          console.log('blob size', kv.dest, err, size)
-          if (!err) {
-            present ++
-            totalSize += size
-            if (synced) {
+    return function processBlobReferences(value) {
+      traverse(value).forEach( v=>{
+        if (ref.isBlob(v)) {
+          if (!knownBlobs.has(v)) {
+            knownBlobs.add(v)
+            refs++
+            blobRefs.set(refs)
+            let sizeObs = Value('...')
+            blobs.push({
+              id: v,
+              size: sizeObs
+            })
+            ssb.blobs.has(v, (err, gotit) => {
+              if (err) return sizeObs.set(err.message)
+              if (!gotit) return sizeObs.set('missing')
+              present++
               blobsPresent.set(present)
-              blobBytes.set(totalSize)
-            }
+              ssb.blobs.size(v, (err, size) => {
+                if (err) return sizeObs.set(err.message)
+                sizeObs.set(size || 'zero')
+                totalSize += size
+                blobBytes.set(totalSize)
+              })
+            })
           }
-        })
-      }, (err) => {
-        console.log('blobs stream ended', err)
+        }
       })
-    )
+    }
   }
 
   watchDrafts()
   watchMessages(root)
-  watchBlobs()
 
   return html()
 }
@@ -241,5 +249,12 @@ module.exports.css = ()=>  `
   .menubar .status>span {
     width: 100px;
     padding-right: 5px;
+  }
+  .statusView {
+    overflow: scroll;
+    height: calc(100vh - 32px); 
+    color: #222;
+    background: #aaa;
+    width: 100%;
   }
 `

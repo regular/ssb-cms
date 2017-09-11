@@ -1,7 +1,6 @@
 // mutant
 require('setimmediate')
 const h = require('mutant/html-element')
-const MappedArray = require('mutant/mapped-array')
 const MutantMap = require('mutant/map')
 const Dict = require('mutant/dict')
 const Value = require('mutant/value')
