@@ -8,7 +8,7 @@ Collaboratively maintaining a database of content requires manipulating and orga
 
 ## User Interface, Concepts
 
-![](http://pub.postpossessive.org/ssb-cms-ui.png)
+![](http://pub.postpossessive.org/ssb-cms-ui2.png)
 
 - left: a tree of posts
 - middle: a list of revisions for the post selected on the left
