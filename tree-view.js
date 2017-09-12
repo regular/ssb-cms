@@ -129,7 +129,7 @@ module.exports = function(ssb, drafts, root) {
       }),
 
       drain = pull.drain( (kv) => {
-        console.log('TREE incoming', kv)
+        //console.log('TREE incoming', kv)
         let {key, value} = kv
         // do we have a child for that revRoot yet?
         let child = mutantArray.find( x=> x.id === key )

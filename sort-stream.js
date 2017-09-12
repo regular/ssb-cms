@@ -75,11 +75,11 @@ module.exports = function(ssb, drafts) {
         }
 
         let pos = kv.pos || 'head'
-        console.log('- RevView:', pos, key, kv.heads)
+        //console.log('- RevView:', pos, key, kv.heads)
         if (pos === 'head') entries.push(kv)
         else if (pos === 'tail') entries.unshift(kv)
         else entries = insert(key, kv, entries, pos)
-        console.log('new length', entries.length)
+        //console.log('new length', entries.length)
         return entries
       })
     )

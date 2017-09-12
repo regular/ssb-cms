@@ -291,7 +291,7 @@ module.exports = function(config, cb) {
       // TODO temp hack
       fullscreenPreview.innerHTML = ''
       ssb.cms.getReduced(key, (err, msg)=>{
-        console.log('reduced', err, msg)
+        //console.log('reduced', err, msg)
         if (err) throw err  
         let el = editor.renderPreviewEditor(msg, [key])
         fullscreenPreview.appendChild(el)
@@ -352,7 +352,7 @@ module.exports = function(config, cb) {
         if (!msgString) return
         let revisionRoot = tree.selection()
         let revisionBranch = revs.selection()
-      console.log("FIRST EDIT")
+        //console.log("FIRST EDIT")
         ssb.get(revs.root(), (err, msg)=>{
           if (err) throw err
           let branch = msg.content && msg.content.branch

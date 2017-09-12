@@ -10,7 +10,7 @@ const {isDraft} = require('./util')
 module.exports = function(ssb, drafts) {
 
   function getMessageOrDraft(id, cb) {
-    console.log('getting', id)
+    //console.log('getting', id)
     if (isDraft(id)) drafts.get(id, cb)
     else if (ref.isMsg(id)) ssb.get(id, cb)
     else cb(Error(`getMessageOrDraft: invalid id: ${id}`))
@@ -20,7 +20,7 @@ module.exports = function(ssb, drafts) {
     return pull.filter( x => {
       // only pass through the last expected sync
       if (sync && x.sync) {
-        console.log('sync, expect more:', sync-1)
+        //console.log('sync, expect more:', sync-1)
         return (!--sync)
       }
       return true
@@ -105,7 +105,7 @@ module.exports = function(ssb, drafts) {
       updatesStream({bufferUntilSync: true}),
       pull.collect( (err, results)=>{
         if (err) return cb(err)
-        console.log('GET LATEST', results)
+        //console.log('GET LATEST', results)
         if (results.length !== 1) return cb(new Error('got more or less than one result'))
         let msg = results[0].value
         cb(null, msg)

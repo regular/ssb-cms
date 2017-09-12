@@ -2,7 +2,7 @@
 require('setimmediate')
 const h = require('mutant/html-element')
 const MutantMap = require('mutant/map')
-const Dict = require('mutant/dict')
+const MutantDict = require('mutant/dict')
 const Value = require('mutant/value')
 const Struct = require('mutant/struct')
 const MutantArray = require('mutant/array')
@@ -13,6 +13,7 @@ const resolve = require('mutant/resolve')
 const ref = require('ssb-ref')
 
 const pull = require('pull-stream')
+const cat = require('pull-cat')
 const traverse = require('traverse')
 const prettyBytes = require('pretty-bytes')
 const updates = require('./update-stream')
@@ -20,6 +21,8 @@ const config = require('../ssb-cms/config')
 const {isDraft} = require('./util')
 
 module.exports = function(ssb, drafts, root, view) {
+  let sbotConnect = Value(true)
+
   let isSynced = Value()
   let draftCount = Value(0)
   let draftWarning = Value(false)
@@ -28,12 +31,34 @@ module.exports = function(ssb, drafts, root, view) {
   let incompleteCount = Value(0)
   let messageCount = Value(0)
   let revisionCount = Value(0)
-
+  
   let blobRefs = Value(0)
   let blobsPresent = Value(0)
   let blobBytes = Value(0)
 
   let ready = computed([isSynced, blobRefs, blobsPresent], (s, r, p) => s && r === p)
+
+  let peers = MutantDict()
+  let peerCount = Value()
+  view.appendChild(
+    h('section.peers', [
+      h('h2', 'Peers'),
+      h('table', computed([peers], p  => {
+        let count = 0
+        let ret = Object.keys(p).map( k => {
+          let v = p[k]
+          if (v === 'connected') count++
+          return h('tr', [
+            h('td', k),
+            h('td', v)
+          ])
+        })
+        peerCount.set(count)
+        return ret
+      }))
+    ])
+  )
+
   let blobs = MutantArray()
   view.appendChild(
     h('section.blobs', [
@@ -58,6 +83,16 @@ module.exports = function(ssb, drafts, root, view) {
 
   function html() {
     return h('span.status', [
+      h('span', [
+        'Sbot:',
+        when(computed([sbotConnect], p => !p), h('span', {title: 'lost connection to backend'}, '⚠')),
+        when(sbotConnect, h('span', {style:{color:'green'}}, '✓'))
+      ]),
+      h('span', [
+        'Peers:',
+        h('span', peerCount),
+        when(computed([peerCount], p => p==0), h('span', {title: 'offline'}, '⚠'))
+      ]),
       h('span', [
         'Drafts:',
         h('span', draftCount),
@@ -258,6 +293,28 @@ module.exports = function(ssb, drafts, root, view) {
     }
   }
 
+  function watchPeers() {
+    sbotConnect.set(true)
+    pull(
+      cat([
+        pull(
+          pull.once(1),
+          pull.asyncMap( (x,cb) => ssb.gossip.peers(cb) ),
+          pull.flatten(),
+          pull.map( kv => { return {peer:kv} } )
+        ),
+        ssb.gossip.changes()
+      ]),
+      pull.drain( kv => {
+        peers.put(kv.peer.key, kv.peer.state)
+      }, err => {
+        console.error('Peers.changes ended:', err)
+        sbotConnect.set(false)
+      })
+    )
+  }
+
+  watchPeers()
   watchDrafts()
   watchMessages(root)
 
