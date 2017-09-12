@@ -148,6 +148,7 @@ module.exports = function(config, cb) {
       statusView = h('div.statusView', {style: {display: 'none'}})
     )
 
+
     menubar.activeItem( item=>{
       let key = item.getAttribute('data-key')
       if (key === 'status') {

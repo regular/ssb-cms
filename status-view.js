@@ -20,6 +20,7 @@ const config = require('../ssb-cms/config')
 const {isDraft} = require('./util')
 
 module.exports = function(ssb, drafts, root, view) {
+  let isSynced = Value()
   let draftCount = Value(0)
   let draftWarning = Value(false)
 
@@ -32,6 +33,7 @@ module.exports = function(ssb, drafts, root, view) {
   let blobsPresent = Value(0)
   let blobBytes = Value(0)
 
+  let ready = computed([isSynced, blobRefs, blobsPresent], (s, r, p) => s && r === p)
   let blobs = MutantArray()
   view.appendChild(
     h('section.blobs', [
@@ -79,7 +81,11 @@ module.exports = function(ssb, drafts, root, view) {
       ]),
       h('span', [
         'Blobs:',
-        h('span', [' ', blobsPresent, ' / ', blobRefs, ' (', computed([blobBytes], b => prettyBytes(b)), ')'])
+        h('span', [' ', blobsPresent, ' / ', blobRefs, ' (', computed([blobBytes], b => prettyBytes(b)), ')']),
+        h('span', { style: {
+          color: computed([ready], r => r ? 'green' : 'red')
+        } },
+        computed([ready], r => r ? '✓' : '⌛ '))
       ])
     ])
   }
@@ -173,6 +179,7 @@ module.exports = function(ssb, drafts, root, view) {
           incomplete()
           message()
           revision()
+          isSynced.set(true)
         }
         return !x.sync
       }),
@@ -207,11 +214,23 @@ module.exports = function(ssb, drafts, root, view) {
     return function processBlobReferences(kv) {
       traverse(kv.value.content || {}).forEach( function(v) {
         if (ref.isBlob(v)) {
-          if (true || !knownBlobs.has(v)) {
+          //if (!knownBlobs.has(v)) {
+            let newBlob = !knownBlobs.has(v)
             knownBlobs.add(v)
             refs++
             blobRefs.set(refs)
             let sizeObs = Value('...')
+            let getSize = function(v) {
+              ssb.blobs.size(v, (err, size) => {
+                if (err) return sizeObs.set(err.message)
+                sizeObs.set(size || 'zero')
+                if (newBlob) {
+                  totalSize += size
+                  blobBytes.set(totalSize)
+                }
+                blobsPresent.set(++present)
+              })
+            }
             blobs.push({
               id: v,
               size: sizeObs,
@@ -222,19 +241,18 @@ module.exports = function(ssb, drafts, root, view) {
                 path: this.path.join('.')
               }
             })
+
             ssb.blobs.has(v, (err, gotit) => {
               if (err) return sizeObs.set(err.message)
-              if (!gotit) return sizeObs.set('missing')
-              present++
-              blobsPresent.set(present)
-              ssb.blobs.size(v, (err, size) => {
+              if (gotit) return getSize(v)
+
+              sizeObs.set('missing')
+              ssb.blobs.want(v, err => {
                 if (err) return sizeObs.set(err.message)
-                sizeObs.set(size || 'zero')
-                totalSize += size
-                blobBytes.set(totalSize)
+                getSize(v)
               })
             })
-          }
+          //}
         }
       })
     }
@@ -243,7 +261,9 @@ module.exports = function(ssb, drafts, root, view) {
   watchDrafts()
   watchMessages(root)
 
-  return html()
+  let ret = html()
+  ret.ready = ready 
+  return ret
 }
 
 
