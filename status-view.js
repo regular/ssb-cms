@@ -36,6 +36,8 @@ module.exports = function(ssb, drafts, root, view) {
   let blobsPresent = Value(0)
   let blobBytes = Value(0)
 
+  let version = Value('dev')
+
   let ready = computed([isSynced, blobRefs, blobsPresent], (s, r, p) => s && r === p)
 
   let peers = MutantDict()
@@ -83,6 +85,10 @@ module.exports = function(ssb, drafts, root, view) {
 
   function html() {
     return h('span.status', [
+      h('span', [
+        h('span', 'Version:'),
+        h('span', version)
+      ]),
       h('span', [
         'Sbot:',
         when(computed([sbotConnect], p => !p), h('span', {title: 'lost connection to backend'}, '⚠')),
@@ -205,6 +211,7 @@ module.exports = function(ssb, drafts, root, view) {
       }),
       pull.through( kv => revision(kv.key, true) ),
       updates({sync: true, bufferUntilSync: true}),
+      pull.through( AutoUpdate() ),
       pull.filter( x => {
         if (x.sync) {
           console.log('watch synced')
@@ -314,6 +321,36 @@ module.exports = function(ssb, drafts, root, view) {
     )
   }
 
+  function AutoUpdate() {
+    let currentCodeBlobUrl = document.location.href.replace(document.location.hash, '')
+    let author, sequence
+    let updateUrl = null
+    return function(kv) {
+      if (kv.sync) {
+        if (updateUrl) {
+          let hash = document.location.hash
+          console.error('*** Auto update!')
+          document.location.href = updateUrl + hash
+        }
+        return
+      }
+      if (kv.value.content && kv.value.content.type === 'client-update') {
+        let newCodeBlobUrl = `${config.blobsRoot}/${kv.value.content.code}`
+        if (currentCodeBlobUrl === newCodeBlobUrl) {
+          console.log('Found currently running client code message', kv.key)
+          author = kv.value.author
+          sequence = kv.value.sequence
+          version.set(`${sequence} (${kv.key.substr(1,6)})`)
+        } else if (author && sequence) {
+          if (kv.value.author === author && kv.value.sequence > sequence) {
+            console.error(`Found newer client version! old seq: ${sequence}, new seq: ${kv.value.sequence}`)
+            updateUrl = newCodeBlobUrl
+          }
+        }
+      }
+    }
+  }
+
   watchPeers()
   watchDrafts()
   watchMessages(root)
@@ -344,5 +381,8 @@ module.exports.css = ()=>  `
     background: #eee;
     padding-left: 2em;
     width: 100%;
+  }
+  .middle .status>span>span {
+    margin: .12em;
   }
 `
