@@ -35,16 +35,21 @@ module.exports = function(ssb, drafts, root, view) {
   let blobs = MutantArray()
   view.appendChild(
     h('section.blobs', [
-      h('h1', 'Blobs'),
+      h('h2', 'Blobs'),
       h('table', MutantMap(blobs, b => h('tr', [
         h('td', h('a', {
+          target: '_blank',
           href: `${config.blobsRoot}/${b.id}`
         }, b.id)),
         h('td', {
           style: {
             background: computed([b.size], s => s==='missing' ? 'red' : 'unset')
           }
-        },computed([b.size], s=>Number.isInteger(s) ? prettyBytes(s) : s))
+        },computed([b.size], s=>Number.isInteger(s) ? prettyBytes(s) : s)),
+        h('td', h('a', {
+          href: `#${b.neededBy.key}`
+        }, `${b.neededBy.type} ${b.neededBy.name || ''}`)),
+        h('td', b.neededBy.path)
       ])))
     ])
   )
@@ -157,7 +162,6 @@ module.exports = function(ssb, drafts, root, view) {
         keys: true,
         values: true
       }),
-      pull.through( Blobs() ),
       pull.through( kv => revision(kv.key, true) ),
       updates({sync: true, bufferUntilSync: true}),
       pull.filter( x => {
@@ -172,7 +176,7 @@ module.exports = function(ssb, drafts, root, view) {
         }
         return !x.sync
       }),
-
+      pull.through( Blobs() ),
       pull.drain( kv => {
         //console.log('watch', kv)
         let {key, value} = kv
@@ -200,17 +204,23 @@ module.exports = function(ssb, drafts, root, view) {
     let totalSize = 0
     let knownBlobs = new Set() 
 
-    return function processBlobReferences(value) {
-      traverse(value).forEach( v=>{
+    return function processBlobReferences(kv) {
+      traverse(kv.value.content || {}).forEach( function(v) {
         if (ref.isBlob(v)) {
-          if (!knownBlobs.has(v)) {
+          if (true || !knownBlobs.has(v)) {
             knownBlobs.add(v)
             refs++
             blobRefs.set(refs)
             let sizeObs = Value('...')
             blobs.push({
               id: v,
-              size: sizeObs
+              size: sizeObs,
+              neededBy: {
+                key: kv.key,
+                type: kv.value.content.type,
+                name: kv.value.content.name,
+                path: this.path.join('.')
+              }
             })
             ssb.blobs.has(v, (err, gotit) => {
               if (err) return sizeObs.set(err.message)
@@ -254,7 +264,8 @@ module.exports.css = ()=>  `
     overflow: scroll;
     height: calc(100vh - 32px); 
     color: #222;
-    background: #aaa;
+    background: #eee;
+    padding-left: 2em;
     width: 100%;
   }
 `

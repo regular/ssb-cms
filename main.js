@@ -245,6 +245,7 @@ module.exports = function(config, cb) {
 
     window.addEventListener('hashchange', (e)=>{
       console.log('HASH CHANGE')
+      menubar.activate('content')
       setSelectionFromURL(e.newURL)
     })
 
