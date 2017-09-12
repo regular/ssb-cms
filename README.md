@@ -55,7 +55,6 @@ TODO (low priority) same for images/icons.
 TODO: Before publishing the editor's content, make sure it actually differs from the lates revision and the content is valid json and satisfies a schema or validation function.
 
 ### Renderers
-
 Renderers are composable Javascript functions that follow the `hyperobj`
 pattern. They take an object as input and generate an HTMLElement.
 Renderers can invoke other Renderers to render child nodes (or otherwise
@@ -77,6 +76,9 @@ TODO (low priority): Instead of the three column layout (or in addition to it), 
 - @bob comments on revision %23j2asds of %Ancient-Artefact-2343 by @alice: "Good work, thanks!"
 - @bob identifies %sdkjf3943SHS as %My_cat
 - @alice comments on %My_cat: "Nice cat!"
+
+### Software updates
+You can deploy an ssb-cms based cms client using a blob. This allows you to update your client code alongside your content. When the client detects that it has been loaded from a blob (the current address is a blob-uRL), it looks for messages of type `client-update` that are newer than the one that referes the blob that is currently loaded into the browser. Only updates from the same ssb feed are accepted. ("newer" here means: higher sequence number). If such an update is found during the startup-phase, the client will reload itself from that new blob. TODO: describe deplyment details.
 
 ## Installtion
 
