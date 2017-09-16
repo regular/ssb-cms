@@ -128,18 +128,27 @@ module.exports = function(ssb, drafts, root) {
         return !x.sync
       }),
       drain = updateObservableMessages(mutantArray, {
-        makeObservable: makeNode
+        makeObservable: makeNode,
+        updateObservable: updateNode
       })
     )
     return drain.abort
   }
 
-  function makeNode(key, msg) {
-    let dict = Dict(msg)
+  function updateNode(child, kv) {
+    console.log('SEQ', kv.value.sequence)
+    child.msg.set(kv.value)
+    child.unsaved.set(kv.unsaved)
+    child.forked.set(Object.keys(kv.heads).length > 1)
+    child.incomplete.set(kv.tail !== kv.key)
+  }
+
+  function makeNode(kv) {
+    let dict = Dict(kv.value)
     let label = computed([dict], x=>x.content && x.content.name)
     let type = computed([dict], x=>x.content && x.content.type)
     let node = Struct({
-      msg: dict, 
+      msg: dict,
       label,
       type,
       open: false,
@@ -149,7 +158,7 @@ module.exports = function(ssb, drafts, root) {
       incomplete: true,
       children: MutantArray()
     })
-    node.id = key
+    node.id = kv.key
     let abortStream
     node.open( (isOpen)=> {
       if (isOpen) {

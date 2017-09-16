@@ -97,7 +97,7 @@ module.exports = function(ssb, drafts, root) {
 
   // --- higher level APIs
   //
-
+/*
   function Cache(root) {
     let cbs = []
     let cache
@@ -142,6 +142,7 @@ module.exports = function(ssb, drafts, root) {
   let cache = Cache(root)
   let getLatest = cache.getLatest
   let getChildren = cache.getChildren
+*/
 
   function getPrototypeChain(key, result, cb) {
     getLatest(key, (err, obs)=>{
@@ -180,10 +181,10 @@ module.exports = function(ssb, drafts, root) {
   return {
     getMessageOrDraft,
     branches,
-    revisions,
-    getLatest,
-    getChildren,
-    getPrototypeChain: function (key, cb) {getPrototypeChain(key, [], cb)},
-    getReduced
+    revisions
+    //getLatest,
+    //getChildren,
+    //getPrototypeChain: function (key, cb) {getPrototypeChain(key, [], cb)},
+    //getReduced
   }
 }

@@ -12,10 +12,13 @@ function cacheAndIndex(opts) {
 
   pull(
     ret = updateObservableMessages(null, {
-      makeObservable: (key, msg) => {
-        let d = MutantDict(msg)
-        messages[key] = d
+      makeObservable: kv => {
+        let d = MutantDict(kv.value)
+        messages[kv.key] = d
         return d
+      },
+      updateObservable: (child, kv) => {
+        child.set(kv.value)
       },
       getContainer: kv => {
         let {key, value} = kv
@@ -36,7 +39,9 @@ function cacheAndIndex(opts) {
 function updateObservableMessages(container, opts) {
   opts = opts || {}
   let makeObservable = opts.makeObservable
+  let updateObservable = opts.updateObservable
   if (!makeObservable) throw new Error('You need to pass makeObservable')
+  if (!updateObservable) throw new Error('You need to pass updateObservable')
 
   let ret = pull.drain( kv => {
     let mutantArray = container || opts.getContainer(kv)
@@ -54,8 +59,8 @@ function updateObservableMessages(container, opts) {
 
     if (!child) {
       if (!value) return console.error('Trying to make a node without a value. This is bad.')
-      child = makeObservable(key, value)
-
+      child = makeObservable(kv)
+      child.id = kv.key
       // if this is a new child that was just created from a draft,
       // make sure to get rid of the draft
       let fromDraft = value.content && value.content['from-draft']
@@ -64,14 +69,8 @@ function updateObservableMessages(container, opts) {
         if (draft) mutantArray.delete(draft)
       }
       mutantArray.push(child)
-    } else {
-      child.msg.set(value)
-    }
-
-    // TODO
-    if (child.unsaved) child.unsaved.set(kv.unsaved)
-    if (child.foreked) child.forked.set(Object.keys(kv.heads).length > 1)
-    if (child.incomplete) child.incomplete.set(kv.tail !== key)
+    } 
+    updateObservable(child, kv)
   }, (err)=>{
     if (err) throw err
     console.log('stream ended', err)

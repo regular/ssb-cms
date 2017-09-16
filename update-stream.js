@@ -3,7 +3,7 @@ const pushable = require('pull-pushable')
 const {isDraft} = require('./util')
 
 function log() {
-  //console.log.apply(console, arguments)
+  console.log.apply(console, arguments)
 }
 
 function forEach(arrOrVal, f) {
@@ -230,7 +230,10 @@ module.exports = function updates(opts) {
                 // Overwrite node value, if claimed time is grater
                 log('internal link, added head, new heads', child.heads)
                 ignoreDraft(child, x.value)
-                
+                // TODO: there is a bug here: the latest head does not win.
+                // TODO: even if the new head is not the latest head,
+                // this might be a transition into forked state, if peviously
+                // headcount===1. We need to inform downstream!
                 let heads = Object.keys(child.heads).sort( (a,b)=>{
                   return child.heads[a] - child.heads[b]
                 })
