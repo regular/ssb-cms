@@ -220,12 +220,20 @@ module.exports = function(config, cb) {
         tree.selection.set(revRoot)
 
         if (rev || revRoot) {
-          ;(rev ? ssb.cms.getMessageOrDraft : ssb.cms.getLatest)(rev || revRoot, (err, obs) => {
-            if (err) throw err  // TODO
-            let value = obs()
-            let msgString = value.msgString || JSON.stringify(value, null, 2)
-            loadIntoEditor(msgString)
-          })
+          if (rev) {
+            ssb.cms.getMessageOrDraft(rev, (err, value) =>{
+              if (err) throw err  // TODO
+              let msgString = value.msgString || JSON.stringify(value, null, 2)
+              loadIntoEditor(msgString)
+            })
+          } else {
+            ssb.cms.getLatest(revRoot, (err, obs) => {
+              if (err) throw err  // TODO
+              let value = obs()
+              let msgString = value.msgString || JSON.stringify(value, null, 2)
+              loadIntoEditor(msgString)
+            })
+          }
         } else loadIntoEditor('')
 
         if (revRoot) {
