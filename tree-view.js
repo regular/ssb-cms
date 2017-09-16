@@ -1,5 +1,4 @@
 // mutant
-require('setimmediate')
 const h = require('mutant/html-element')
 const MutantMap = require('mutant/map')
 const Dict = require('mutant/dict')
@@ -16,6 +15,7 @@ const pull = require('pull-stream')
 const ref = require('ssb-ref')
 
 const updates = require('./update-stream')
+const {updateObservableMessages} = require('./message-cache')
 const {isDraft} = require('./util')
 const config = require('../ssb-cms/config')
 
@@ -127,46 +127,8 @@ module.exports = function(ssb, drafts, root) {
         if (x.sync) syncedCb(null)
         return !x.sync
       }),
-
-      drain = pull.drain( (kv) => {
-        //console.log('TREE incoming', kv)
-        let {key, value} = kv
-        // do we have a child for that revRoot yet?
-        let child = mutantArray.find( x=> x.id === key )
-  
-        // Is this a request to remove a draft?
-        if (kv.type === 'del') {
-          if (child) {
-            mutantArray.delete(child)
-          } else console.error('Request to delete non-existing child', key)
-          return
-        }
-
-        if (!child) {
-          if (!value) return console.error('Trying to make a node without a value. This is bad.')
-          child = makeNode(key, value)
-
-          // if this is a new child that was just created from a draft,
-          // make sure to get rid of the draft
-          let fromDraft = value.content && value.content['from-draft']
-          let draftWasSelected = false
-          if (fromDraft) {
-            let draft = mutantArray.find( x=> x.id === fromDraft )
-            draftWasSelected = selection() == draft
-            if (draft) mutantArray.delete(draft)
-          }
-          mutantArray.push(child)
-          //if (draftWasSelected) selection(key)
-        } else {
-          child.msg.set(value)
-        }
-
-        child.unsaved.set(kv.unsaved)
-        child.forked.set(Object.keys(kv.heads).length > 1)
-        child.incomplete.set(kv.tail !== key)
-      }, (err)=>{
-        if (err) throw err
-        console.log('stream ended', err)
+      drain = updateObservableMessages(mutantArray, {
+        makeObservable: makeNode
       })
     )
     return drain.abort

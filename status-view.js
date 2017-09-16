@@ -236,7 +236,7 @@ module.exports = function(ssb, drafts, root, view) {
         let revRoot = content && content.revisionRoot
         let revBranch = content && content.revisionBranch
         let isMessage = !revRoot || revRoot === key
-        let isRevision = revBranch && revBranch !== revRoot
+        //let isRevision = revBranch && revBranch !== revRoot
         
         forked(key, Object.keys(kv.heads).length > 1)
         incomplete(key, kv.tail !== key)
