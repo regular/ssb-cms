@@ -1,13 +1,13 @@
 const ref = require('ssb-ref')
 const pull = require('pull-stream')
 const many = require('pull-many')
-const ssbSort = require('ssb-sort')
 const merge = require('lodash.merge')
-const updatesStream = require('./update-stream')
 
+const updatesStream = require('./update-stream')
+const {cacheAndIndex} = require('./message-cache')
 const {isDraft} = require('./util')
 
-module.exports = function(ssb, drafts) {
+module.exports = function(ssb, drafts, root) {
 
   function getMessageOrDraft(id, cb) {
     //console.log('getting', id)
@@ -95,29 +95,58 @@ module.exports = function(ssb, drafts) {
     )
   }
 
-  // get latest revision of given revisionRoot
-  // (including drafts)
-  function getLatest(key, cb) {
-    if (!key) return cb(new Error('no key specified'))
-    if (isDraft(key)) return drafts.get(key, cb)
-    pull(
-      revisions(key),
-      updatesStream({bufferUntilSync: true}),
-      pull.collect( (err, results)=>{
-        if (err) return cb(err)
-        //console.log('GET LATEST', results)
-        if (results.length !== 1) return cb(new Error('got more or less than one result'))
-        let msg = results[0].value
-        cb(null, msg)
+  // --- higher level APIs
+  //
+
+  function Cache(root) {
+    let cbs = []
+    let cache
+    function flushCBs() {
+      cbs.forEach( ({cb, key, type})=>{
+        if (type === 'msg') return cb(null, cache.getMessageObservable(key))
+        cb(null, cache.getChildrenObservable(key))
       })
+      cbs = null
+    }
+    pull(
+      ssb.links({
+        live: true,
+        sync: true,
+        rel: 'root',
+        dest: root,
+        keys: true,
+        values: true
+      }),
+      updatesStream({live: true, sync: true, bufferUntilSync: true}),
+      pull.filter( x=>{
+        if (x.sync) {
+          flushCBs()
+          synced = true
+        }
+        return !x.sync
+      }),
+      cache = cacheAndIndex()
     )
+    return {
+      getLatest: (key, cb) => {
+        if (synced) return cb(null, cache.getMessageObservable(key))
+        cbs.push({key, cb, type: 'msg'})
+      },
+      getChildren: (key, cb) => {
+        if (synced) return cb(null, cache.getChildrenObservable(key))
+        cbs.push({key, cb, type: 'children'})
+      }
+    }
   }
 
-  /// -- TODO: refactor below this line
+  let cache = Cache(root)
+  let getLatest = cache.getLatest
+  let getChildren = cache.getChildren
 
   function getPrototypeChain(key, result, cb) {
-    getLatest(key, (err, msg)=>{
+    getLatest(key, (err, obs)=>{
       if (err) return cb(err)
+      let msg = obs()
       result.unshift({key, msg})
       let p
       if (p = msg.content.prototype) {
@@ -147,76 +176,14 @@ module.exports = function(ssb, drafts) {
   // - ignorePrototype: (default: false)
   // - ignorePrototypeProperties: (default: false) don't include properties from prototypes
   // - ignorePrototypeChildren: (default: false) don't include children from prototypes
-  function getObservable(key, opts) {
-    if (!key) throw new Error('no key specified')
-    opts = opts || {}
-
-    function findOrMake(kv, pool) {
-      if (!kv.value) return console.error('Trying to make a node without a value. This is bad.')
-      let node
-
-      if (pool) {
-        node = pool.find( x=> x.id === kv.kkey )
-  
-        // Is this a request to remove a draft?
-        if (kv.type === 'del') {
-          if (node) chlds.delete(node)
-          else console.error('Request to delete non-existing child', key)
-          return null
-        }
-        // if this is a new child that was just created from a draft,
-        // make sure to get rid of the draft
-        let fromDraft = kv.value.content && kv.value.content['from-draft']
-        if (poolfromDraft) {
-          let draft = pool.find( x=> x.id === fromDraft )
-          if (draft) pool.delete(draft)
-        }
-      }
-      if (!node) {
-        node = Dict()
-        pool.push(node)
-      }
-      return node
-    }
-
-    let observable = Dict()
-    let drain
-    let synced = false
-    if (opts.includeChildren) observable.children = MutantArray()
-    pull(
-      many([
-        revisions(key, opts),
-        opts.includeChildren ? branches(key, opts) : pull.empty()
-      ]),
-      uniqueKeys(),
-      updatesStream(Object.assign({}, opts, {bufferUntilSync: opts.live})),
-      pull.filter( x=>{
-        if (x.sync) synced = true
-        return !x.sync
-      }),
-      drain = pull.drain( (kv)=>{
-        if (kv.key === key) {
-          return observable.set(kv.value)
-        }
-        if (observable.children) {
-          // do we have a child for that revRoot yet?
-          child = findOrMake(kv, observable.children)
-          child.set(kv.value)
-        }
-      }, (err)=>{
-        console.error('get API stream ended', err)
-      })
-    )
-    return observable
-  }
   
   return {
-    getObservable,
     getMessageOrDraft,
-    getLatest,
-    getPrototypeChain: function (key, cb) {getPrototypeChain(key, [], cb)},
-    getReduced,
     branches,
-    revisions
+    revisions,
+    getLatest,
+    getChildren,
+    getPrototypeChain: function (key, cb) {getPrototypeChain(key, [], cb)},
+    getReduced
   }
 }

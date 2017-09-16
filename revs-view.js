@@ -86,7 +86,7 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
     ])
   }
 
-  let sortStream = SortStream(ssb, drafts)
+  let sortStream = SortStream(ssb)
   let mutantArray = MutantArray()
 
   function streamRevisions(id, syncCb) {

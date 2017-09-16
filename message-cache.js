@@ -68,9 +68,10 @@ function updateObservableMessages(container, opts) {
       child.msg.set(value)
     }
 
-    child.unsaved.set(kv.unsaved)
-    child.forked.set(Object.keys(kv.heads).length > 1)
-    child.incomplete.set(kv.tail !== key)
+    // TODO
+    if (child.unsaved) child.unsaved.set(kv.unsaved)
+    if (child.foreked) child.forked.set(Object.keys(kv.heads).length > 1)
+    if (child.incomplete) child.incomplete.set(kv.tail !== key)
   }, (err)=>{
     if (err) throw err
     console.log('stream ended', err)

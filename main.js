@@ -52,7 +52,7 @@ module.exports = function(config, cb) {
       throw err
     }
 
-    ssb.cms = DB(ssb, drafts)
+    ssb.cms = DB(ssb, drafts, root)
 
     sbot.set(ssb)
     ssb.whoami( (err, feed)=> {
@@ -220,8 +220,9 @@ module.exports = function(config, cb) {
         tree.selection.set(revRoot)
 
         if (rev || revRoot) {
-          ;(rev ? ssb.cms.getMessageOrDraft : ssb.cms.getLatest)(rev || revRoot, (err, value) => {
+          ;(rev ? ssb.cms.getMessageOrDraft : ssb.cms.getLatest)(rev || revRoot, (err, obs) => {
             if (err) throw err  // TODO
+            let value = obs()
             let msgString = value.msgString || JSON.stringify(value, null, 2)
             loadIntoEditor(msgString)
           })
