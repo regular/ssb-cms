@@ -41,6 +41,9 @@ module.exports = function(opts) {
       let key = item.key
       let el = h('section',
         {
+          attributes: {
+            'data-key': key
+          },
           classList: computed([activeItem], ae =>
             ['menu-item'].concat(ae && ae.getAttribute('data-key') === key ? ['active'] : []).concat(item.classes || [])
           ),
@@ -50,9 +53,8 @@ module.exports = function(opts) {
             e.preventDefault()
           }
         },
-        renderItem.call(renderItem, item.value, kp.concat([item.key]))
+        item.value ? renderItem.call(renderItem, item.value, kp.concat([item.key])) : h('span', '[No value]')
       )
-      el.setAttribute("data-key", key)
       return el
     }
 
