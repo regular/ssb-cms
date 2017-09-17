@@ -16,6 +16,7 @@ const Menubar = require('./renderers/menubar')
 const drafts = require('./drafts')()
 const DB = require('./db')
 const {isDraft} = require('./util')
+const ObjectDB = require('./object-db')
 
 const modes = ['normal', 'translucent', 'no-ui']
 
@@ -53,6 +54,7 @@ module.exports = function(config, cb) {
     }
 
     ssb.cms = DB(ssb, drafts, root)
+    Object.assign(ssb.cms, ObjectDB(ssb, root))
 
     sbot.set(ssb)
     ssb.whoami( (err, feed)=> {
