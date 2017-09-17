@@ -4,6 +4,8 @@ const pull = require('pull-stream')
 const MutantDict = require('mutant/dict')
 const MutantArray = require('mutant/array')
 
+// TODO: this does not account for messages changing branches!
+
 function cacheAndIndex(opts) {
   opts = opts || {}
   let branches = {}

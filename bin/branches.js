@@ -24,7 +24,10 @@ ssbClient(keys, config, (err, ssb)=>{
   let db = DB(ssb, drafts, root)
   pull(
     db.branches(branch),
+    pull.filter( kv => kv.value.content.revisionRoot === revRoot ),
+    pull.through( kv=> console.error('in', kv.key) ),
     updateStream(),
+    pull.through( kv => console.error('out', kv.revision)),
     pull.filter( kv => kv.key === revRoot ),
     pull.log()
   )

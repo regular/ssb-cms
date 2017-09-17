@@ -140,7 +140,7 @@ module.exports = function(ssb, drafts, root) {
     child.msg.set(kv.value)
     child.unsaved.set(kv.unsaved)
     child.forked.set(Object.keys(kv.heads).length > 1)
-    child.incomplete.set(kv.tail !== kv.key)
+    child.incomplete.set(kv.tail !== kv.key || kv.queue.length !== 0)
   }
 
   function makeNode(kv) {

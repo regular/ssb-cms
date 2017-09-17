@@ -800,6 +800,95 @@ test('new a, rev a1, rev a2 (fork, a2 wins), draft-a3 (merge)', (t)=>{
   )
 })
 
+test('bufferUntilSync: new a, rev a1, rev a2 (fork, a2 wins), draft-a3 (merge)', (t)=>{
+  const kvs = [
+    { key: 'a', value: {
+        content: {
+          text: 'foo'
+    } } },
+    { key: 'a1', value: {
+        timestamp: 1,
+        content: {
+          revisionRoot: 'a',
+          revisionBranch: 'a',
+          text: 'bar'
+    } } },
+    { key: 'a2', value: {
+        timestamp: 2,
+        content: {
+          revisionRoot: 'a',
+          revisionBranch: 'a',
+          text: 'baz'
+    } } },
+    { key: 'draft-a3', value: {
+        content: {
+          revisionRoot: 'a',
+          revisionBranch: ['a1', 'a2'],
+          text: 'merged'
+    } } },
+    {sync: true}
+  ]
+  pull(
+    pull.values(kvs),
+    s({bufferUntilSync:true}),
+    pull.collect( (err, updates) => {
+      t.notOk(err)
+      t.equal(updates.length, 1)
+
+      t.deepEqual(updates[0].value.content, {
+        revisionRoot: 'a',
+        revisionBranch: ['a1', 'a2'],
+        text: 'merged'
+      })
+      t.equal(updates[0].unsaved, true)
+      t.deepEqual(heads(updates[0]), ['draft-a3'])
+
+      t.end()
+    })
+  )
+})
+
+test.only('bufferUntilSync: new a, rev a1, rev a2 (fork, a2 wins)', (t)=>{
+  const kvs = [
+    { key: 'a', value: {
+        content: {
+          text: 'foo'
+    } } },
+    { key: 'a1', value: {
+        timestamp: 1,
+        content: {
+          revisionRoot: 'a',
+          revisionBranch: 'a',
+          text: 'bar'
+    } } },
+    { key: 'a2', value: {
+        timestamp: 2,
+        content: {
+          revisionRoot: 'a',
+          revisionBranch: 'a',
+          text: 'baz'
+    } } },
+    {sync: true}
+  ]
+  pull(
+    pull.values(kvs),
+    s({bufferUntilSync:true}),
+    pull.collect( (err, updates) => {
+      t.notOk(err)
+      t.equal(updates.length, 1)
+
+      t.deepEqual(updates[0].value.content, {
+        revisionRoot: 'a',
+        revisionBranch: 'a',
+        text: 'baz'
+      })
+      t.deepEqual(heads(updates[0]), ['a1', 'a2'])
+
+      t.end()
+    })
+  )
+})
+
 test('new a, rev a1, rev a2 (fork, a1 wins), draft-a3 (merge)', (t)=>{
   const kvs = [
     { key: 'a', value: {

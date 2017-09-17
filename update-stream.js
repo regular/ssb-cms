@@ -218,6 +218,10 @@ module.exports = function updates(opts) {
         function fit() {
           let success = false
           child.queue = child.queue.filter( (x)=> {
+            // TODO: We need to emit updates with x already removed
+            // from the queue, otherwise downstream is confuesd and displays
+            // a warning about incomplete message history (it thinks not all puzzle
+            // pieces fit together)
 
             let pos = isLinked(child, x)
             if (!pos) {
