@@ -2,6 +2,7 @@ const pull = require('pull-stream')
 
 const {arr} = require('./util')
 const updateStream = require('./update-stream')
+const DB = require('./db')
 
 function insert(key, kv, entries, pos) {
   let error = ()=> {
@@ -36,12 +37,13 @@ function insert(key, kv, entries, pos) {
   return entries.slice(0, i).concat([kv]).concat(entries.slice(i))
 }
 
-module.exports = function(ssb) {
+module.exports = function(ssb, drafts) {
+  let db = DB(ssb, drafts)
 
   function streamSortRevs(id) {
     let entries = []
     return pull(
-      ssb.cms.revisions(id, {
+      db.revisions(id, {
         live: true,
         sync: true
       }),
