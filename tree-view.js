@@ -17,7 +17,7 @@ const ref = require('ssb-ref')
 const updates = require('./update-stream')
 const {updateObservableMessages} = require('./message-cache')
 const {isDraft} = require('./util')
-const config = require('../ssb-cms/config')
+const config = require('./cms-config')
 
 module.exports = function(ssb, drafts, root) {
 
@@ -136,7 +136,6 @@ module.exports = function(ssb, drafts, root) {
   }
 
   function updateNode(child, kv) {
-    console.log('SEQ', kv.value.sequence)
     child.msg.set(kv.value)
     child.unsaved.set(kv.unsaved)
     child.forked.set(Object.keys(kv.heads).length > 1)

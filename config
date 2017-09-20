@@ -1,0 +1,37 @@
+{
+  "appName": "ssb-cms-test6",
+  "productName": "SSB CMS TEST 6",
+  "party": {
+    "out": false
+  },
+  "caps": {
+    "shs": "fasELM5JJp+1eGkTUAAFQpmuMpJjgLYhZJfW/TIjdmc="
+  },
+  "host": "127.0.0.1",
+  "port": 10000,
+  "allowPrivate": true,
+  "ws": {
+    "port": 10001
+  },
+  "timers": {
+    "handshake": 30000
+  },
+  "master": [
+    "@ZovWuWbQeHbyxHZZwgWhEl3T445yZke3QKn9/8UTzBo=.ed25519",
+    "@MqO+uVt+2M/o1EBFbnIhDAchF4F7by6NRh716DphJMk=.ed25519"
+  ],
+  "cms": {
+    "root": "%Qmxp+xUtreDtsXk3E8cN05EoJ+dvRztfkdnOiAfGfmc=.sha256"
+  },
+  "onboarding": {
+    "inviteCode": "pub.postpossessive.org:10000:@W0usBc5dFcUVSShld7ybYveGGhhZ1u6cLwFH6lYPCDo=.ed25519~i2LaKaJ5XiF6eLXScMUyvXtOgTzXN+jN57+hckgm/lg=",
+    "name": "testperson",
+    "autofollow": [
+      "@nti4TWBH/WNZnfwEoSleF3bgagd63Z5yeEnmFIyq0KA=.ed25519",
+      "@YWWdiYICsgdl884zIMjljdukzCHA2B8hnBzq3/em+pA=.ed25519"
+    ]
+  },
+  "bootloader": {
+    "codeMessage": "%eBvduHVVyltpODsQ39F6JcG7NW1pXscN86anIS9e8uU=.sha256"
+  }
+}

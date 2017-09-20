@@ -17,7 +17,7 @@ const cat = require('pull-cat')
 const traverse = require('traverse')
 const prettyBytes = require('pretty-bytes')
 const updates = require('./update-stream')
-const config = require('../ssb-cms/config')
+const config = require('./cms-config')
 const {isDraft} = require('./util')
 
 module.exports = function(ssb, drafts, root, view) {
@@ -323,6 +323,8 @@ module.exports = function(ssb, drafts, root, view) {
 
   function AutoUpdate() {
     let currentCodeBlobUrl = document.location.href.replace(document.location.hash, '')
+    if (/#$/.test(currentCodeBlobUrl)) currentCodeBlobUrl = currentCodeBlobUrl.slice(0, -1)
+    console.log('currentCodeBlobUrl', currentCodeBlobUrl)
     let author, sequence
     let updateUrl = null
     return function(kv) {
@@ -336,6 +338,7 @@ module.exports = function(ssb, drafts, root, view) {
       }
       if (kv.value.content && kv.value.content.type === 'client-update') {
         let newCodeBlobUrl = `${config.blobsRoot}/${kv.value.content.code}`
+        console.log('newCodeBlobUrl', newCodeBlobUrl)
         if (currentCodeBlobUrl === newCodeBlobUrl) {
           console.log('Found currently running client code message', kv.key)
           author = kv.value.author

@@ -4,7 +4,7 @@ const ho = require('hyperobj')
 const Value = require('mutant/value')
 const computed = require('mutant/computed')
 const pull = require('pull-stream')
-const ssbClient = require('ssb-client')
+//const ssbClient = require('ssb-client')
 const getAvatar = require('ssb-avatar')
 const ref = require('ssb-ref')
 
@@ -27,12 +27,14 @@ module.exports = function(config, cb) {
   let me = Value()
   let sbot = Value()
 
+  /*
   ssbClient(config.keys, {
     caps: config.sbot.caps,
     remote: config.sbotAddress,
     timers: {handshake: 30000},
     manifest: config.manifest
-  }, function (err, ssb) {
+  */
+  require('ssb-electroparty/client')(function (err, ssb) {
     if (err) {
       document.body.innerHTML = `<pre>
       ssb-client says: "${err.message}"
@@ -42,7 +44,8 @@ module.exports = function(config, cb) {
         "@${config.keys.public}"
       ]
 
-      in ${process.env.HOME + '/.' + process.env.ssb_appname + '/config'}
+      in ~/.${config.appName + '/config'}
+
 
       (the above is not an example, it is your actual public key)
 
