@@ -15,12 +15,12 @@ function cacheAndIndex(opts) {
   pull(
     ret = updateObservableMessages(null, {
       makeObservable: kv => {
-        let d = MutantDict(kv.value)
+        let d = MutantDict(kv)
         messages[kv.key] = d
         return d
       },
       updateObservable: (child, kv) => {
-        child.set(kv.value)
+        child.set(kv)
       },
       getContainer: kv => {
         let {key, value} = kv

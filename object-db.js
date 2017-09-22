@@ -1,5 +1,8 @@
 const pull = require('pull-stream')
 const merge = require('lodash.merge')
+const ref = require('ssb-ref')
+const ProxyDict = require('mutant/proxy-dict')
+const ProxyCollection = require('mutant/proxy-collection')
 const updatesStream = require('./update-stream')
 const {cacheAndIndex} = require('./message-cache')
 
@@ -12,9 +15,17 @@ module.exports = function(ssb, root) {
     let cbs = []
     let cache
     function flushCBs() {
-      cbs.forEach( ({cb, key, type})=>{
-        if (type === 'msg') return cb(null, cache.getMessageObservable(key))
-        cb(null, cache.getChildrenObservable(key))
+      cbs.forEach( ({cb, opts, key, type, proxy})=>{
+        let obs =cache[ (type === 'msg') ? 'getMessageObservable' : 'getChildrenObservable'](key)
+        if (!obs && cb) return cb(new Error(`Not found: ${key}`))
+        let value = (type === 'msg') ? (
+           opts.keys ? obs() : obs().value
+        ) : (
+          opts.keys ? obs() : obs().map( x => x.value )
+        )
+        if (cb) cb(null, value)
+        console.log(`Seeing ${type} proxy`, obs)
+        proxy.set(obs)
       })
       cbs = null
     }
@@ -38,13 +49,28 @@ module.exports = function(ssb, root) {
       cache = cacheAndIndex()
     )
     return {
-      getLatest: (key, cb) => {
-        if (synced) return cb(null, cache.getMessageObservable(key))
-        cbs.push({key, cb, type: 'msg'})
+      // return observable, call cb with value
+      getLatest: (key, opts, cb) => {
+        if (typeof opts === 'function') {cb = opts; opts = {}}
+        if (synced) {
+          let obs = cache.getMessageObservable(key)
+          if (cb) cb(null, opts.keys ? obs() : obs().value)
+          return obs
+        }
+        let proxy = ProxyDict()
+        cbs.push({key, cb, opts, type: 'msg', proxy})
+        return proxy
       },
-      getChildren: (key, cb) => {
-        if (synced) return cb(null, cache.getChildrenObservable(key))
-        cbs.push({key, cb, type: 'children'})
+      getChildren: (key, opts, cb) => {
+        if (typeof opts === 'function') {cb = opts; opts = {}}
+        if (synced) {
+          let obs = cache.getChildrenObservable(key)
+          if (cb) cb(null, opts.keys ? obs() : obs().map( x=>x.value) )
+          return obs
+        }
+        let proxy = ProxyCollection()
+        cbs.push({key, cb, opts, type: 'children', proxy})
+        return proxy
       }
     }
   }
@@ -55,9 +81,8 @@ module.exports = function(ssb, root) {
 
   // TODO: return observable
   function getPrototypeChain(key, result, cb) {
-    getLatest(key, (err, obs)=>{
+    getLatest(key, (err, msg)=>{
       if (err) return cb(err)
-      let msg = obs()
       result.unshift({key, msg})
       let p
       if (p = msg.content.prototype) {
@@ -82,10 +107,28 @@ module.exports = function(ssb, root) {
     })
   }
 
+  // smart update function
+  // creates a draft, if needed
+  // updates the draft otherwise.
+  // Fails if preexisting draft is not parsable
+  // May auto-publish a draft after deboucing
+  function update(kp, value, opts) {
+    opts = opts || {}
+    console.log('update', kp)
+    console.log(value)
+
+    // find innermost message in keypath
+    let msgId = kp.slice().reverse().find(ref.isMsgId)
+    console.log('affected msg:', msgId)
+    let propPath = kp.slice(kp.indexOf(msgId) + 1)
+    console.log('prop path', propPath)
+  }
+
   return {
     getLatest,
     getChildren,
     getPrototypeChain: function (key, cb) {getPrototypeChain(key, [], cb)},
-    getReduced
+    getReduced,
+    update
   }
 }

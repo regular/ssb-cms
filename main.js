@@ -232,9 +232,8 @@ module.exports = function(config, cb) {
               loadIntoEditor(msgString)
             })
           } else {
-            ssb.cms.getLatest(revRoot, (err, obs) => {
+            ssb.cms.getLatest(revRoot, (err, value) => {
               if (err) throw err  // TODO
-              let value = obs()
               let msgString = value.msgString || JSON.stringify(value, null, 2)
               loadIntoEditor(msgString)
             })

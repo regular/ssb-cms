@@ -1,6 +1,12 @@
 {
-  "appName": "ssb-cms-test6",
-  "productName": "SSB CMS TEST 6",
+  "dev": true,
+  "appName": "ssb-cms-test9",
+  "invite_appName": "ssb-cms",
+  "productName": "SSB CMS",
+  "title": "Electroparty - SSB CMS",
+  "center": true,
+  "backgroundColor": "#ddd",
+  "titleBarStyle": "hiddenInset",
   "party": {
     "out": false
   },
@@ -24,8 +30,12 @@
     "root": "%Qmxp+xUtreDtsXk3E8cN05EoJ+dvRztfkdnOiAfGfmc=.sha256"
   },
   "onboarding": {
-    "inviteCode": "pub.postpossessive.org:10000:@W0usBc5dFcUVSShld7ybYveGGhhZ1u6cLwFH6lYPCDo=.ed25519~i2LaKaJ5XiF6eLXScMUyvXtOgTzXN+jN57+hckgm/lg=",
-    "name": "testperson",
+    "about": {
+      "root": "%Qmxp+xUtreDtsXk3E8cN05EoJ+dvRztfkdnOiAfGfmc=.sha256",
+      "branch": "%ETYpMzq2d5KkXhGUnigBlC9wtRUXWoRzH6udi1bX56A=.sha256",
+      "name": "new testperson"
+    },
+    "inviteCode":"pub.postpossessive.org:10000:@W0usBc5dFcUVSShld7ybYveGGhhZ1u6cLwFH6lYPCDo=.ed25519~xs2I44nstV4Cm/DQ3TjAEgeP0xeR4DEtCqelp5YOMNE=",
     "autofollow": [
       "@nti4TWBH/WNZnfwEoSleF3bgagd63Z5yeEnmFIyq0KA=.ed25519",
       "@YWWdiYICsgdl884zIMjljdukzCHA2B8hnBzq3/em+pA=.ed25519"
