@@ -8,6 +8,7 @@ function tryToParse(value) {
   try {
     msg = JSON.parse(value.msgString)
     // overwrite crucial values
+    msg.syntaxOkay = true
   } catch(e) { }
   let content = (msg.content = msg.content || {})
   content.revisionRoot = value.revisionRoot
@@ -32,6 +33,7 @@ module.exports = function () {
     }
     db.get(e.value, function (err, value) {
       if (err) return cb(err)
+      // this looks funny, but it isn't
       value = JSON.parse(value)
       cb(null, {key: e.value, value: tryToParse(value)})
     })
@@ -41,6 +43,7 @@ module.exports = function () {
     get: (key, cb) => {
       db.get(key, (err, value) => {
         if (err) return cb(err)
+        // this looks funny, but it isn't
         value = JSON.parse(value)
         value = tryToParse(value)
         cb(null, value)
@@ -124,7 +127,19 @@ module.exports = function () {
 
     all: function(opts) {
       opts = opts || {}
-      return pl.read(db, opts)
+      return pull(
+        pl.read(db, Object.assign({keys: true, values: true}, opts)),
+        pull.filter( kv => !(kv.key && kv.key[0] === '~')),
+        pull.map( kv => {
+          if (kv.sync) return kv
+          if (kv.type && kv.type !== 'put') {
+            return {key: kv.key, value: null, type: kv.type}
+          }
+          let value = JSON.parse(kv.value)
+          let ret = {key: kv.key, value: tryToParse(value)}
+          return ret
+        })
+      )
     }
   }
 }
