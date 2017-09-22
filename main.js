@@ -57,7 +57,7 @@ module.exports = function(config, cb) {
     }
 
     ssb.cms = DB(ssb, drafts, root)
-    Object.assign(ssb.cms, ObjectDB(ssb, root))
+    Object.assign(ssb.cms, ObjectDB(ssb, drafts, root))
 
     sbot.set(ssb)
     ssb.whoami( (err, feed)=> {
