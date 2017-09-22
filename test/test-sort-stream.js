@@ -187,7 +187,8 @@ test('sortstream: new a, rev a2, rev a1 (fork, a2 wins)', t => {
 
   pull(
     SS(ssb, drafts)(validMsgId),
-    pull.map( a=>a.slice() ), // make a copy for the sake of testing
+    pull.through(console.log),
+    pull.map( a=>a.sync ? a : a.slice() ), // make a copy for the sake of testing
     pull.collect( (err, updates) => {
       console.log('updates', updates)
       t.equal(updates[0].length, 1)

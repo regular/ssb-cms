@@ -246,6 +246,7 @@ test('draft-a2, new a, rev a1', (t)=>{
   pull(
     pull.values(kvs),
     s(),
+    pull.through(console.log),
     pull.collect( (err, updates) => {
       t.notOk(err)
       t.equal(updates.length, 1)
@@ -258,6 +259,52 @@ test('draft-a2, new a, rev a1', (t)=>{
       })
       t.equal(updates[0].unsaved, true)
       t.deepEqual(heads(updates[0]), ['draft-a2'])
+      t.equal(updates[0].revision, 'draft-a2')
+      //t.equal(updates[0].tail, 'a') // fails
+
+      t.end()
+    })
+  )
+})
+
+test('bufferUntilSync: draft-a2, new a, rev a1', (t)=>{
+  const kvs = [
+    { key: 'draft-a2', value: {
+        content: {
+          revisionRoot: 'a',
+          revisionBranch: 'a1',
+          text: 'foo'
+    } } },
+    { key: 'a', value: {
+        content: {
+          text: 'hello'
+    } } },
+    { key: 'a1', value: {
+        content: {
+          revisionRoot: 'a',
+          revisionBranch: 'a',
+          text: 'world'
+    } } },
+    {sync: true}
+  ]
+  pull(
+    pull.values(kvs),
+    s({bufferUntilSync: true}),
+    pull.through(console.log),
+    pull.collect( (err, updates) => {
+      t.notOk(err)
+      t.equal(updates.length, 1)
+
+      t.equal(updates[0].key, 'a')
+      t.deepEqual(updates[0].value.content, {
+        revisionRoot: 'a',
+        revisionBranch: 'a1',
+        text: "foo"
+      })
+      t.equal(updates[0].unsaved, true)
+      t.deepEqual(heads(updates[0]), ['draft-a2'])
+      t.equal(updates[0].revision, 'draft-a2')
+      t.equal(updates[0].tail, 'a') // fails
 
       t.end()
     })
@@ -848,7 +895,7 @@ test('bufferUntilSync: new a, rev a1, rev a2 (fork, a2 wins), draft-a3 (merge)',
   )
 })
 
-test.only('bufferUntilSync: new a, rev a1, rev a2 (fork, a2 wins)', (t)=>{
+test('bufferUntilSync: new a, rev a1, rev a2 (fork, a2 wins)', (t)=>{
   const kvs = [
     { key: 'a', value: {
         content: {

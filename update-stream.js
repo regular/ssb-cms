@@ -104,6 +104,12 @@ function isLinked(child, x) {
   return 0
 }
 
+function sortHeads(heads) {
+  return Object.keys(heads).sort( (a,b)=>{
+    return heads[a] - heads[b]
+  })
+}
+
 module.exports = function updates(opts) {
   opts = opts || {}
   let children = {}
@@ -137,7 +143,11 @@ module.exports = function updates(opts) {
   function flush() {
     if (doBuffer) {
       log('update-stream: unbuffering')
-      Object.values(children).forEach( c => push(Object.assign({}, c)) )
+      Object.values(children).forEach( c => {
+        let heads = sortHeads(c.heads)
+        let rev = heads.reverse()[0]
+        push(Object.assign({revision: rev}, c)) 
+      })
       doBuffer = false
     }
   }
@@ -194,6 +204,7 @@ module.exports = function updates(opts) {
               tail: key,
               queue: [],
               links: links(kv)
+              //revision: key
             }
             debug(child)
             ignoreDraft(child, value)
@@ -234,13 +245,13 @@ module.exports = function updates(opts) {
                 // Overwrite node value, if claimed time is grater
                 log('internal link, added head, new heads', child.heads)
                 ignoreDraft(child, x.value)
-                // TODO: there is a bug here: the latest head does not win.
                 // TODO: even if the new head is not the latest head,
                 // this might be a transition into forked state, if peviously
                 // headcount===1. We need to inform downstream!
-                let heads = Object.keys(child.heads).sort( (a,b)=>{
-                  return child.heads[a] - child.heads[b]
-                })
+                // NOTE: in gerneal, we only guarantee changes in `value` to be
+                // passed downstream, not state changes. They are considered internal (but leak)
+                // TODO: either don't leak or guarantee updates
+                let heads = sortHeads(child.heads)
                 let headIndex = heads.indexOf(x.key)
                 if (headIndex === heads.length - 1) {
                   // this is the latest head
