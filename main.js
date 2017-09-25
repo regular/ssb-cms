@@ -328,13 +328,21 @@ module.exports = function(config, cb) {
         
         let draftId
         if (isDraft(msgId)) draftId = msgId
-        else if (kv.unsaved) draftId = kv.revision
+        else if (isDraft(kv.revision)) draftId = kv.revision
         console.log('draftId', draftId)
 
         // easy path (there already is a draft)
         if (draftId) {
           // we just need to update the draft
           updateDraft(draftId, newValue, propPath, cb)
+        } else {
+          console.log('creating draft, because latest is', kv)
+          let msgString = JSON.stringify(kv.value, null, 2)
+          drafts.create(msgString, kv.value.content.branch, kv.value.content.revisionRoot, kv.revision, (err, key, value)=>{
+            if (err) return cb(err)
+            console.log('created draft', key)
+            updateDraft(key, newValue, propPath, cb)
+          })
         }
       })
     }

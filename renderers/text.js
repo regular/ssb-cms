@@ -23,7 +23,7 @@ module.exports = function(ssb, opts) {
     if (!value) return console.error('rendering null')
     const docLang = document.getElementsByTagName('html')[0].getAttribute('lang')
     const defaultLang = docLang || opts.defaultLanguage || 'en'
-    let lang = opts.langObservable || Value(defaultLang)
+    let langObs = opts.langObservable || Value(defaultLang)
 
     if (opts.languages) {
       opts.languages.forEach( (l)=> {
@@ -31,12 +31,15 @@ module.exports = function(ssb, opts) {
       })
     }
 
-    let localizedText = computed([lang], lang => {
-     return value[lang] || opts.defaultText || 'n/a' 
+    let localizedText = computed([langObs], l => {
+     return value[l] || opts.defaultText || 'n/a' 
     })
     let transformedText = computed([localizedText], transform)
+    let editorLang = Value(langObs())
+    let editing = Value(false)
 
     let el = h(tag, {
+      contentEditable: editing,
       'ev-click': e => {
         if (e.altKey) {
           makeEditable()
@@ -44,17 +47,14 @@ module.exports = function(ssb, opts) {
           e.stopPropagation()
         }
       }
-    }, 
-      transformedText
+    }, [computed([editing, editorLang, transformedText], (e,l,t) => e ? value[l] : t)]
     )
-    let editable = false
     let unsubscribe
 
     function makeEditable() {
-      if (editable) return
-      editable = true
-      el.innerText = localizedText()
-      el.contentEditable = true
+      if (editing()) return
+      editing.set(true)
+      editorLang.set(langObs())
       el.focus()
       let width = el.offsetWidth
       if (width<300) width = 300
@@ -73,10 +73,10 @@ module.exports = function(ssb, opts) {
       el.parentElement.appendChild(menu)
       let menuHeight = menu.offsetHeight
       reposition()
-      menu.activate(lang())
+      menu.activate(editorLang())
 
       el.addEventListener('keyup', reposition)
-          
+
       function reposition() {
         let height = el.offsetHeight
         let y = el.offsetTop
@@ -86,24 +86,21 @@ module.exports = function(ssb, opts) {
       }
 
       let closeEditor = function() {
-        if (!editable) return
+        if (!editing()) return
         unsubscribe()
         el.removeEventListener('keyup', reposition)
         menu.parentElement.removeChild(menu)
         menu = null
-        lang = defaultLang
-        el.innerHTML = transform(localizedText())
-        el.contentEditable = false
-        editable = false
+        editing.set(false)
       }
 
       unsubscribe = menu.activeItem( (item)=>{
-        value[lang()] = el.innerText
-        ssb.cms.update([...kp, lang()], value[lang()])
+        value[editorLang()] = el.innerText
+        ssb.cms.update([...kp, editorLang()], value[editorLang()])
         let key = item.getAttribute('data-key')
         if (key === 'close') return closeEditor()
-        lang.set(key)
-        el.innerText = value[lang()]
+        editorLang.set(key)
+        el.focus()
         reposition()
       })
     }

@@ -50,7 +50,7 @@ module.exports = function(ssb, drafts, root) {
           values: true
         })
       ]),
-      pull.through( console.log ),
+      //pull.through( console.log ),
       updatesStream({live: true, sync: true, bufferUntilSync: true}),
       pull.filter( x=>{
         if (x.sync) {

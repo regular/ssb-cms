@@ -338,7 +338,7 @@ module.exports = function(ssb, drafts, root, view) {
       }
       if (kv.value.content && kv.value.content.type === 'client-update') {
         let newCodeBlobUrl = `${config.blobsRoot}/${kv.value.content.code}`
-        console.log('newCodeBlobUrl', newCodeBlobUrl)
+        //console.log('newCodeBlobUrl', newCodeBlobUrl)
         if (currentCodeBlobUrl === newCodeBlobUrl) {
           console.log('Found currently running client code message', kv.key)
           author = kv.value.author
