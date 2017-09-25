@@ -80,7 +80,8 @@ module.exports = function(ssb, drafts, root) {
         if (typeof opts === 'function') {cb = opts; opts = {}}
         if (synced) {
           let obs = cache.getChildrenObservable(key)
-          if (cb) cb(null, opts.keys ? obs() : obs().map( x=>x.value) )
+          if (!obs && cb) cb(null, [])
+          else if (cb) cb(null, opts.keys ? obs() : obs().map( x=>x.value) )
           return obs
         }
         let proxy = ProxyCollection()

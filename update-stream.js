@@ -6,7 +6,7 @@ function log() {
   //console.log.apply(console, arguments)
 }
 function logObj() {
-  console.log.apply(console, [].slice.apply(arguments).map( x=>JSON.stringify(x,null,2) ))
+  //console.log.apply(console, [].slice.apply(arguments).map( x=>JSON.stringify(x,null,2) ))
 }
 
 function forEach(arrOrVal, f) {

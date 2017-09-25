@@ -13,12 +13,14 @@ const Menubar = require('./menubar')
 //    de: "Hallo Welt"
 // }
 
-module.exports = function(opts) {
+module.exports = function(ssb, opts) {
   opts = opts || {}
   const transform = opts.transform || function (x) {return x}
   const tag = opts.tag || 'div.text'
 
   return function render(value, kp) {
+    console.log('TEXT render', value)
+    if (!value) return console.error('rendering null')
     const docLang = document.getElementsByTagName('html')[0].getAttribute('lang')
     const defaultLang = docLang || opts.defaultLanguage || 'en'
     let lang = opts.langObservable || Value(defaultLang)
@@ -57,7 +59,7 @@ module.exports = function(opts) {
       let width = el.offsetWidth
       if (width<300) width = 300
       let x = el.offsetLeft
-      let langs = Object.keys(value)
+      let langs = opts.languages
       let menu = ho(
         Menubar({renderItem: value => h('span', value) })
       )({
@@ -96,11 +98,12 @@ module.exports = function(opts) {
       }
 
       unsubscribe = menu.activeItem( (item)=>{
-        value[lang] = el.innerText
+        value[lang()] = el.innerText
+        ssb.cms.update([...kp, lang()], value[lang()])
         let key = item.getAttribute('data-key')
         if (key === 'close') return closeEditor()
-        lang = key
-        el.innerText = value[lang]
+        lang.set(key)
+        el.innerText = value[lang()]
         reposition()
       })
     }

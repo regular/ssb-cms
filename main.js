@@ -16,7 +16,7 @@ const Revs = require('./revs-view')
 const Menubar = require('./renderers/menubar')
 const drafts = require('./drafts')()
 const DB = require('./db')
-const {isDraft} = require('./util')
+const {isDraft, getLastMessageId} = require('./util')
 const ObjectDB = require('./object-db')
 
 const modes = ['normal', 'translucent', 'no-ui']
@@ -317,7 +317,7 @@ module.exports = function(config, cb) {
       }
 
       // find innermost message in keypath
-      let msgId = kp.slice().reverse().find( x=>ref.isMsgId(x) || isDraft(x) )
+      let msgId = getLastMessageId(kp)
       console.log('affected msg:', msgId)
       let propPath = kp.slice(kp.indexOf(msgId) + 1)
       console.log('prop path', propPath)

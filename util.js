@@ -1,5 +1,11 @@
+const ref = require('ssb-ref')
+
 function isDraft(id) {
   return /^draft/.test(id)
+}
+
+function getLastMessageId(keypath) {
+  return keypath.slice().reverse().find( x=>ref.isMsgId(x) || isDraft(x) )
 }
 
 function arr(v) {
@@ -16,6 +22,7 @@ function unarr(v) {
 
 module.exports = {
   isDraft,
+  getLastMessageId,
   arr,
   unarr
 }
