@@ -14,7 +14,7 @@ const Tree = require('./tree-view')
 const Editor = require('./editor-view')
 const Revs = require('./revs-view')
 const Menubar = require('./renderers/menubar')
-const drafts = require('./drafts')()
+const Drafts = require('./drafts')
 const DB = require('./db')
 const {isDraft, getLastMessageId} = require('./util')
 const ObjectDB = require('./object-db')
@@ -57,6 +57,7 @@ module.exports = function(config, cb) {
       throw err
     }
 
+    drafts = Drafts(root)
     ssb.cms = DB(ssb, drafts, root)
 
     sbot.set(ssb)

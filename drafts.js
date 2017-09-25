@@ -3,22 +3,30 @@ const pl = require('pull-level')
 const pull = require('pull-stream')
 const crypto = require('crypto')
 
-function tryToParse(value) {
-  let msg = value
-  try {
-    msg = JSON.parse(value.msgString)
-    // overwrite crucial values
-    msg.syntaxOkay = true
-  } catch(e) { }
-  let content = (msg.content = msg.content || {})
-  content.revisionRoot = value.revisionRoot
-  content.revisionBranch = value.revisionBranch
-  content.branch = value.branch
-  msg.draft = true
-  return msg
-}
 
-module.exports = function () {
+module.exports = function (root) {
+  console.log('drafts root', root)
+
+  function overrideCriticalProperties(msg, value) {
+    let content = (msg.content = msg.content || {})
+    content.revisionRoot = value.revisionRoot
+    content.revisionBranch = value.revisionBranch
+    content.branch = value.branch
+    content.root = root
+  }
+  
+  function tryToParse(value) {
+    let msg = value
+    msg.syntaxOkay = false
+    try {
+      msg = JSON.parse(value.msgString)
+      msg.syntaxOkay = true
+    } catch(e) { }
+    overrideCriticalProperties(msg, value)
+    msg.draft = true
+    return msg
+  }
+
   const db = levelup('drafts', {
     db: require('level-js'),
     valueEncoding: 'utf8',
