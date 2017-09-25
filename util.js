@@ -8,6 +8,10 @@ function getLastMessageId(keypath) {
   return keypath.slice().reverse().find( x=>ref.isMsgId(x) || isDraft(x) )
 }
 
+function getFirstMessageId(keypath) {
+  return keypath.slice().find( x=>ref.isMsgId(x) || isDraft(x) )
+}
+
 function arr(v) {
   if (typeof v === 'undefined') return []
   if (v === null) return []
@@ -22,6 +26,7 @@ function unarr(v) {
 
 module.exports = {
   isDraft,
+  getFirstMessageId,
   getLastMessageId,
   arr,
   unarr
