@@ -101,7 +101,7 @@ module.exports = function(ssb, drafts, root) {
             ]),
             when(node.unsaved, h('span', {title: 'draft'}, '✎')),
             when(node.forked, h('span', {title: 'conflicting updates, plese merge'}, '⑃')),
-            when(node.incomplete, h('span', {title: 'incomplete history'}, '⚠')),
+            //when(node.incomplete, h('span', {title: 'incomplete history'}, '⚠')),
             h('span.buttons', [
               h('button.id', {
                 'ev-click': function(e) { selectId.apply(this, [node.id]) },
