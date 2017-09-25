@@ -2,12 +2,10 @@ const pull = require('pull-stream')
 const many = require('pull-many')
 const merge = require('lodash.merge')
 const ref = require('ssb-ref')
-const traverse = require('traverse')
 const ProxyDict = require('mutant/proxy-dict')
 const ProxyCollection = require('mutant/proxy-collection')
 const updatesStream = require('./update-stream')
 const {cacheAndIndex} = require('./message-cache')
-const {isDraft} = require('./util')
 
 // Oberservables for "objects" (mutable ssb messages).
 // Wwarning: all messages are kept in memory, avoid mutliple instances
@@ -17,6 +15,7 @@ module.exports = function(ssb, drafts, root) {
   function Cache() {
     let cbs = []
     let cache
+    let synced
     let syncCount = 2
 
     function flushCBs() {
@@ -123,52 +122,11 @@ module.exports = function(ssb, drafts, root) {
     })
   }
 
-  // smart update function
-  // creates a draft, if needed
-  // updates the draft otherwise.
-  // Fails if preexisting draft is not parsable
-  // May auto-publish a draft after deboucing
-  function update(kp, newValue, opts, cb) {
-    if (typeof opts === 'function') { cb = opts; opts = {} }
-    if (!cb) cb = function() {}
-    console.log('update', kp)
-    console.log(newValue)
-
-    // find innermost message in keypath
-    let msgId = kp.slice().reverse().find( x=>ref.isMsgId(x) || isDraft(x) )
-    console.log('affected msg:', msgId)
-    let propPath = kp.slice(kp.indexOf(msgId) + 1)
-    console.log('prop path', propPath)
-
-    getLatest(msgId, {keys: true}, (err, kv) => {
-      if (err) return cb(err)
-      console.log('kv', kv)
-      
-      let draftId
-      if (isDraft(msgId)) draftId = msgId
-      else if (kv.unsaved) draftId = kv.revision
-      console.log('draftId', draftId)
-      //
-      // easy path
-      if (draftId) {
-        // we just need to update the draft
-        drafts.get(draftId, (err, value) => {
-          if (err) return cb(err)
-          console.log('before:', value)
-          if (!value.syntaxOkay) return cb(new Error('draft cannot be updated because it has syntax errors'))
-          propPath.unshift('content')
-          traverse(value).set(propPath, newValue)
-          console.log('after:', value)
-        })
-      }
-    })
-  }
 
   return {
     getLatest,
     getChildren,
     getPrototypeChain: function (key, cb) {getPrototypeChain(key, [], cb)},
-    getReduced,
-    update
+    getReduced
   }
 }

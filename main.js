@@ -7,6 +7,7 @@ const pull = require('pull-stream')
 //const ssbClient = require('ssb-client')
 const getAvatar = require('ssb-avatar')
 const ref = require('ssb-ref')
+const traverse = require('traverse')
 
 const Status = require('./status-view')
 const Tree = require('./tree-view')
@@ -57,7 +58,6 @@ module.exports = function(config, cb) {
     }
 
     ssb.cms = DB(ssb, drafts, root)
-    Object.assign(ssb.cms, ObjectDB(ssb, drafts, root))
 
     sbot.set(ssb)
     ssb.whoami( (err, feed)=> {
@@ -165,6 +165,7 @@ module.exports = function(config, cb) {
       }
     })
 
+    Object.assign(ssb.cms, ObjectDB(ssb, drafts, root), {update})
     const editor = Editor(editorContainer, ssb, config)
 
     let mode = 0
@@ -284,6 +285,60 @@ module.exports = function(config, cb) {
       }
     }
 
+
+    // smart update function
+    // creates a draft, if needed
+    // updates the draft otherwise.
+    // Fails if preexisting draft is not parsable
+    // May auto-publish a draft after deboucing
+    function update(kp, newValue, opts, cb) {
+      if (typeof opts === 'function') { cb = opts; opts = {} }
+      if (!cb) cb = function() {}
+      console.log('update', kp)
+      console.log(newValue)
+
+      function updateDraft(draftId, newValue, propPathcb) {
+        drafts.get(draftId, (err, value) => {
+          if (err) return cb(err)
+          console.log('before:', value)
+          if (!value.syntaxOkay) return cb(new Error('draft cannot be updated because it has syntax errors'))
+          propPath.unshift('content')
+          traverse(value).set(propPath, newValue)
+          console.log('after:', value)
+          console.log('revsel', revs.selection())
+          let msgString = JSON.stringify(value, null, 2)
+          if (revs.selection() === draftId) {
+            console.log('update editor')
+            loadIntoEditor(msgString)
+          }
+          // update draft
+          drafts.update(draftId, msgString, cb)
+        })
+      }
+
+      // find innermost message in keypath
+      let msgId = kp.slice().reverse().find( x=>ref.isMsgId(x) || isDraft(x) )
+      console.log('affected msg:', msgId)
+      let propPath = kp.slice(kp.indexOf(msgId) + 1)
+      console.log('prop path', propPath)
+
+      ssb.cms.getLatest(msgId, {keys: true}, (err, kv) => {
+        if (err) return cb(err)
+        console.log('kv', kv)
+        
+        let draftId
+        if (isDraft(msgId)) draftId = msgId
+        else if (kv.unsaved) draftId = kv.revision
+        console.log('draftId', draftId)
+
+        // easy path (there already is a draft)
+        if (draftId) {
+          // we just need to update the draft
+          updateDraft(draftId, newValue, propPath, cb)
+        }
+      })
+    }
+
     let ignoreChanges = false
     editor.change( ()=> {
       if (ignoreChanges) return
@@ -291,6 +346,7 @@ module.exports = function(config, cb) {
       if (isDraft(revs.selection())) {
         drafts.update( revs.selection(), msgString, (err)=>{
           if (err) throw err
+          // TODO: we shouldnt need this. do we?
           drafts.get( revs.selection(), (err, value)=>{
             if (err) throw err
             tree.update(tree.selection(), value)

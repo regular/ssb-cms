@@ -5,6 +5,9 @@ const {isDraft} = require('./util')
 function log() {
   //console.log.apply(console, arguments)
 }
+function logObj() {
+  console.log.apply(console, [].slice.apply(arguments).map( x=>JSON.stringify(x,null,2) ))
+}
 
 function forEach(arrOrVal, f) {
   if (typeof arrOrVal === 'undefined') return
@@ -136,7 +139,7 @@ module.exports = function updates(opts) {
   })
 
   function push(o) {
-    log('update-stream pushes', o)
+    logObj('update-stream pushes', o)
     out.push(o)
   }
 
@@ -156,7 +159,7 @@ module.exports = function updates(opts) {
     pull(
       read,
       pull.through( kv=>{
-        log('update-stream reads', JSON.stringify(kv))
+        logObj('update-stream reads', kv)
       }),
       pull.filter( kv =>{
         if (kv.sync) {
@@ -226,7 +229,7 @@ module.exports = function updates(opts) {
 
         // Can we fit one of the  unattached puzzle pieces on one end or
         // the other?
-        function fit() {
+        function fit(child) {
           let success = false
           child.queue = child.queue.filter( (x)=> {
             // TODO: We need to emit updates with x already removed
@@ -332,7 +335,7 @@ module.exports = function updates(opts) {
         }
 
         child.queue.push(kv)
-        while(fit() && child.queue.length);
+        while(fit(child) && child.queue.length);
         log('queue', child.queue) 
 
         // TODO: handle re-parenting

@@ -48,7 +48,7 @@ module.exports = function(ssb, drafts) {
         sync: true
       }),
       pull.through( x=>{
-        //console.log('RS ',x)
+        console.log('RS ',x)
       }),
       updateStream({
         live: true,
@@ -57,7 +57,7 @@ module.exports = function(ssb, drafts) {
         bufferUntilSync: false
       }),
       pull.through( x=>{
-        //console.log('US ',x)
+        console.log('US ',x)
       }),
       pull.map( (kv)=>{
         if (kv.sync) return kv

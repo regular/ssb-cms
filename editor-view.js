@@ -67,6 +67,7 @@ module.exports = function(parent, ssb, config) {
 
   let change = observable()
 
+  let currMessageId = null
   const editor = JsonEditor({
     container: jsonContainer,
     blobs: ssb.blobs
@@ -111,7 +112,7 @@ module.exports = function(parent, ssb, config) {
     removePreviewEditor()
     if (key === 'preview') {
       let value = editor.getValue()
-      showPreviewEditor(value)
+      showPreviewEditor(value, currMessageId)
     }
   })
 
@@ -119,6 +120,7 @@ module.exports = function(parent, ssb, config) {
     change,
     clean: editor.clean,
     setValue: (value, key) => {
+      currMessageId = key
       if (value && previewEditor) {
         showPreviewEditor(value, key)
       }
