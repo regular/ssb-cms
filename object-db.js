@@ -69,7 +69,8 @@ module.exports = function(ssb, drafts, root) {
         if (typeof opts === 'function') {cb = opts; opts = {}}
         if (synced) {
           let obs = cache.getMessageObservable(key)
-          if (cb) cb(null, opts.keys ? obs() : obs().value)
+          if (!obs && cb) cb(new Error(`message not found ${key}`))
+           else if (cb) cb(null, opts.keys ? obs() : obs().value)
           return obs
         }
         let proxy = ProxyDict()
