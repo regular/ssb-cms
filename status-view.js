@@ -42,6 +42,25 @@ module.exports = function(ssb, drafts, root, view) {
 
   let peers = MutantDict()
   let peerCount = Value()
+  let draftsMessage = Value("")
+  view.appendChild(
+    h('section.drafts', [
+      h('h2', 'Drafts'),
+      h('div', draftsMessage),
+      h('button', {
+        'ev-click': function(e) {
+          drafts.destroy(/* (err)=>{
+            if (err) console.error(err)
+            draftsMessage.set(err ? err.message : 'all deleted')
+            if (!err) window.location.reload()
+          }*/)
+          window.location.hash = ''
+          window.location.reload()
+        }
+      }, 'Delete all drafts')
+    ])
+  )
+
   view.appendChild(
     h('section.peers', [
       h('h2', 'Peers'),

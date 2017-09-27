@@ -339,7 +339,11 @@ module.exports = function(config, cb) {
         } else {
           console.log('creating draft, because latest is', kv)
           let msgString = JSON.stringify(kv.value, null, 2)
-          drafts.create(msgString, kv.value.content.branch, kv.value.content.revisionRoot, kv.revision, (err, key, value)=>{
+          drafts.create(
+            msgString,
+            kv.value.content.branch,
+            kv.value.content.revisionRoot || kv.revision,
+            kv.revision, (err, key, value)=>{
             if (err) return cb(err)
             console.log('created draft', key)
             updateDraft(key, newValue, propPath, cb)

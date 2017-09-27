@@ -47,6 +47,24 @@ module.exports = function (root) {
     })
   }
 
+  function write(key, msgString, branch, revisionRoot, revisionBranch, cb) {
+    let value = {
+      revisionRoot,
+      revisionBranch,
+      branch,
+      msgString
+    }
+    let json = JSON.stringify(value)
+    db.batch()
+      .put(key, json)
+      .put(`~BRANCH~${branch || ''}~${key}`, key)
+      .put(`~REVROOT~${revisionRoot || ''}~${key}`, key)
+      .write( (err)=>{
+        value.draft = true
+        cb(err, key, value)
+      })
+  }
+
   return {
     get: (key, cb) => {
       db.get(key, (err, value) => {
@@ -61,9 +79,13 @@ module.exports = function (root) {
       db.get(key, (err, value) => {
         if (err) return cb(err)
         value = JSON.parse(value)
-        value.msgString = msgString
-        value = JSON.stringify(value)
-        db.put(key, value, cb)
+        let {
+          revisionRoot,
+          revisionBranch,
+          branch
+        } = value
+        console.log('draft update', key, value)
+        write(key, msgString, branch, revisionRoot, revisionBranch, cb)
       })
     },
     remove: (key, cb) => {
@@ -80,21 +102,7 @@ module.exports = function (root) {
     },
     create: function(msgString, branch, revisionRoot, revisionBranch, cb) {
       const key = 'draft-' + crypto.randomBytes(16).toString('base64')
-      let value = {
-        revisionRoot,
-        revisionBranch,
-        branch,
-        msgString
-      }
-      let json = JSON.stringify(value)
-      db.batch()
-        .put(key, json)
-        .put(`~BRANCH~${branch || ''}~${key}`, key)
-        .put(`~REVROOT~${revisionRoot || ''}~${key}`, key)
-        .write( (err)=>{
-          value.draft = true
-          cb(err, key, value)
-        })
+      write(key, msgString, branch, revisionRoot, revisionBranch, cb)
     },
     publish: (ssb, key, cb) => {
       db.get(key, (err, value) => {
@@ -131,6 +139,10 @@ module.exports = function (root) {
         pl.read(db, Object.assign({}, opts, {min: `~REVROOT~${root||""}`, max: `~REVROOT~${root||""}~~`})),
         pull.asyncMap(processEntry)
       )
+    },
+
+    destroy: function(cb) {
+      require('level-js').destroy('drafts', cb)
     },
 
     all: function(opts) {
