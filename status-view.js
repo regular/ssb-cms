@@ -43,6 +43,14 @@ module.exports = function(ssb, drafts, root, view) {
   let peers = MutantDict()
   let peerCount = Value()
   let draftsMessage = Value("")
+
+  view.appendChild(
+    h('section.drafts', [
+      h('h2', 'Remote access'),
+      h('a', {href: window.location.href}, window.location.href)
+    ])
+  )
+  
   view.appendChild(
     h('section.drafts', [
       h('h2', 'Drafts'),
