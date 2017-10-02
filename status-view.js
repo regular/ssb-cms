@@ -44,10 +44,13 @@ module.exports = function(ssb, drafts, root, view) {
   let peerCount = Value()
   let draftsMessage = Value("")
 
+  let remoteUrl = window.location.href.replace(/#.*$/,'').replace('127.0.0.1', config.sbot.host || '127.0.0.1') + '#' +
+    window.localStorage['electroparty-config']
+
   view.appendChild(
     h('section.drafts', [
       h('h2', 'Remote access'),
-      h('a', {href: window.location.href}, window.location.href)
+      h('a', {href: remoteUrl, target: '_blank'}, remoteUrl)
     ])
   )
   
@@ -57,11 +60,7 @@ module.exports = function(ssb, drafts, root, view) {
       h('div', draftsMessage),
       h('button', {
         'ev-click': function(e) {
-          drafts.destroy(/* (err)=>{
-            if (err) console.error(err)
-            draftsMessage.set(err ? err.message : 'all deleted')
-            if (!err) window.location.reload()
-          }*/)
+          drafts.destroy()
           window.location.hash = ''
           window.location.reload()
         }
@@ -239,6 +238,7 @@ module.exports = function(ssb, drafts, root, view) {
       pull.through( kv => revision(kv.key, true) ),
       updates({sync: true, bufferUntilSync: true}),
       pull.through( AutoUpdate() ),
+      pull.through( Blobs() ),
       pull.filter( x => {
         if (x.sync) {
           console.log('watch synced')
@@ -252,7 +252,6 @@ module.exports = function(ssb, drafts, root, view) {
         }
         return !x.sync
       }),
-      pull.through( Blobs() ),
       pull.drain( kv => {
         //console.log('watch', kv)
         let {key, value} = kv
@@ -279,53 +278,76 @@ module.exports = function(ssb, drafts, root, view) {
     let present = 0
     let totalSize = 0
     let knownBlobs = new Set() 
+    let sizeObs = {}
+    let synced = false
+    let refList = []
+
+    let getSize = function(blob) {
+      ssb.blobs.size(blob, (err, size) => {
+        if (err) return sizeObs[blob].set(err.message)
+        sizeObs[blob].set(size || 'zero')
+        totalSize += size
+        ++present
+        if (synced) {
+          blobBytes.set(totalSize)
+          blobsPresent.set(present)
+        }
+      })
+    }
 
     return function processBlobReferences(kv) {
+    
+      if (kv.sync) {
+        if (!synced) {
+          synced = true
+          blobRefs.set(refs)
+          blobBytes.set(totalSize)
+          blobsPresent.set(present)
+          blobs.set(refList)
+          console.log('BLOBS synced')
+        }
+        return
+      }
+      
       traverse(kv.value.content || {}).forEach( function(v) {
         if (ref.isBlob(v)) {
-          //if (!knownBlobs.has(v)) {
-            let newBlob = !knownBlobs.has(v)
-            knownBlobs.add(v)
+          let blob = v
+          let newBlob = !knownBlobs.has(blob)
+          if (newBlob) {
+            knownBlobs.add(blob)
             refs++
-            blobRefs.set(refs)
-            let sizeObs = Value('...')
-            let getSize = function(v) {
-              ssb.blobs.size(v, (err, size) => {
-                if (err) return sizeObs.set(err.message)
-                sizeObs.set(size || 'zero')
-                if (newBlob) {
-                  totalSize += size
-                  blobBytes.set(totalSize)
-                }
-                blobsPresent.set(++present)
+            if (synced) blobRefs.set(refs)
+            sizeObs[blob] = Value('...')
+
+            ssb.blobs.has(blob, (err, gotit) => {
+              if (err) return sizeObs[blob].set(err.message)
+              if (gotit) return getSize(blob)
+
+              sizeObs[blob].set('wanted ...')
+              ssb.blobs.want(blob, err => {
+                if (err) return sizeObs[blob].set(err.message)
+                getSize(blob)
               })
+            })
+          }
+
+          refList.push({
+            id: blob,
+            size: sizeObs[blob],
+            neededBy: {
+              key: kv.key,
+              type: kv.value.content.type,
+              name: kv.value.content.name,
+              path: this.path.join('.')
             }
-            blobs.push({
-              id: v,
-              size: sizeObs,
-              neededBy: {
-                key: kv.key,
-                type: kv.value.content.type,
-                name: kv.value.content.name,
-                path: this.path.join('.')
-              }
-            })
+          })
+          if (synced) blobs.set(refList)
 
-            ssb.blobs.has(v, (err, gotit) => {
-              if (err) return sizeObs.set(err.message)
-              if (gotit) return getSize(v)
-
-              sizeObs.set('missing')
-              ssb.blobs.want(v, err => {
-                if (err) return sizeObs.set(err.message)
-                getSize(v)
-              })
-            })
-          //}
         }
       })
     }
   }
+
 
   function watchPeers() {
     sbotConnect.set(true)
