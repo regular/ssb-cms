@@ -381,7 +381,7 @@ module.exports = function(config, cb) {
           //console.log('2 Rendering FS preview', key)
           container.innerHTML = ''
           ssb.cms.getReduced(key, (err, msg)=>{
-            ??console.log('FS Preview: reduced', err, msg)
+            //console.log('FS Preview: reduced', err, msg)
             if (err) throw err  
             let el = editor.renderPreviewEditor(msg, [key])
             container.appendChild(el)
