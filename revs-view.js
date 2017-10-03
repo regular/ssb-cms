@@ -56,7 +56,7 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
 
     let feedId = isDraft(entry.id) ? me : entry.value.author
     let authorAvatarUrl = Value(null, {defaultValue: ""})
-    let authorName = Value(null, {defaultValue: feedId})
+    let authorName = Value(null, {defaultValue: feedId.substr(0,6)})
     getAvatar(feedId, (err, avatar) =>{
       if (err) return console.error(err)
       authorAvatarUrl.set(avatar.imageUrl || "")
@@ -70,14 +70,21 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
         if (sel === entry.id) cl.push('selected')
         if (draft) cl.push('draft')
         return cl
-      })
+      }),
+      'ev-click': function(e) {
+        document.location.hash = `#${root()}:${entry.id}`
+      }
     }, [
-      h('img.avatar', {src: authorAvatarUrl}),
+      h('div.avatar', {
+        style: {
+          'background-image': computed([authorAvatarUrl], (u)=>`url("${u}")`)
+        }
+      }),
       h('span.author', authorName),
       h('span.timestamp', htime(new Date(entry.value.timestamp))),
       h('a.node', {
         href: `#${root()}:${entry.id}`
-      },entry.id.substr(0,8)),
+      }, entry.id.substr(0,8)),
       when(isDraft(entry.id), h('span', {title: 'draft'}, '✎')),
       // TODO when(entry.forked, h('span', {title: 'conflicting updates, plese merge'}, '⑃')),
       h('span.buttons', [
@@ -199,11 +206,19 @@ module.exports.css = ()=> `
     margin: 8px 32px;
     color: #6b6969;
   }
-  .rev img {
+  .rev .avatar {
     margin: 0 8px;
-    max-height: 32px;
+    height: 32px;
+    width: 32px;
+    border-radius: 3px;
+    background-size: cover;
   }
   .rev .author, .rev .timestamp {
     width: 80px;
+    white-space: nowrap;
+  }
+  .rev .author {
+    color: #555;
+    padding-top: 3px;
   }
 `
