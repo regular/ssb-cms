@@ -39,6 +39,7 @@ module.exports = function(ssb, opts) {
     let editing = Value(false)
 
     let el = h(tag, {
+      innerHTML: computed([editing, editorLang, transformedText], (e,l,t) => e ? value[l] : t),
       contentEditable: editing,
       'ev-click': e => {
         if (e.altKey) {
@@ -47,8 +48,7 @@ module.exports = function(ssb, opts) {
           e.stopPropagation()
         }
       }
-    }, [computed([editing, editorLang, transformedText], (e,l,t) => e ? value[l] : t)]
-    )
+    })
     let unsubscribe
 
     function makeEditable() {
