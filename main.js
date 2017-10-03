@@ -379,12 +379,19 @@ module.exports = function(config, cb) {
 
         function render() {
           //console.log('2 Rendering FS preview', key)
-          container.innerHTML = ''
+          //container.innerHTML = ''
+          let oldChildren = [].slice.apply(container.children)
+          console.log('old screens', oldChildren)
           ssb.cms.getReduced(key, (err, msg)=>{
             //console.log('FS Preview: reduced', err, msg)
             if (err) throw err  
             let el = editor.renderPreviewEditor(msg, [key])
             container.appendChild(el)
+            setTimeout( ()=>{
+              oldChildren.forEach( e => {
+                e.remove()
+              })
+            }, 150)
           })
         }
         //render()
