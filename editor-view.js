@@ -149,6 +149,7 @@ module.exports.css = ()=>  `
   .editor-container.preview-wrapper {
     background: #eee;
     overflow: scroll;
+    display: block;
   }
   .editor-container>.toolbar {
     display: flex;
