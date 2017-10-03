@@ -3,6 +3,7 @@ const many = require('pull-many')
 const merge = require('lodash.merge')
 const ref = require('ssb-ref')
 const ProxyDict = require('mutant/proxy-dict')
+const Value = require('mutant/value')
 const ProxyCollection = require('mutant/proxy-collection')
 const updatesStream = require('./update-stream')
 const {cacheAndIndex} = require('./message-cache')
@@ -19,19 +20,33 @@ module.exports = function(ssb, drafts, root) {
     let syncCount = 2
 
     function flushCBs() {
-      cbs.forEach( ({cb, opts, key, type, proxy})=>{
-        let obs =cache[ (type === 'msg') ? 'getMessageObservable' : 'getChildrenObservable'](key)
-        if (!obs && cb) return cb(new Error(`Not found: ${key}`))
-        let value = (type === 'msg') ? (
-           opts.keys ? obs() : obs().value
-        ) : (
-          opts.keys ? obs() : obs().map( x => x.value )
-        )
+      // NOTE: no callbacks might be pushed
+      // while we process the queue
+      while(cbs.length) {
+        let {cb, opts, key, type, proxy} = cbs.shift()
+        let obs = cache[ (type === 'msg') ? 'getMessageObservable' : 'getChildrenObservable'](key)
+        if (!obs && cb) {
+          if (type === 'msg') {
+            cb(new Error(`Not found: ${type} ${key}`))
+          } else {
+            //console.error('No children observable for', key)
+            cb(null, [])
+          }
+        }
+        let value
+        if (!obs) {
+          value = (type === 'msg') ? null : []
+        } else {
+          value = (type === 'msg') ? (
+             opts.keys ? obs() : obs().value
+          ) : (
+            opts.keys ? obs() : obs().map( x => x.value )
+          )
+        }
         if (cb) cb(null, value)
-        console.log(`Seeing ${type} proxy`, obs)
-        proxy.set(obs)
-      })
-      cbs = null
+        //console.log(`Seeing ${type} proxy`, obs)
+        if (obs) proxy.set(obs)
+      }
     }
     pull(
       many([
@@ -55,8 +70,8 @@ module.exports = function(ssb, drafts, root) {
       pull.filter( x=>{
         if (x.sync) {
           if (--syncCount === 0) {
-            flushCBs()
             synced = true
+            flushCBs()
           }
         }
         return !x.sync
@@ -67,6 +82,7 @@ module.exports = function(ssb, drafts, root) {
       // return observable, call cb with value
       getLatest: (key, opts, cb) => {
         if (typeof opts === 'function') {cb = opts; opts = {}}
+        opts = opts || {}
         if (synced) {
           let obs = cache.getMessageObservable(key)
           if (!obs && cb) cb(new Error(`message not found ${key}`))
@@ -79,10 +95,11 @@ module.exports = function(ssb, drafts, root) {
       },
       getChildren: (key, opts, cb) => {
         if (typeof opts === 'function') {cb = opts; opts = {}}
+        opts = opts || {}
         if (synced) {
           let obs = cache.getChildrenObservable(key)
           if (!obs && cb) cb(null, [])
-          else if (cb) cb(null, opts.keys ? obs() : obs().map( x=>x.value) )
+          else if (cb) cb(null, opts.keys ? obs() : obs().map( x => x.value) )
           return obs
         }
         let proxy = ProxyCollection()
@@ -98,7 +115,10 @@ module.exports = function(ssb, drafts, root) {
 
   // TODO: return observable
   function getPrototypeChain(key, result, cb) {
-    getLatest(key, (err, msg)=>{
+    if (typeof result === 'function') {cb = result; result = []}
+    //console.log('Proto getLatest', key)
+    getLatest(key, (err, msg) => {
+      //console.log('Proto got latest', key, err, msg)
       if (err) return cb(err)
       result.unshift({key, msg})
       let p
@@ -106,20 +126,23 @@ module.exports = function(ssb, drafts, root) {
         if (result.indexOf(p) !== -1) return cb(new Error('Cyclic prototype chain'))
         return getPrototypeChain(p, result, cb)
       }
+      //console.log('Proto done', key)
       cb(null, result)
     })
   }
 
   // TODO: return observable
   function getReduced(key, cb) {
+    //console.log('get REDUCED', key)
     getPrototypeChain(key, [], (err, chain)=>{
+      //console.log('got PROTO chain', key, err, chain)
       if (err) return cb(err)
-      let msgs = chain.map( x=>x.msg)
+      let msgs = chain.map( x => x.msg)
       msgs.unshift({})
       let msg = merge.apply(null, msgs)
       msg.content = msg.content || {}
       chain.pop() // remove original message
-      msg.content.prototype = chain.map( x=>x.key )
+      msg.content.prototype = chain.map( x => x.key )
       cb(null, msg)
     })
   }

@@ -114,8 +114,10 @@ module.exports = function(config, cb) {
     })
 
     let uiContainer = h('.ui')
-    let fullscreenPreview = h('.fullscreen-preview')
-    document.body.appendChild(fullscreenPreview)
+    let fullscreenPreviewEl = h('.fullscreen-preview')
+    document.body.appendChild(fullscreenPreviewEl)
+    let fullscreenPreview = FullscreenPreview(fullscreenPreviewEl)
+
     document.body.appendChild(uiContainer)
     uiContainer.appendChild(menubar)
     menubar.activate('content')
@@ -243,7 +245,7 @@ module.exports = function(config, cb) {
         } else loadIntoEditor('')
 
         if (revRoot) {
-          updateFullscreenPreview(revRoot)
+          fullscreenPreview(revRoot)
         }
       }
     }
@@ -369,15 +371,37 @@ module.exports = function(config, cb) {
       }
     })
 
-    function updateFullscreenPreview(key) {
-      // TODO temp hack
-      fullscreenPreview.innerHTML = ''
-      ssb.cms.getReduced(key, (err, msg)=>{
-        //console.log('reduced', err, msg)
-        if (err) throw err  
-        let el = editor.renderPreviewEditor(msg, [key])
-        fullscreenPreview.appendChild(el)
-      })
+    // TODO: move this into its own file
+    function FullscreenPreview(container) {
+      let unsubscribe
+      return function update(key) {
+        //console.log('1 Rendering FS preview', key)
+
+        function render() {
+          //console.log('2 Rendering FS preview', key)
+          container.innerHTML = ''
+          ssb.cms.getReduced(key, (err, msg)=>{
+            ??console.log('FS Preview: reduced', err, msg)
+            if (err) throw err  
+            let el = editor.renderPreviewEditor(msg, [key])
+            container.appendChild(el)
+          })
+        }
+        //render()
+
+        if (unsubscribe) unsubscribe()
+        // TODO: it is not enough to just observe
+        // the message, we also neeed to observe prototypes
+        let obs = ssb.cms.getLatest(key, (err, kv) => {
+          //console.log('FS preview: initial state', kv)
+          if (err) return console.error(err)
+          render()
+        })
+        unsubscribe = obs( kv => {
+          //console.log('FS preview: object changed', kv)
+          render()
+        })
+      }
     }
 
     function loadIntoEditor(text) {
