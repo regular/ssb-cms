@@ -156,7 +156,10 @@ module.exports = function (root) {
             return {key: kv.key, value: null, type: kv.type}
           }
           let value = JSON.parse(kv.value)
-          let ret = {key: kv.key, value: tryToParse(value)}
+          let ret = Object.assign({}, value, {
+            key: kv.key,
+            value: tryToParse(value)
+          })
           return ret
         })
       )

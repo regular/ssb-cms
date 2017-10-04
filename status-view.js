@@ -48,15 +48,26 @@ module.exports = function(ssb, drafts, root, view) {
     window.localStorage['electroparty-config']
 
   view.appendChild(
-    h('section.drafts', [
+    h('section.remote-access', [
       h('h2', 'Remote access'),
       h('a', {href: remoteUrl, target: '_blank'}, remoteUrl)
     ])
   )
-  
+
+  let draftsMutantDict = MutantDict()
   view.appendChild(
     h('section.drafts', [
       h('h2', 'Drafts'),
+      h('table', computed([draftsMutantDict], drafts  => {
+        return Object.keys(drafts).map( k => {
+          let kv = drafts[k]
+          return h('tr', [
+            h('td', k),
+            h('td', h('a', {href: `#${kv.revisionRoot}`}, kv.revisionRoot || 'no revisionRoot')),
+            h('td', kv.revisionBranch || 'no revisionBranch')
+          ])
+        })
+      })),
       h('div', draftsMessage),
       h('button', {
         'ev-click': function(e) {
@@ -159,6 +170,7 @@ module.exports = function(ssb, drafts, root, view) {
 
   function watchDrafts() {
     let seen = new Set()
+    let allDrafts = {}
     let counts = {
       draft: 0,
       branch: 0,
@@ -169,11 +181,13 @@ module.exports = function(ssb, drafts, root, view) {
       drafts.all({
         live: true,
         sync: true,
-        keys: true
+        keys: true,
+        values: true
       }),
       pull.drain( (kv)=>{
         if (kv.sync) {
           draftCount.set(counts.draft)
+          draftsMutantDict.set(allDrafts)
           synced = true
           return
         }
@@ -184,12 +198,16 @@ module.exports = function(ssb, drafts, root, view) {
         if (t === 'draft') {
           if (!kv.type || kv.type == 'put') {
             if (!seen.has(kv.key)) {
+              console.log('DRAFT', kv)
               counts[t]++
               seen.add(kv.key)
+              allDrafts[kv.key] = kv
+              if (synced) draftsMutantDict.put(kv.key, kv)
             }
           } else if (kv.type == 'del') {
             counts[t]--
             seen.delete(kv.key)
+            if (synced) draftsMutantDict.delete(kv.key)
           }
         } else {
           counts[t] += (kv.type === 'del') ? -1 : 1
