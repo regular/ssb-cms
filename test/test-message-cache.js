@@ -166,7 +166,7 @@ test('Should delete object when type=="del"', t => {
   )
 })
 
-test('Should update revert to previous revision', t => {
+test('Should revert to previous revision', t => {
   t.plan(10)
   let objs = {}
 
@@ -207,6 +207,142 @@ test('Should update revert to previous revision', t => {
           type: 'revert',
           remove: 2
         })
+      Object.assign(o, kv)
+    },
+    getContainer: kv => {
+      t.equal(kv, updates[ii++])
+      return objs[kv.key] || (objs[kv.key] = container())
+    }
+  }
+
+  pull(
+    pull.values(updates),
+    updateObservableMessages(null, opts)
+  )
+})
+
+test('Should revert to previous revision, twice', t => {
+  t.plan(16)
+  let objs = {}
+
+  let updates = [
+    {
+      key: 'obj-a',
+      value: 'a value',
+      revision: 1
+    },
+    {
+      key: 'obj-a',
+      value: 'b value',
+      revision: 2
+    },
+    {
+      key: 'obj-a',
+      value: 'a value',
+      type: 'revert',
+      remove: 2
+    },
+    {
+      key: 'obj-a',
+      value: 'c value',
+      revision: 3
+    },
+    {
+      key: 'obj-a',
+      value: 'a value',
+      type: 'revert',
+      remove: 3
+    },
+  ]
+
+  let i = -1, ii = 0, o
+  let opts = {
+    makeObservable: kv => {
+      t.equal(kv, updates[0])
+      return (o = {})
+    },
+    updateObservable: (o2, kv) => {
+      t.equal(o, o2)
+      i++
+      if (i<2) 
+        t.equal(kv, updates[i], `update ${i}`)
+      else if (i==2) t.deepEqual(kv, {
+        key: 'obj-a',
+        value: 'a value',
+        revision: 1,
+        type: 'revert',
+        remove: 2
+      }, 'first revert'); else if (i==3) t.deepEqual(kv, {
+        key: 'obj-a',
+        value: 'c value',
+        revision: 3,
+      }, 'new revision c'); else if (i==4) t.deepEqual(kv, {
+        key: 'obj-a',
+        value: 'a value',
+        revision: 1,
+        type: 'revert',
+        remove: 3
+      }, '2nd revert')
+      Object.assign(o, kv)
+    },
+    getContainer: kv => {
+      t.equal(kv, updates[ii++])
+      return objs[kv.key] || (objs[kv.key] = container())
+    }
+  }
+
+  pull(
+    pull.values(updates),
+    updateObservableMessages(null, opts)
+  )
+})
+
+test('Should revert to previous revision, after draft updates', t => {
+  t.plan(13)
+  let objs = {}
+
+  let updates = [
+    {
+      key: 'obj-a',
+      value: 'a value',
+      revision: 1
+    },
+    {
+      key: 'obj-a',
+      value: 'b value',
+      revision: 'draft-a'
+    },
+    {
+      key: 'obj-a',
+      value: 'c value',
+      revision: 'draft-a'
+    },
+    {
+      key: 'obj-a',
+      value: 'a value',
+      type: 'revert',
+      remove: 'draft-a'
+    },
+  ]
+
+  let i = -1, ii = 0, o
+  let opts = {
+    makeObservable: kv => {
+      t.equal(kv, updates[0])
+      return (o = {})
+    },
+    updateObservable: (o2, kv) => {
+      t.equal(o, o2)
+      i++
+      if (i<3) 
+        t.equal(kv, updates[i], `update ${i}`)
+      else if (i==3) t.deepEqual(kv, {
+        key: 'obj-a',
+        value: 'a value',
+        revision: 1,
+        type: 'revert',
+        remove: 'draft-a'
+      }, 'revert')
       Object.assign(o, kv)
     },
     getContainer: kv => {

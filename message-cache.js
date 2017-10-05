@@ -79,8 +79,11 @@ function updateObservableMessages(container, opts, cb) {
       }
       mutantArray.push(child)
     } 
-    previousRevisions[kv.key] = currentRevisions[kv.key]
-    currentRevisions[kv.key] = kv.revision
+    if (currentRevisions[kv.key] !== kv.revision) {
+      previousRevisions[kv.key] = currentRevisions[kv.key]
+      currentRevisions[kv.key] = kv.revision
+    }
+
     updateObservable(child, kv)
   }, cb || (err => {
     if (err) throw err

@@ -302,7 +302,10 @@ module.exports = function(config, cb) {
 
       function updateDraft(draftId, newValue, propPathcb) {
         drafts.get(draftId, (err, value) => {
-          if (err) return cb(err)
+          if (err) {
+            console.error('Trying to update non-existing draft')
+            return cb(err)
+          }
           console.log('before:', value)
           if (!value.syntaxOkay) return cb(new Error('draft cannot be updated because it has syntax errors'))
           propPath.unshift('content')
