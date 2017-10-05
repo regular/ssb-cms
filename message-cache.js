@@ -1,10 +1,11 @@
 // pull drains that receives updates from update-stream
-// and keeps a cache of observable message objects
+// and keep a cache of observable message objects
 const pull = require('pull-stream')
 const MutantDict = require('mutant/dict')
 const MutantArray = require('mutant/array')
 
 // TODO: this does not account for messages changing branches!
+// TODO: BUG: does not handle type: revert!
 
 function cacheAndIndex(opts) {
   opts = opts || {}
@@ -38,7 +39,7 @@ function cacheAndIndex(opts) {
   return ret
 }
 
-function updateObservableMessages(container, opts) {
+function updateObservableMessages(container, opts, cb) {
   opts = opts || {}
   let makeObservable = opts.makeObservable
   let updateObservable = opts.updateObservable
@@ -73,10 +74,10 @@ function updateObservableMessages(container, opts) {
       mutantArray.push(child)
     } 
     updateObservable(child, kv)
-  }, (err)=>{
+  }, cb || (err => {
     if (err) throw err
     console.log('stream ended', err)
-  })
+  }))
  
   return ret
 }
