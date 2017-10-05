@@ -19,8 +19,9 @@ module.exports = function(ssb, opts) {
   const tag = opts.tag || 'div.text'
 
   return function render(value, kp) {
-    console.log('TEXT render', value)
+    console.log('TEXT render', value, kp)
     if (!value) return console.error('rendering null')
+    if (typeof kp === 'undefined') throw new Error('text renderer: no keypath!')
     const docLang = document.getElementsByTagName('html')[0].getAttribute('lang')
     const defaultLang = docLang || opts.defaultLanguage || 'en'
     let langObs = opts.langObservable || Value(defaultLang)
@@ -39,8 +40,14 @@ module.exports = function(ssb, opts) {
     let editing = Value(false)
 
     let el = h(tag, {
-      innerHTML: computed([editing, editorLang, transformedText], (e,l,t) => e ? value[l] : t),
+      //innerText: computed([editing, editorLang, transformedText], (e,l,t) => e ? value[l] : undefined),
+      innerHTML: computed([editing, editorLang, transformedText], (e,l,t) => e ? '' : t),
       contentEditable: editing,
+      'ev-focus': e => {
+        if (editing()) {
+          e.target.innerText = value[editorLang()]
+        }
+      },
       'ev-click': e => {
         if (e.altKey) {
           makeEditable()
@@ -87,16 +94,19 @@ module.exports = function(ssb, opts) {
 
       let closeEditor = function() {
         if (!editing()) return
-        unsubscribe()
-        el.removeEventListener('keyup', reposition)
-        menu.parentElement.removeChild(menu)
-        menu = null
-        editing.set(false)
+        console.log('Text editor: updating', kp)
+        ssb.cms.update([...kp], value, err => {
+          if (err) return console.error('unable to update', err)
+          unsubscribe()
+          el.removeEventListener('keyup', reposition)
+          menu.parentElement.removeChild(menu)
+          menu = null
+          editing.set(false)
+        })
       }
 
       unsubscribe = menu.activeItem( (item)=>{
         value[editorLang()] = el.innerText
-        ssb.cms.update([...kp, editorLang()], value[editorLang()])
         let key = item.getAttribute('data-key')
         if (key === 'close') return closeEditor()
         editorLang.set(key)
