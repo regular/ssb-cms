@@ -97,13 +97,13 @@ module.exports.css = function() {
       flex-wrap: nowrap;
       justify-content: center;
       align-items: center;
-      padding-left: 10px;
-      padding-right: 10px;
+      padding-left: 4px;
+      padding-right: 4px;
     }
 
     .menu-item>span {
-      margin-left: 17px;
-      margin-right: 8px;
+      margin-left: 6px;
+      margin-right: 6px;
     }
 
     .menubar>section.middle {

@@ -40,9 +40,11 @@ module.exports = function(ssb, opts) {
     let editing = Value(false)
 
     let el = h(tag, {
-      //innerText: computed([editing, editorLang, transformedText], (e,l,t) => e ? value[l] : undefined),
       innerHTML: computed([editing, editorLang, transformedText], (e,l,t) => e ? '' : t),
       contentEditable: editing,
+      style: {
+        position: 'relative'
+      },
       'ev-focus': e => {
         if (editing()) {
           e.target.innerText = value[editorLang()]
@@ -63,9 +65,6 @@ module.exports = function(ssb, opts) {
       editing.set(true)
       editorLang.set(langObs())
       el.focus()
-      let width = el.offsetWidth
-      if (width<300) width = 300
-      let x = el.offsetLeft
       let langs = opts.languages
       let menu = ho(
         Menubar({renderItem: value => h('span', value) })
@@ -74,22 +73,30 @@ module.exports = function(ssb, opts) {
         left: langs.map((l)=>{ return { key: l, value: l } }),
         right: [{key: 'close', value: 'Done'}]
       })
+
       menu.style.position='absolute'
-      menu.style.left = `${x}px`
-      menu.style.width = `${width}px`
-      el.parentElement.appendChild(menu)
-      let menuHeight = menu.offsetHeight
+      document.body.appendChild(menu)
       reposition()
+
       menu.activate(editorLang())
 
       el.addEventListener('keyup', reposition)
 
       function reposition() {
-        let height = el.offsetHeight
-        let y = el.offsetTop
-        let p = y - menuHeight - 8
-        if (p<0) p = y + height + 8;
-        menu.style.top = `${p}px`
+        const margin = 8
+        const minWidth = 150
+        const menuHeight = menu.offsetHeight
+        const rect = el.getBoundingClientRect()
+        const width = Math.max(rect.right - rect.left, minWidth)
+        menu.style.width = `${width}px`
+        menu.style.zIndex = 10
+        menu.style.left = `${rect.left}px`
+        let spaceAbove = rect.top
+        if (spaceAbove > menuHeight + margin) {
+          menu.style.top = `${rect.top - menuHeight - margin}px`
+        } else {
+          menu.style.top = `${rect.bottom + margin}px`
+        }
       }
 
       let closeEditor = function() {
