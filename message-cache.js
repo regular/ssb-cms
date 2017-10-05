@@ -5,7 +5,6 @@ const MutantDict = require('mutant/dict')
 const MutantArray = require('mutant/array')
 
 // TODO: this does not account for messages changing branches!
-// TODO: BUG: does not handle type: revert!
 
 function cacheAndIndex(opts) {
   opts = opts || {}
@@ -46,6 +45,9 @@ function updateObservableMessages(container, opts, cb) {
   if (!makeObservable) throw new Error('You need to pass makeObservable')
   if (!updateObservable) throw new Error('You need to pass updateObservable')
 
+  let currentRevisions = {} // needed to implement revert, because update-stream doesn't gice as the revision we revert to
+  let previousRevisions = {}
+
   let ret = pull.drain( kv => {
     let mutantArray = container || opts.getContainer(kv)
     let {key, value} = kv
@@ -58,6 +60,9 @@ function updateObservableMessages(container, opts, cb) {
         mutantArray.delete(child)
       } else console.error('Request to delete non-existing child', key)
       return
+    } else if (kv.type === 'revert') {
+      if (kv.remove !== currentRevisions[kv.key]) throw new Error('revert to inknow revision')
+      kv.revision = previousRevisions[kv.key]
     }
 
     if (!child) {
@@ -68,11 +73,14 @@ function updateObservableMessages(container, opts, cb) {
       // make sure to get rid of the draft
       let fromDraft = value.content && value.content['from-draft']
       if (fromDraft) {
+        delete currentRevisions[fromDraft]
         let draft = mutantArray.find( x=> x.id === fromDraft )
         if (draft) mutantArray.delete(draft)
       }
       mutantArray.push(child)
     } 
+    previousRevisions[kv.key] = currentRevisions[kv.key]
+    currentRevisions[kv.key] = kv.revision
     updateObservable(child, kv)
   }, cb || (err => {
     if (err) throw err
