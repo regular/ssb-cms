@@ -41,6 +41,7 @@ module.exports = function(ssb, opts) {
 
     let el = h(tag, {
       innerHTML: computed([editing, editorLang, transformedText], (e,l,t) => e ? '' : t),
+      lang: computed([editing, editorLang, langObs], (e,el,l) => e ? el : l),
       contentEditable: editing,
       style: {
         position: 'relative'
