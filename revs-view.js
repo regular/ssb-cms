@@ -95,6 +95,7 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
 
   let sortStream = SortStream(ssb, drafts)
   let mutantArray = MutantArray()
+  let selectedLatest = false
 
   function streamRevisions(id, syncCb) {
     //console.log('streaming sorted revisions of', id)
@@ -112,6 +113,9 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
         entries = _entries
         if (synced) {
           mutantArray.set(entries)
+          if (selectedLatest) {
+            selection.set('latest')
+          }
         }
       }, (err)=>{
         if (err) throw err
@@ -123,16 +127,14 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
 
   let containerEl = h('.revs', MutantMap(mutantArray, html))
   let abort
-  let selectedLatest = false
 
   selection( id => {
     selectedLatest = false
     if (id === 'latest') {
-      selectedLatest = true
       if (mutantArray.getLength() > 0) {
-        return selection.set(mutantArray.get(mutantArray.getLength()-1).id)
-      }
-      selection.set(null)
+        selection.set(mutantArray.get(mutantArray.getLength()-1).id)
+      } else selection.set(null)
+      selectedLatest = true
     }
     console.log('rev selected', id)
   })
