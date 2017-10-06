@@ -92,7 +92,7 @@ function isLinked(child, x) {
   let aLinks = links(child)
   let bLinks = links(x)
   if (includesAll(x.key, aLinks)) {
-    log(`${x.key} fits before ${aLinks}`)
+    log(`${x.key} is new tail`)
     return -1
   } else if (bLinks && includesAll(bLinks, Object.keys(child.heads))) {
     // does b fit at one (or more) of a's heads?
@@ -175,7 +175,6 @@ module.exports = function updates(opts) {
         let {key, value} = kv
         log('incoming', kv)
 
-
         if (ignore.includes(key)) {
           if (kv.type === 'del') {
             ignore = ignore.filter( k => k !== key)
@@ -227,11 +226,11 @@ module.exports = function updates(opts) {
 
         // we have a child for that revRoot already
 
-        // Can we fit one of the  unattached puzzle pieces on one end or
+        // Can we fit one of the unattached puzzle pieces on one end or
         // the other?
         function fit(child) {
           let success = false
-          child.queue = child.queue.filter( (x)=> {
+          child.queue = child.queue.filter( x => {
             // TODO: We need to emit updates with x already removed
             // from the queue, otherwise downstream is confuesd and displays
             // a warning about incomplete message history (it thinks not all puzzle
@@ -287,7 +286,20 @@ module.exports = function updates(opts) {
               }
               child.tail = x.key
               debug(child)
-              if (opts.allRevisions && !doBuffer) push(Object.assign({}, child, {revision: kv.key, pos: 'tail', value: kv.value}))
+              if (opts.allRevisions && !doBuffer) {
+                // because allRevisions is true, we emit the 
+                // revision's value, even though this revision 
+                // does not update the object's current value
+                push(Object.assign(
+                  {},
+                  child,
+                  {
+                    revision: x.key, 
+                    pos: 'tail',
+                    value: x.value
+                  }
+                ))
+              }
               return false // remove from queue
             }
 
@@ -313,7 +325,7 @@ module.exports = function updates(opts) {
               }
               return false
             }
-          
+
             if (isDraft(x.key)) {
               child.valueBeforeDraft = child.value
               child.unsaved = true
@@ -329,13 +341,14 @@ module.exports = function updates(opts) {
             addHead(child, x.key, x.value.timestamp)
             debug(child)
             if (!doBuffer) push(Object.assign({revision: x.key}, child))
+            success = true
             return false // remove from queue
           })
           return success
         }
 
         child.queue.push(kv)
-        while(fit(child) && child.queue.length);
+        while(child.queue.length && fit(child));
         log('queue', child.queue) 
 
         // TODO: handle re-parenting
