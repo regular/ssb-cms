@@ -58,7 +58,11 @@ module.exports = function(ssb, drafts, root, view) {
   view.appendChild(
     h('section.drafts', [
       h('h2', 'Drafts'),
-      h('table', computed([draftsMutantDict], drafts  => {
+      h('table', [ h('tr', [
+        h('th', 'Id'),
+        h('th', 'revisionRoot'),
+        h('th', 'revisionBranch')
+      ]), computed([draftsMutantDict], drafts  => {
         return Object.keys(drafts).map( k => {
           let kv = drafts[k]
           return h('tr', [
@@ -67,7 +71,7 @@ module.exports = function(ssb, drafts, root, view) {
             h('td', kv.revisionBranch || 'no revisionBranch')
           ])
         })
-      })),
+      })]),
       h('div', draftsMessage),
       h('button', {
         'ev-click': function(e) {
@@ -76,6 +80,23 @@ module.exports = function(ssb, drafts, root, view) {
           window.location.reload()
         }
       }, 'Delete all drafts')
+    ])
+  )
+
+  let forkedObjectsObs = MutantDict()
+  view.appendChild(
+    h('section.forks', [
+      h('h2', 'Forks'),
+      h('table', computed([forkedObjectsObs], forks  => {
+        return Object.keys(forks).map( k => {
+          let kv = forks[k]
+          let content = kv.value && kv.value.content 
+          return h('tr', [
+            h('td', h('a', {href: `#${k}`}, (content && `${content.type || 'no type'} ${content.name || 'no name'}`) || 'no name')),
+            h('td', `${Object.keys(kv.heads).length} heads`)
+          ])
+        })
+      }))
     ])
   )
 
@@ -238,7 +259,8 @@ module.exports = function(ssb, drafts, root, view) {
         if (dirty && synced || !key) obs.set(Object.keys(list).length)
       }
     }
-
+  
+    let forkedObjects = {}
     let forked = f(forkCount)
     let incomplete = f(incompleteCount)
     let message = f(messageCount)
@@ -266,6 +288,7 @@ module.exports = function(ssb, drafts, root, view) {
           incomplete()
           message()
           revision()
+          forkedObjectsObs.set(forkedObjects)
           isSynced.set(true)
         }
         return !x.sync
@@ -282,7 +305,17 @@ module.exports = function(ssb, drafts, root, view) {
         let isMessage = !revRoot || revRoot === key
         //let isRevision = revBranch && revBranch !== revRoot
         
-        forked(key, Object.keys(kv.heads).length > 1)
+        let isForked = Object.keys(kv.heads).length > 1
+        let isKnownFork = Object.keys(forkedObjects).includes(kv.key)
+        if (isForked && !isKnownFork) {
+          forkedObjects[key] = kv
+          if (synced) forkedObjectsObs.put(key, kv)
+        } else if (!isForked && isKnownFork) {
+          delete forkedObjects[key]
+          if (synced) forkedObjectsObs.delete(key)
+        }
+
+        forked(key, isForked)
         incomplete(key, kv.tail !== key)
         message(key, isMessage)
       }, (err) => {
@@ -454,5 +487,8 @@ module.exports.css = ()=>  `
   }
   .middle .status>span>span {
     margin: .12em;
+  }
+  th {
+    text-align: left;
   }
 `

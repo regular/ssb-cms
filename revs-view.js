@@ -82,9 +82,11 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
       }),
       h('span.author', authorName),
       h('span.timestamp', htime(new Date(entry.value.timestamp))),
-      h('a.node', {
-        href: `#${root()}:${entry.id}`
-      }, entry.id.substr(0,8)),
+      h('span.node', 
+        ((entry.value.content && entry.value.content.revisionBranch) ? 
+        entry.value.content.revisionBranch.substr(0,6) + ' → ' : '⤜') +
+        entry.id.substr(0,6)
+      ),
       when(isDraft(entry.id), h('span', {title: 'draft'}, '✎')),
       // TODO when(entry.forked, h('span', {title: 'conflicting updates, plese merge'}, '⑃')),
       h('span.buttons', [
@@ -125,7 +127,7 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
     return drain.abort
   }
 
-  let containerEl = h('.revs', MutantMap(mutantArray, html))
+  let containerEl = h('erevs', MutantMap(mutantArray, html))
   let abort
 
   selection( id => {
@@ -188,6 +190,8 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
 
 module.exports.css = ()=> `
   .rev {
+    cursor: alias;
+    position: relative;
     font-size: 11px;
     color: #6b6969;
     background-color: #eee;
@@ -204,9 +208,12 @@ module.exports.css = ()=> `
     background: #b39254;
   }
   .rev .node {
+    position: absolute;
+    right: 1em;
+    top: .5em;
     order: 3;
-    margin: 8px 32px;
-    color: #6b6969;
+    font-family: monospace;
+    font-size: 12px;
   }
   .rev .avatar {
     margin: 0 8px;
@@ -220,7 +227,6 @@ module.exports.css = ()=> `
     white-space: nowrap;
   }
   .rev .author {
-    color: #555;
     padding-top: 3px;
   }
 `
