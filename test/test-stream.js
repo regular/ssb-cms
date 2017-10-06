@@ -1358,3 +1358,47 @@ test('allRevisions=true: pass through draft deletion: new a, draft a2, rev a2, d
   )
 })
 
+//// ---- real world problems
+//
+
+test('mxv(ns8), cg2(mxv), vec(mtx), ns8(vec)', (t)=>{
+  const kvs = [
+    { key: 'mxv', value: {
+        content: {
+          revisionRoot: 'mtx',
+          revisionBranch: 'ns8'
+    } } },
+    { key: 'cg2', value: {
+        content: {
+          revisionRoot: 'mtx',
+          revisionBranch: 'mxv'
+    } } },
+    { key: 'vec', value: {
+        content: {
+          revisionRoot: 'mtx',
+          revisionBranch: 'mtx'
+    } } },
+    { key: 'ns8', value: {
+        content: {
+          revisionRoot: 'mtx',
+          revisionBranch: 'vec'
+    } } }
+  ]
+  pull(
+    pull.values(kvs),
+    s({allRevisions: true}),
+    pull.collect( (err, updates) => {
+      t.notOk(err)
+      t.deepEqual(
+        updates.map( x=> ({rev: x.revision, pos: x.pos})), [
+          {rev:'mxv', pos: undefined},
+          {rev:'cg2', pos: undefined},
+          {rev:'ns8', pos: 'tail'},
+          {rev:'vec', pos: 'tail'}
+        ]
+      )
+      console.log(updates)
+      t.end()
+    })
+  )
+})
