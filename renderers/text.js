@@ -43,9 +43,11 @@ module.exports = function(ssb, opts) {
       innerHTML: computed([editing, editorLang, transformedText], (e,l,t) => e ? '' : t),
       lang: computed([editing, editorLang, langObs], (e,el,l) => e ? el : l),
       contentEditable: editing,
+      /*
       style: {
         position: 'relative'
       },
+      */
       'ev-focus': e => {
         if (editing()) {
           e.target.innerText = value[editorLang()]
