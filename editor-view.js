@@ -1,14 +1,6 @@
 const h = require('hyperscript')
 const ho = require('hyperobj')
 const observable = require('observable')
-const u = require('hyperobj-tree/util')
-const properties = require('hyperobj-tree/properties')
-const kv = require('hyperobj-tree/kv')
-const source = require('hyperobj-tree/source')
-const array = require('hyperobj-tree/array')
-const filter = require('hyperobj-tree/filter')
-const tag = require('hyperobj-tree/tag')
-const ref = require('ssb-ref')
 
 const Menubar = require('./renderers/menubar')
 const JsonEditor = require('./json-editor')
@@ -28,19 +20,7 @@ module.exports = function(parent, ssb, config) {
       if (value === null) return h('span.null', '[null]')
     },
     customRender(ssb),
-    source(),
-    array(),
-    properties(),
-    kv(),
-    function(value) {
-      if (!ref.isMsg(value)) return
-      return h('a', {href: `#${value}`}, value)
-    },
-    function(value) {
-      if (!ref.isBlob(value)) return
-      return h('a', {href: `${config.blobsRoot}/${value}`}, value)
-    },
-    ho.basic()
+    ...require('./default-renderers')(config)
   )
 
   let toolbar, container, jsonContainer, previewContainer
