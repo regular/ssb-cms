@@ -172,14 +172,20 @@ module.exports = function(config, cb) {
     const editor = Editor(editorContainer, ssb, config)
 
     let mode = 0
+    function setMode(newMode) {
+      document.body.classList.remove(modes[mode])
+      document.body.classList.add(modes[newMode])
+      if (newMode === 0) {
+        editor.adjustSize()
+      }
+      mode = newMode
+    }
+
+    setMode( window.frameElement ? 2 : 0)
+
     window.addEventListener('keydown', (e)=>{
       if (e.key === 'Tab' && e.shiftKey) {
-        document.body.classList.remove(modes[mode])
-        mode = (mode + 1) % modes.length
-        document.body.classList.add(modes[mode])
-        if (mode === 0) {
-          editor.adjustSize()
-        }
+        setMode( (mode + 1) % modes.length)
         e.preventDefault()
       }
     })
