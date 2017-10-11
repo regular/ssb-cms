@@ -74,7 +74,10 @@ module.exports = function(ssb, opts) {
       )({
         type: 'menubar',
         left: langs.map((l)=>{ return { key: l, value: l } }),
-        right: [{key: 'close', value: 'Done'}]
+        right: [
+          {key: 'cancel', value: 'Cancel'},
+          {key: 'save', value: 'Save'}
+        ]
       })
 
       menu.style.position='absolute'
@@ -102,23 +105,32 @@ module.exports = function(ssb, opts) {
         }
       }
 
-      let closeEditor = function() {
+      function closeEditor() {
+        if (!editing()) return
+        unsubscribe()
+        el.removeEventListener('keyup', reposition)
+        menu.parentElement.removeChild(menu)
+        menu = null
+        editing.set(false)
+      }
+
+      function saveAndCloseEditor() {
         if (!editing()) return
         console.log('Text editor: updating', kp)
         ssb.cms.update([...kp], value, err => {
           if (err) return console.error('unable to update', err)
-          unsubscribe()
-          el.removeEventListener('keyup', reposition)
-          menu.parentElement.removeChild(menu)
-          menu = null
-          editing.set(false)
+          closeEditor()
         })
       }
 
       unsubscribe = menu.activeItem( (item)=>{
         value[editorLang()] = el.innerText
         let key = item.getAttribute('data-key')
-        if (key === 'close') return closeEditor()
+        if (key === 'save') {
+          return saveAndCloseEditor()
+        } else if (key === 'cancel') {
+          return closeEditor()
+        }
         editorLang.set(key)
         el.focus()
         reposition()
