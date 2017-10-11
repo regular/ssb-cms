@@ -68,7 +68,22 @@ module.exports = function(config, cb) {
   })
 
   let avatar = Value({defaultValue: {name: "", imageUrl: ""}})
-  me( (feed) => {
+  me( feed => {
+    config.avatar = avatar
+    config.feedId = feed
+    config.profile = Value()
+    pull(
+      sbot().createUserStream({id: feed, reverse: true}),
+      pull.filter( kv => kv.value.content && kv.value.content.type === 'about'),
+      pull.filter( kv => kv.value.content && kv.value.content.about === feed),
+      pull.take(1),
+      pull.map( kv => kv.value.content.revisionRoot || kv.key),
+      pull.collect( (err, results) => {
+        if (err) return console.error(err)
+        if (results.length<1) return console.error('No about message found')
+        config.profile.set(results[0])
+      })
+    )
     getAvatar(sbot(), feed, feed, (err, result) => {
       if (err) console.error(err)
       if (!result.image) return
@@ -165,6 +180,12 @@ module.exports = function(config, cb) {
       } else {
         statusView.style.display = 'none'
         contentView.style.display = 'flex'
+      }
+      if (key === 'profile') {
+       let msgId =  config.profile()
+      if (msgId) {
+        document.location.hash = `#${msgId}`
+      }
       }
     })
 
