@@ -517,6 +517,7 @@ module.exports.css = function() {
   Revs.css() +
   Editor.css() +
   Status.css() +
+  require('./default-renderers').css() +
   `
   body, html {
     height: 100%;

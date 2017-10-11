@@ -10,8 +10,13 @@ const array = require('hyperobj-tree/array')
 const filter = require('hyperobj-tree/filter')
 const tag = require('hyperobj-tree/tag')
 
+const profile = require('./renderers/profile-renderer')
+
 module.exports = function(config) {
   return [
+    value => value === null ? h('span.null', 'null') : undefined,
+    value => typeof value === 'undefined' ? h('span.undefined', 'undefined') : undefined,
+    profile(),
     source(),
     array(),
     properties(),
@@ -27,3 +32,6 @@ module.exports = function(config) {
     ho.basic()
   ]
 }
+
+module.exports.css = ()=>
+  profile.css()
