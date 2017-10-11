@@ -11,6 +11,7 @@ const when = require('mutant/when')
 const send = require('mutant/send')
 const resolve = require('mutant/resolve')
 const ref = require('ssb-ref')
+const bus = require('page-bus')('lad-page-bus')
 
 const pull = require('pull-stream')
 const cat = require('pull-cat')
@@ -342,6 +343,12 @@ module.exports = function(ssb, drafts, root, view) {
         if (synced) {
           blobBytes.set(totalSize)
           blobsPresent.set(present)
+          if (window.frameElement) {
+            bus.emit('screen-progress', {
+              id: window.frameElement.id,
+              progress: present / refs
+            })
+          }
         }
       })
     }
