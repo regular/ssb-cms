@@ -8,11 +8,14 @@ module.exports = function (root) {
   console.log('drafts root', root)
 
   function overrideCriticalProperties(msg, value) {
+    console.log('OW', msg, value)
+    console.log('BEFORE OW', msg)
     let content = (msg.content = msg.content || {})
     content.revisionRoot = value.revisionRoot
     content.revisionBranch = value.revisionBranch
     content.branch = value.branch
     content.root = root
+    console.log('AFTER OW', msg)
   }
   
   function tryToParse(value) {

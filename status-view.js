@@ -56,6 +56,7 @@ module.exports = function(ssb, drafts, root, view) {
   )
 
   let draftsMutantDict = MutantDict()
+  let openDraft = Value('')
   view.appendChild(
     h('section.drafts', [
       h('h2', 'Drafts'),
@@ -66,11 +67,27 @@ module.exports = function(ssb, drafts, root, view) {
       ]), computed([draftsMutantDict], drafts  => {
         return Object.keys(drafts).map( k => {
           let kv = drafts[k]
-          return h('tr', [
-            h('td', k),
-            h('td', h('a', {href: `#${kv.revisionRoot}`}, kv.revisionRoot || 'no revisionRoot')),
-            h('td', kv.revisionBranch || 'no revisionBranch')
-          ])
+          return [
+            h('tr', [
+              h('td', k),
+              h('td', h('a', {href: `#${kv.revisionRoot}`}, kv.revisionRoot || 'no revisionRoot')),
+              h('td', kv.revisionBranch || 'no revisionBranch'),
+              h('td',
+                when(
+                  computed(
+                    [openDraft],
+                    d => d === k
+                  ),
+                  h('pre', JSON.stringify(kv, null, 2)),
+                  h('button', {
+                    'ev-click': ()=>{
+                      openDraft.set(k)
+                    }
+                  }, 'inspect')
+                )
+              )
+            ])
+          ]
         })
       })]),
       h('div', draftsMessage),
