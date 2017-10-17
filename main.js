@@ -210,6 +210,10 @@ module.exports = function(config, cb) {
       setMode( window.frameElement ? 2 : 0)
     }
 
+    if (config.sbot.cms && config.sbot.cms.entry) {
+      setURL(config.sbot.cms.entry)
+    }
+
     window.addEventListener('keydown', (e)=>{
       if (e.key === 'Tab' && e.shiftKey) {
         setMode( (mode + 1) % modes.length)
