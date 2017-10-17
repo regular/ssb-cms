@@ -182,10 +182,10 @@ module.exports = function(config, cb) {
         contentView.style.display = 'flex'
       }
       if (key === 'profile') {
-       let msgId =  config.profile()
-      if (msgId) {
-        document.location.hash = `#${msgId}`
-      }
+        let msgId =  config.profile()
+        if (msgId) {
+          document.location.hash = `#${msgId}`
+        }
       }
     })
 
@@ -202,7 +202,13 @@ module.exports = function(config, cb) {
       mode = newMode
     }
 
-    setMode( window.frameElement ? 2 : 0)
+    if (config.sbot.cms && config.sbot.cms['view-mode']) {
+      let vm = modes.indexOf(config.sbot.cms['view-mode'])
+      if (vm<0) vm = 0
+      setMode(vm)
+    } else {
+      setMode( window.frameElement ? 2 : 0)
+    }
 
     window.addEventListener('keydown', (e)=>{
       if (e.key === 'Tab' && e.shiftKey) {
