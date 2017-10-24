@@ -125,10 +125,13 @@ module.exports = function(ssb, drafts, root, view) {
         let count = 0
         let ret = Object.keys(p).map( k => {
           let v = p[k]
-          if (v === 'connected') count++
+          if (v.state === 'connected') count++
           return h('tr', [
             h('td', k),
-            h('td', v)
+            h('td', v.host),
+            h('td', v.port),
+            h('td', v.source),
+            h('td', v.state)
           ])
         })
         peerCount.set(count)
@@ -437,7 +440,7 @@ module.exports = function(ssb, drafts, root, view) {
         ssb.gossip.changes()
       ]),
       pull.drain( kv => {
-        peers.put(kv.peer.key, kv.peer.state)
+        peers.put(kv.peer.key, kv.peer)
       }, err => {
         console.error('Peers.changes ended:', err)
         sbotConnect.set(false)
