@@ -210,7 +210,7 @@ module.exports = function(config, cb) {
       setMode( window.frameElement ? 2 : 0)
     }
 
-    if (config.sbot.cms && config.sbot.cms.entry) {
+    if (config.sbot.cms && config.sbot.cms.entry && !window.frameElement) {
       setURL(config.sbot.cms.entry)
     }
 
