@@ -7,5 +7,6 @@ module.exports.sendToParentFrame = (eventName, data) => {
     })
     console.log(`sendToParentFrame: ${eventName}, ${JSON.stringify(payload)}`)
     bus.emit(eventName, payload)
+    bus.emit('dummy', {})
   }
 }
