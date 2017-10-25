@@ -18,6 +18,7 @@ const Drafts = require('./drafts')
 const DB = require('./db')
 const {isDraft, getLastMessageId} = require('./util')
 const ObjectDB = require('./object-db')
+const bus = require('./bus')
 
 const modes = ['normal', 'translucent', 'no-ui']
 
@@ -97,6 +98,15 @@ module.exports = function(config, cb) {
   let unsubscribe = me( (feed) => {
     unsubscribe()
     const ssb = sbot()
+
+    // if we are in an iframe, tell
+    // parent frame when we detect user interaction,
+    // so it can reset its idle timeout timer
+    function userInteraction() {
+      bus.sendToParentFrame('interaction', {})
+    }
+    document.body.addEventListener('mousedown', userInteraction)
+    document.body.addEventListener('touchstart', userInteraction)
 
     let renderMenu = ho(
       Menubar(),
@@ -264,6 +274,10 @@ module.exports = function(config, cb) {
         })
         revs.root.set(revRoot)
         tree.selection.set(revRoot)
+
+        bus.sendToParentFrame('navigate', {
+          nodeId: revRoot
+        })
 
         if (rev || revRoot) {
           if (rev) {
