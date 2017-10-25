@@ -11,7 +11,7 @@ const when = require('mutant/when')
 const send = require('mutant/send')
 const resolve = require('mutant/resolve')
 const ref = require('ssb-ref')
-const bus = require('page-bus')('lad-page-bus')
+const bus = require('./bus')
 
 const pull = require('pull-stream')
 const cat = require('pull-cat')
