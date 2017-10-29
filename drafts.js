@@ -120,6 +120,7 @@ module.exports = function (root) {
         if (!msg.content) return cb(new Error('message has no content'))
         // NOTE: we ignore everything but the msg.content and overwrite
         // branch, revisionRoot, and revisionBranch!
+        msg.content.root = root
         if (value.branch) msg.content.branch = value.branch
         if (value.revisionRoot) msg.content.revisionRoot = value.revisionRoot
         if (value.revisionBranch) msg.content.revisionBranch = value.revisionBranch
