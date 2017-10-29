@@ -11,8 +11,8 @@ const DB = require('../db')
 const updateStream = require('../update-stream')
 
 const root =   '%HBQXn4hHFwQxy1ULBr6qLALOBPBP/P5Ue4mWSspblz0=.sha256'
-const branch = '%rqxYX52iQzBMY5uIcHbodxtdttsriLzsrouDg8gqnik=.sha256' // station Sacred Manuscripts
-const revRoot ='%l35F3ggMCwx5Tv68f0L75ssPnCfUHw7tFeYFIAFWdWk=.sha256' // screen main-menu
+const branch = '%zVhzFaCdmZQ7xoxNsP1qsZE1LozW45sTs75IbpjI3BE=.sha256' // node "Tests"
+const revRoot ='%vGU6kCCj4BZSDYBYIIXO0N7jxc/q09Rk7XDD6ZOkyLc=.sha256' // node "Video 1080p"
 
 const drafts = {
   byBranch: () => pull.empty()
@@ -28,7 +28,7 @@ ssbClient(keys, config, (err, ssb)=>{
     pull.through( kv=> console.error('in', kv.key) ),
     updateStream(),
     pull.through( kv => console.error('out', kv.revision)),
-    pull.filter( kv => kv.key === revRoot ),
+    //pull.filter( kv => kv.key === revRoot ),
     pull.log()
   )
 })

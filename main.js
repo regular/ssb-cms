@@ -262,14 +262,17 @@ module.exports = function(config, cb) {
       }
       console.log('FROM URL:', revRoot, rev)
       if (!revRoot || ref.isMsg(revRoot) || isDraft(revRoot)) {
-        let unsubsribe = revs.ready( (ready)=>{
+        let unsubscribe = revs.ready( (ready)=>{
           if (ready) {
             if (rev && (ref.isMsg(rev) || isDraft(rev)) ) {
               revs.selection.set(rev)
             } else {
-              revs.selection.set('latest')
+             ssb.cms.getLatest(revRoot, {keys: true}, (err, kv) => {
+               if (err) return console.error(err)
+               revs.selection.set(kv.revision)
+             })
             }
-            unsubsribe()
+            unsubscribe()
           }
         })
         revs.root.set(revRoot)
@@ -289,7 +292,7 @@ module.exports = function(config, cb) {
           } else {
             ssb.cms.getLatest(revRoot, (err, value) => {
               if (err) throw err  // TODO
-              let msgString = value.msgString || JSON.stringify(value, null, 2)
+              let msgString = JSON.stringify(value, null, 2)
               loadIntoEditor(msgString)
             })
           }
