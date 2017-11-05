@@ -24,6 +24,7 @@ const {isDraft} = require('./util')
 module.exports = function(ssb, drafts, root, view) {
   let sbotConnect = Value(true)
 
+  let updateAvailable = Value(false)
   let isSynced = Value()
   let draftCount = Value(0)
   let draftWarning = Value(false)
@@ -167,6 +168,13 @@ module.exports = function(ssb, drafts, root, view) {
       h('span', [
         h('span', 'Version:'),
         h('span', version)
+      ]),
+      h('span', {
+        style: {
+          display: computed( [updateAvailable], ua => ua ? 'inline' : 'none' )
+        }
+      }, [
+        h('span', 'Update available!')
       ]),
       h('span', [
         'Sbot:',
@@ -475,6 +483,7 @@ module.exports = function(ssb, drafts, root, view) {
           if (kv.value.author === author && kv.value.sequence > sequence) {
             console.error(`Found newer client version! old seq: ${sequence}, new seq: ${kv.value.sequence}`)
             updateUrl = newCodeBlobUrl
+            updateAvailable.set(true)
           }
         }
       }
