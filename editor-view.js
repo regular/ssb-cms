@@ -58,6 +58,7 @@ module.exports = function(parent, ssb, config) {
   let previewEditor
   function showPreviewEditor(value, key) {
     removePreviewEditor()
+    if (config.sbot.cms.kiosk) return
     // only render preview if our value is parsable JSON
     let msg
     try {

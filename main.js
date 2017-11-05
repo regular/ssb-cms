@@ -22,6 +22,8 @@ const bus = require('./bus')
 
 const modes = ['normal', 'translucent', 'no-ui']
 
+document.body.classList.add('hide')
+
 module.exports = function(config, cb) {
   const root = config.sbot.cms && config.sbot.cms.root
   if (!root) throw new Error('Please specify a root node in your config. See ssb-cms README.md for details.')
@@ -38,6 +40,7 @@ module.exports = function(config, cb) {
   */
   require('ssb-electroparty/client')(function (err, ssb) {
     if (err) {
+      document.body.classList.remove('hide')
       document.body.innerHTML = `<pre>
       ssb-client says: "${err.message}"
       If you have not done already, please add your public key to sbot's master array:
@@ -46,7 +49,7 @@ module.exports = function(config, cb) {
         "@${config.keys.public}"
       ]
 
-      in ~/.${config.appName + '/config'}
+      in ~/.${config.sbot.appName + '/config'}
 
 
       (the above is not an example, it is your actual public key)
@@ -204,6 +207,7 @@ module.exports = function(config, cb) {
 
     let mode = 0
     function setMode(newMode) {
+      document.body.classList.remove('hide')
       document.body.classList.remove(modes[mode])
       document.body.classList.add(modes[newMode])
       if (newMode === 0) {
@@ -461,10 +465,18 @@ module.exports = function(config, cb) {
           if (err) return console.error(err)
           render()
         })
-        unsubscribe = obs( kv => {
-          //console.log('FS preview: object changed', kv)
-          render()
-        })
+
+        // TODO: this is a quickfix
+        // stations were rendered multiple times
+        // degrading performace
+        // We switch off realtime updates
+        // in kiosk mode here
+        if (!config.sbot.cms.kiosk) {
+          unsubscribe = obs( kv => {
+            //console.log('FS preview: object changed', kv)
+            render()
+          })
+        }
       }
     }
 
@@ -554,6 +566,12 @@ module.exports.css = function() {
     font-family: sans-serif;
     color: #444;
     overflow: hidden;
+  }
+  body.hide {
+    background: #002833
+  }
+  body.hide>*{
+    display: none
   }
   .fullscreen-preview {
     background-color: #1a1a1a;
