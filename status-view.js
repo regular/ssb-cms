@@ -21,10 +21,11 @@ const updates = require('./update-stream')
 const config = require('./cms-config')
 const {isDraft} = require('./util')
 
+let updateAvailable = Value(false)
+
 module.exports = function(ssb, drafts, root, view) {
   let sbotConnect = Value(true)
 
-  let updateAvailable = Value(false)
   let isSynced = Value()
   let draftCount = Value(0)
   let draftWarning = Value(false)
@@ -462,8 +463,10 @@ module.exports = function(ssb, drafts, root, view) {
     console.log('currentCodeBlobUrl', currentCodeBlobUrl)
     let author, sequence
     let updateUrl = null
+    let synced = false
     return function(kv) {
       if (kv.sync) {
+        synced = true
         if (updateUrl) {
           let hash = document.location.hash
           console.error('*** Auto update!')
@@ -483,7 +486,9 @@ module.exports = function(ssb, drafts, root, view) {
           if (kv.value.author === author && kv.value.sequence > sequence) {
             console.error(`Found newer client version! old seq: ${sequence}, new seq: ${kv.value.sequence}`)
             updateUrl = newCodeBlobUrl
-            updateAvailable.set(true)
+            if (synced) {
+              updateAvailable.set(true)
+            }
           }
         }
       }
@@ -499,6 +504,7 @@ module.exports = function(ssb, drafts, root, view) {
   return ret
 }
 
+module.exports.updateAvailable = updateAvailable
 
 module.exports.css = ()=>  `
   .menubar .status {
