@@ -19,7 +19,6 @@
 const h = require('mutant/html-element')
 const Value = require('mutant/value')
 const computed = require('mutant/computed')
-const when = require('mutant/when')
 
 module.exports = function(opts) {
   opts = opts || {}
@@ -68,9 +67,9 @@ module.exports = function(opts) {
 
   render.renderItem = function(value, kp) {
     return [
-      when(value.icon, h('img', {src: value.icon})),
-      when(value.label, h('span', value.label))
-    ]
+      value.icon ?  h('img', {src: value.icon}) : null,
+      value.label ? h('span', value.label) : null
+    ].filter(x=>x)
   }
 
   return render
