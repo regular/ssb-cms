@@ -256,13 +256,15 @@ module.exports = function(config, cb) {
     })
 
     function setSelectionFromURL(newURL) {
-      let fragment = newURL.substr(newURL.indexOf('#') + 1)
-      let revRoot, rev
-      if (fragment.indexOf(':') !== -1) {
-        [revRoot, rev] = fragment.split(':')
-      } else {
-        revRoot = fragment || null // empty string -> null
-        rev = null
+      let revRoot = null, rev = null
+      if (newURL.indexOf('#') !== -1) {
+        let fragment = newURL.substr(newURL.indexOf('#') + 1)
+        if (fragment.indexOf(':') !== -1) {
+          [revRoot, rev] = fragment.split(':')
+        } else {
+          revRoot = fragment || null // empty string -> null
+          rev = null
+        }
       }
       console.log('FROM URL:', revRoot, rev)
       if (!revRoot || ref.isMsg(revRoot) || isDraft(revRoot)) {
@@ -270,10 +272,10 @@ module.exports = function(config, cb) {
           if (ready) {
             if (rev && (ref.isMsg(rev) || isDraft(rev)) ) {
               revs.selection.set(rev)
-            } else {
+            } else if (revRoot) {
              ssb.cms.getLatest(revRoot, {keys: true}, (err, kv) => {
                if (err) return console.error(err)
-               revs.selection.set(kv.revision)
+               revs.selection.set(kv && kv.revision)
              })
             }
             unsubscribe()
@@ -289,7 +291,7 @@ module.exports = function(config, cb) {
         if (rev || revRoot) {
           if (rev) {
             ssb.cms.getMessageOrDraft(rev, (err, value) =>{
-              if (err) throw err  // TODO
+              if (err) console.error(err)
               let msgString = value.msgString || JSON.stringify(value, null, 2)
               loadIntoEditor(msgString)
             })
