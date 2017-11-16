@@ -15,11 +15,11 @@ const bus = require('./bus')
 
 const pull = require('pull-stream')
 const cat = require('pull-cat')
-const traverse = require('traverse')
 const prettyBytes = require('pretty-bytes')
 const updates = require('./update-stream')
 const config = require('./cms-config')
 const {isDraft} = require('./util')
+const Blobs = require('./blobs')
 
 let updateAvailable = Value(false)
 
@@ -308,7 +308,7 @@ module.exports = function(ssb, drafts, root, view) {
       pull.through( kv => revision(kv.key, true) ),
       updates({sync: true, bufferUntilSync: true}),
       pull.through( AutoUpdate() ),
-      pull.through( Blobs() ),
+      pull.through( Blobs(ssb, blobs, blobBytes, blobRefs, blobsPresent) ),
       pull.filter( x => {
         if (x.sync) {
           console.log('watch synced')
@@ -354,86 +354,6 @@ module.exports = function(ssb, drafts, root, view) {
     )
   }
 
-  function Blobs() {
-    let refs = 0
-    let present = 0
-    let totalSize = 0
-    let knownBlobs = new Set() 
-    let sizeObs = {}
-    let synced = false
-    let refList = []
-
-    let getSize = function(blob) {
-      ssb.blobs.size(blob, (err, size) => {
-        if (err) return sizeObs[blob].set(err.message)
-        sizeObs[blob].set(size || 'zero')
-        totalSize += size
-        ++present
-        if (synced) {
-          blobBytes.set(totalSize)
-          blobsPresent.set(present)
-          if (window.frameElement) {
-            bus.emit('screen-progress', {
-              id: window.frameElement.id,
-              progress: present / refs
-            })
-          }
-        }
-      })
-    }
-
-    return function processBlobReferences(kv) {
-    
-      if (kv.sync) {
-        if (!synced) {
-          synced = true
-          blobRefs.set(refs)
-          blobBytes.set(totalSize)
-          blobsPresent.set(present)
-          blobs.set(refList)
-          console.log('BLOBS synced')
-        }
-        return
-      }
-      
-      traverse(kv.value.content || {}).forEach( function(v) {
-        if (ref.isBlob(v)) {
-          let blob = v
-          let newBlob = !knownBlobs.has(blob)
-          if (newBlob) {
-            knownBlobs.add(blob)
-            refs++
-            if (synced) blobRefs.set(refs)
-            sizeObs[blob] = Value('...')
-
-            ssb.blobs.has(blob, (err, gotit) => {
-              if (err) return sizeObs[blob].set(err.message)
-              if (gotit) return getSize(blob)
-
-              sizeObs[blob].set('wanted ...')
-              ssb.blobs.want(blob, err => {
-                if (err) return sizeObs[blob].set(err.message)
-                getSize(blob)
-              })
-            })
-          }
-
-          refList.push({
-            id: blob,
-            size: sizeObs[blob],
-            neededBy: {
-              key: kv.key,
-              type: kv.value.content.type,
-              name: kv.value.content.name,
-              path: this.path.join('.')
-            }
-          })
-          if (synced) blobs.set(refList)
-
-        }
-      })
-    }
-  }
 
 
   function watchPeers() {
