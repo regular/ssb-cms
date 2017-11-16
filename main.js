@@ -254,8 +254,12 @@ module.exports = function(config, cb) {
       }
     })
 
-    const status = Status(ssb, drafts, root, statusView)
-    menubar.querySelector('.middle').appendChild(status)
+    let status
+    // save us the effort of message traversal and blob enumeration
+    if (!window.frameElement) {
+      status = Status(ssb, drafts, root, statusView)
+      menubar.querySelector('.middle').appendChild(status)
+    }
 
     const tree = Tree(ssb, drafts, root)
     treeColumn.appendChild(tree)
