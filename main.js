@@ -8,6 +8,7 @@ const pull = require('pull-stream')
 const getAvatar = require('ssb-avatar')
 const ref = require('ssb-ref')
 const traverse = require('traverse')
+const isElectron = require('is-electron')
 
 const Status = require('./status-view')
 const Tree = require('./tree-view')
@@ -27,6 +28,24 @@ document.body.classList.add('hide')
 module.exports = function(config, cb) {
   const root = config.sbot.cms && config.sbot.cms.root
   if (!root) throw new Error('Please specify a root node in your config. See ssb-cms README.md for details.')
+
+  // if we are in electron, we might want to
+  // disable pinch-to-zoom
+  if (isElectron()) {
+    console.warn('Runnig inside electron')
+    if (window && window.require) {
+      if (!config.sbot.allowBrowserZoom) {
+        // to disable pinch zoom feature on electron
+        const webFrame = window['require']('electron').webFrame // it's written like this so browserify doesnt feel like it has to do something
+        webFrame.setVisualZoomLevelLimits(1, 1)
+        webFrame.setLayoutZoomLevelLimits(0, 0)
+      }
+    } else {
+      console.warn('But we do not have window.require. (inside iframe?)')
+    }
+  } else {
+    console.warn('Not runnig inside electron')
+  }
 
   let me = Value()
   let sbot = Value()
