@@ -33,12 +33,11 @@ module.exports = function Blobs(ssb, blobs, blobBytes, blobRefs, blobsPresent) {
     blobBytes.set(totalSize)
     blobsPresent.set(present)
 
-    if (window.frameElement) {
-      bus.emit('screen-progress', {
-        id: window.frameElement.id,
-        progress: present / refs
-      })
+    if (!window.frameElement) {
+      const event = new CustomEvent('blobs-progress', { detail: present / refs }); 
+      document.body.dispatchEvent(event)
     }
+
   })
 
   let getSize = function(blob) {
