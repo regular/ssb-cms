@@ -2,6 +2,23 @@ const Value = require('mutant/value')
 const bus = require('./bus')
 const ref = require('ssb-ref')
 const traverse = require('traverse')
+const pull = require('pull-stream')
+
+function rateLimit(ms, f) {
+  let lastTime = 0
+  let timer
+
+  return function fun() {
+    const now = Date.now()
+    if (now - lastTime > ms) {
+      if (timer) clearTimeout(timer)
+      f()
+      lastTime = now
+    } else {
+      timer = setTimeout(fun, ms)
+    }
+  }
+}
 
 module.exports = function Blobs(ssb, blobs, blobBytes, blobRefs, blobsPresent) {
   let refs = 0
@@ -12,28 +29,37 @@ module.exports = function Blobs(ssb, blobs, blobBytes, blobRefs, blobsPresent) {
   let synced = false
   let refList = []
 
+  const updateStuff = rateLimit(230, ()=>{ 
+    blobBytes.set(totalSize)
+    blobsPresent.set(present)
+
+    if (window.frameElement) {
+      bus.emit('screen-progress', {
+        id: window.frameElement.id,
+        progress: present / refs
+      })
+    }
+  })
+
   let getSize = function(blob) {
     ssb.blobs.size(blob, (err, size) => {
       if (err) return sizeObs[blob].set(err.message)
       sizeObs[blob].set(size || 'zero')
       totalSize += size
       ++present
-      if (synced) {
-        
-        // TODO: rate-limit
-        blobBytes.set(totalSize)
-        blobsPresent.set(present)
-
-        if (window.frameElement) {
-          bus.emit('screen-progress', {
-            id: window.frameElement.id,
-            progress: present / refs
-          })
-        }
-
-      }
+      if (synced) updateStuff()
     })
   }
+
+  pull(
+    ssb.blobs.ls(),
+    pull.drain( blob => {
+      if (!sizeObs[blob]) {
+        sizeObs[blob] = Value('...')
+        getSize(blob)
+      }
+    } )
+  )
 
   return function processBlobReferences(kv) {
   
@@ -57,18 +83,22 @@ module.exports = function Blobs(ssb, blobs, blobBytes, blobRefs, blobsPresent) {
           knownBlobs.add(blob)
           refs++
           if (synced) blobRefs.set(refs)
-          sizeObs[blob] = Value('...')
+          
+          if (!sizeObs[blob]) {
+            sizeObs[blob] = Value('...')
 
-          ssb.blobs.has(blob, (err, gotit) => {
-            if (err) return sizeObs[blob].set(err.message)
-            if (gotit) return getSize(blob)
-
-            sizeObs[blob].set('wanted ...')
-            ssb.blobs.want(blob, err => {
+            ssb.blobs.has(blob, (err, gotit) => {
               if (err) return sizeObs[blob].set(err.message)
-              getSize(blob)
+              if (gotit) return getSize(blob)
+
+              sizeObs[blob].set('wanted ...')
+              ssb.blobs.want(blob, err => {
+                if (err) return sizeObs[blob].set(err.message)
+                getSize(blob)
+              })
             })
-          })
+
+          }
         }
 
         refList.push({
