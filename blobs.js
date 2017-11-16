@@ -9,9 +9,9 @@ function rateLimit(ms, f) {
   let timer
 
   return function fun() {
+    if (timer) clearTimeout(timer)
     const now = Date.now()
     if (now - lastTime > ms) {
-      if (timer) clearTimeout(timer)
       f()
       lastTime = now
     } else {
