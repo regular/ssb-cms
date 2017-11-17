@@ -18,12 +18,68 @@ const Menubar = require('./renderers/menubar')
 const Drafts = require('./drafts')
 const DB = require('./db')
 const {isDraft, getLastMessageId} = require('./util')
-const ObjectDB = require('./object-db')
 const bus = require('./bus')
 
 const modes = ['normal', 'translucent', 'no-ui']
 
 document.body.classList.add('hide')
+
+function getOrCreateSbotClient(sbot, drafts, root) {
+  if (parent && parent.ssb) {
+    console.warn('Found sbot client on parent object')
+    return sbot.set(parent.ssb)
+  }
+  console.warn('Creating sbot client')
+  require('ssb-electroparty/client')(function (err, ssb) {
+    if (err) {
+      document.body.classList.remove('hide')
+      document.body.innerHTML = `<pre>
+      ssb-client says: "${err.message}"
+      If you have not done already, please add your public key to sbot's master array:
+
+      "master": [
+        "@${config.keys.public}"
+      ]
+
+      in ~/.${config.sbot.appName + '/config'}
+
+
+      (the above is not an example, it is your actual public key)
+
+      Then restart sbot and reload this page. Hopefully you won't see this message again.
+
+      </pre>`
+      cb(err)
+      throw err
+    }
+    ssb.cms = DB(ssb, drafts, root)
+    window.ssb = ssb // for child iframes to share
+    sbot.set(ssb)
+  })
+}
+
+function getProfileData(ssb, config, feed, avatar, profile) {
+  pull(
+    ssb.createUserStream({id: feed, reverse: true}),
+    pull.filter( kv => kv.value.content && kv.value.content.type === 'about'),
+    pull.filter( kv => kv.value.content && kv.value.content.about === feed),
+    pull.take(1),
+    pull.map( kv => kv.value.content.revisionRoot || kv.key),
+    pull.collect( (err, results) => {
+      if (err) return console.error(err)
+      if (results.length<1) return console.error('No about message found')
+      profile.set(results[0])
+    })
+  )
+  getAvatar(ssb, feed, feed, (err, result) => {
+    if (err) console.error(err)
+    if (!result.image) return
+    avatar.set({
+      name: result.name,
+      imageUrl:`${config.blobsRoot}/${result.image}`
+    })
+  })
+}
 
 module.exports = function(config, cb) {
   const root = config.sbot.cms && config.sbot.cms.root
@@ -50,76 +106,42 @@ module.exports = function(config, cb) {
   let me = Value()
   let sbot = Value()
 
-  /*
-  ssbClient(config.keys, {
-    caps: config.sbot.caps,
-    remote: config.sbotAddress,
-    timers: {handshake: 30000},
-    manifest: config.manifest
-  */
-  require('ssb-electroparty/client')(function (err, ssb) {
-    if (err) {
-      document.body.classList.remove('hide')
-      document.body.innerHTML = `<pre>
-      ssb-client says: "${err.message}"
-      If you have not done already, please add your public key to sbot's master array:
+  drafts = Drafts(root)
 
-      "master": [
-        "@${config.keys.public}"
-      ]
-
-      in ~/.${config.sbot.appName + '/config'}
-
-
-      (the above is not an example, it is your actual public key)
-
-      Then restart sbot and reload this page. Hopefully you won't see this message again.
-
-      </pre>`
-      cb(err)
-      throw err
-    }
-
-    drafts = Drafts(root)
-    ssb.cms = DB(ssb, drafts, root)
-
-    sbot.set(ssb)
-    ssb.whoami( (err, feed)=> {
-      if (err) throw err
-      me.set(feed.id)
-    })
+  sbot( ssb => {
+    console.log('got sbot', ssb)
+    if (ssb) {
+      ssb.whoami( (err, feed)=> {
+        if (err) throw err
+        me.set(feed.id)
+      })
+    } 
   })
 
-  let avatar = Value({defaultValue: {name: "", imageUrl: ""}})
-  me( feed => {
-    config.avatar = avatar
-    config.feedId = feed
-    config.profile = Value()
-    pull(
-      sbot().createUserStream({id: feed, reverse: true}),
-      pull.filter( kv => kv.value.content && kv.value.content.type === 'about'),
-      pull.filter( kv => kv.value.content && kv.value.content.about === feed),
-      pull.take(1),
-      pull.map( kv => kv.value.content.revisionRoot || kv.key),
-      pull.collect( (err, results) => {
-        if (err) return console.error(err)
-        if (results.length<1) return console.error('No about message found')
-        config.profile.set(results[0])
-      })
-    )
-    getAvatar(sbot(), feed, feed, (err, result) => {
-      if (err) console.error(err)
-      if (!result.image) return
-      avatar.set({
-        name: result.name,
-        imageUrl:`${config.blobsRoot}/${result.image}`
-      })
-    })
-  })
+  getOrCreateSbotClient(sbot, drafts, root)
 
-  let unsubscribe = me( (feed) => {
+  // profile and avatar
+  let avatar = config.avatar = Value({defaultValue: {name: "", imageUrl: ""}})
+  let profile = config.profile = Value()
+  if (!config.sbot.cms.kiosk && !window.frameElement) {
+    me( feed => {
+      getProfileData(sbot(), config.blobsRoot, feed, avatar, profile)
+    })
+  }
+
+  let unsubscribe = me( feed => {
     unsubscribe()
+    config.feedId = feed
     const ssb = sbot()
+
+    // decorate ssb.cms API with object DB methods (if not present already)
+    if (!ssb.cms.getReduced) {
+      console.warn('Decorating ssb.cms with objectdb methods.')
+      const ObjectDB = require('./object-db')
+      Object.assign(ssb.cms, ObjectDB(ssb, drafts, root), {update})
+    } else {
+      console.warn('Not decorating ssb.cms with objectdb methods.')
+    }
 
     // if we are in an iframe, tell
     // parent frame when we detect user interaction,
@@ -221,7 +243,6 @@ module.exports = function(config, cb) {
       }
     })
 
-    Object.assign(ssb.cms, ObjectDB(ssb, drafts, root), {update})
     const editor = Editor(editorContainer, ssb, config)
 
     let mode = 0
