@@ -42,6 +42,7 @@
     "pull-level": "^2.0.3",
     "pull-many": "^1.0.8",
     "pull-pushable": "^2.1.1",
+    "pull-ric": "^0.1.0",
     "pull-stream": "^3.6.0",
     "raf": "^3.3.2",
     "setimmediate": "^1.0.5",

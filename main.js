@@ -439,7 +439,7 @@ module.exports = function(config, cb) {
       let propPath = kp.slice(kp.indexOf(msgId) + 1)
       console.log('prop path', propPath)
 
-      ssb.cms.getLatest(msgId, {keys: true}, (err, kv) => {
+      ssb.cms.getLatest(msgId, {keys: true, maxAge: 0}, (err, kv) => {
         if (err) return cb(err)
         console.log('kv', kv)
         
