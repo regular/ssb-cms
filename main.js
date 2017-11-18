@@ -24,7 +24,7 @@ const modes = ['normal', 'translucent', 'no-ui']
 
 document.body.classList.add('hide')
 
-function getOrCreateSbotClient(sbot, drafts, root) {
+function getOrCreateSbotClient(config, sbot, drafts, root) {
   if (parent && parent.ssb) {
     console.warn('Found sbot client on parent object')
     return sbot.set(parent.ssb)
@@ -118,7 +118,7 @@ module.exports = function(config, cb) {
     } 
   })
 
-  getOrCreateSbotClient(sbot, drafts, root)
+  getOrCreateSbotClient(config, sbot, drafts, root)
 
   // profile and avatar
   let avatar = config.avatar = Value({defaultValue: {name: "", imageUrl: ""}})
@@ -247,7 +247,13 @@ module.exports = function(config, cb) {
 
     let mode = 0
     function setMode(newMode) {
-      document.body.classList.remove('hide')
+      if (config.sbot.cms.kiosk && newMode === 2 && !window.frameElement) {
+        // if we are the parent in a kisok and we are started without a UI,
+        // we do not remove hide class from body. We leave this
+        // to custom code, to aboid flickering
+      } else {
+        document.body.classList.remove('hide')
+      }
       document.body.classList.remove(modes[mode])
       document.body.classList.add(modes[newMode])
       if (newMode === 0) {
@@ -613,7 +619,7 @@ module.exports.css = function() {
     overflow: hidden;
   }
   body.hide {
-    background: #002833
+    background: #000000;
   }
   body.hide>*{
     display: none
