@@ -146,7 +146,8 @@ module.exports = function updates(opts) {
   function flush() {
     if (doBuffer) {
       log('update-stream: unbuffering')
-      Object.values(children).forEach( c => {
+      Object.keys(children).forEach( k => {
+        let c = children[k]
         let heads = sortHeads(c.heads)
         let rev = heads.reverse()[0]
         push(Object.assign({revision: rev}, c)) 
@@ -218,8 +219,11 @@ module.exports = function updates(opts) {
           // This is a request to remove a draft
           // type === 'del' events have no `value` and therefor no
           // revRoot. We need to find the child that has this draft as a head
-          let entry = Object.entries(children).find( ([k,v])=>includesAll(key, Object.keys(v.heads)) )
-          if (!entry) throw Error("Can't find child with draft", key)
+          let entry = Object.keys(children).map(k=>[k,children[k]]).find( ([k,v])=>includesAll(key, Object.keys(v.heads)) )
+          if (!entry) {
+            console.error("Can't find child with draft", key)
+            return
+          } 
           child = entry[1]
           console.log('US: del in', child)
         }
