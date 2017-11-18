@@ -423,7 +423,8 @@ module.exports = function(ssb, drafts, root, view) {
   // if we are a kisok system, we only do auto updates
   // and blobs
   if (config.sbot.cms.kiosk) {
-    const needToCheckBlobs = true
+    const needToCheckBlobs = sessionStorage.getItem('enumerateBlobs') !== 'false'
+    sessionStorage.removeItem('enumerateBlobs')
 
     // and on silent restarts, we dont even do blobs
     if (!needToCheckBlobs) {
