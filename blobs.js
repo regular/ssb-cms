@@ -30,8 +30,10 @@ module.exports = function Blobs(ssb, blobs, blobBytes, blobRefs, blobsPresent) {
   let refList = []
 
   const updateStuff = rateLimit(230, ()=>{ 
+    if (!synced) return
     blobBytes.set(totalSize)
     blobsPresent.set(present)
+    blobRefs.set(refs)
 
     if (!window.frameElement) {
       const event = new CustomEvent('blobs-progress', { detail: present / refs }); 
@@ -46,28 +48,35 @@ module.exports = function Blobs(ssb, blobs, blobBytes, blobRefs, blobsPresent) {
       sizeObs[blob].set(size || 'zero')
       totalSize += size
       ++present
-      if (synced) updateStuff()
+      updateStuff()
     })
   }
 
-  pull(
-    ssb.blobs.ls(),
-    pull.drain( blob => {
-      if (!sizeObs[blob]) {
-        sizeObs[blob] = Value('...')
-        getSize(blob)
+  let blobsLs
+  return pull(
+    pull.asyncMap( (kv, cb) => {
+      if (typeof blobsLs === 'undefined') {
+        pull(
+          ssb.blobs.ls(),
+          pull.collect( (err, ls) =>{
+            if (err) console.error(err)
+            blobsLs = ls || []
+            cb(null, kv)
+          } )
+        )
+      } else {
+        cb(null, kv)
       }
-    } )
+    }),
+    pull.through( processBlobReferences )
   )
 
-  return function processBlobReferences(kv) {
+  function processBlobReferences(kv) {
   
     if (kv.sync) {
       if (!synced) {
         synced = true
-        blobRefs.set(refs)
-        blobBytes.set(totalSize)
-        blobsPresent.set(present)
+        updateStuff()
         blobs.set(refList)
         console.log('BLOBS synced')
       }
@@ -81,21 +90,20 @@ module.exports = function Blobs(ssb, blobs, blobBytes, blobRefs, blobsPresent) {
         if (newBlob) {
           knownBlobs.add(blob)
           refs++
-          if (synced) blobRefs.set(refs)
+          updateStuff()
           
           if (!sizeObs[blob]) {
             sizeObs[blob] = Value('...')
 
-            ssb.blobs.has(blob, (err, gotit) => {
-              if (err) return sizeObs[blob].set(err.message)
-              if (gotit) return getSize(blob)
-
+            if (blobsLs.includes(blob)) {
+              getSize(blob)
+            } else {
               sizeObs[blob].set('wanted ...')
               ssb.blobs.want(blob, err => {
                 if (err) return sizeObs[blob].set(err.message)
                 getSize(blob)
               })
-            })
+            }
 
           }
         }
@@ -111,7 +119,6 @@ module.exports = function Blobs(ssb, blobs, blobBytes, blobRefs, blobsPresent) {
           }
         })
         if (synced) blobs.set(refList)
-
       }
     })
   }

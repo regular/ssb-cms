@@ -41,7 +41,7 @@ module.exports = function(ssb, drafts, root, view) {
 
   let version = Value('dev')
 
-  let ready = computed([isSynced, blobRefs, blobsPresent], (s, r, p) => s && r === p)
+  //let ready = computed([isSynced, blobRefs, blobsPresent], (s, r, p) => s && r === p)
 
   let peers = MutantDict()
   let peerCount = Value()
@@ -211,10 +211,12 @@ module.exports = function(ssb, drafts, root, view) {
       h('span', [
         'Blobs:',
         h('span', [' ', blobsPresent, ' / ', blobRefs, ' (', computed([blobBytes], b => prettyBytes(b)), ')']),
+        /*
         h('span', { style: {
           color: computed([ready], r => r ? 'green' : 'red')
         } },
         computed([ready], r => r ? '✓' : '⌛ '))
+        */
       ])
     ])
   }
@@ -308,7 +310,7 @@ module.exports = function(ssb, drafts, root, view) {
       pull.through( kv => revision(kv.key, true) ),
       updates({sync: true, bufferUntilSync: true}),
       pull.through( AutoUpdate() ),
-      pull.through( Blobs(ssb, blobs, blobBytes, blobRefs, blobsPresent) ),
+      Blobs(ssb, blobs, blobBytes, blobRefs, blobsPresent),
       pull.filter( x => {
         if (x.sync) {
           console.log('watch synced')
@@ -354,8 +356,6 @@ module.exports = function(ssb, drafts, root, view) {
     )
   }
 
-
-
   function watchPeers() {
     sbotConnect.set(true)
     pull(
@@ -398,7 +398,7 @@ module.exports = function(ssb, drafts, root, view) {
         let newCodeBlobUrl = `${config.blobsRoot}/${kv.value.content.code}`
         //console.log('newCodeBlobUrl', newCodeBlobUrl)
         if (currentCodeBlobUrl === newCodeBlobUrl) {
-          console.log('Found currently running client code message', kv.key)
+          console.warn('Found currently running client code message', kv.key)
           author = kv.value.author
           sequence = kv.value.sequence
           version.set(`${sequence} (${kv.key.substr(1,6)})`)
@@ -415,12 +415,56 @@ module.exports = function(ssb, drafts, root, view) {
     }
   }
 
-  watchPeers()
-  watchDrafts()
-  watchMessages(root)
+  // inside frames, we dont do anything
+  if (window.frameElement) {
+    return h('div')
+  }
+
+  // if we are a kisok system, we only do auto updates
+  // and blobs
+  if (config.sbot.cms.kiosk) {
+    const needToCheckBlobs = true
+
+    // and on silent restarts, we dont even do blobs
+    if (!needToCheckBlobs) {
+      const event = new CustomEvent('blobs-progress', { detail: 1.0 }); 
+      document.body.dispatchEvent(event)
+
+      pull(
+        ssb.messagesByType({
+          live: true,
+          sync: true,
+          type: 'client-update',
+          keys: true,
+          values: true
+        }),
+        pull.through( AutoUpdate() ),
+        pull.drain()
+      )
+    } else {
+      pull(
+        ssb.links({
+          live: true,
+          sync: true,
+          rel: 'root',
+          dest: root,
+          keys: true,
+          values: true
+        }),
+        pull.through( AutoUpdate() ),
+        updates({sync: true, bufferUntilSync: true}),
+        Blobs(ssb, blobs, blobBytes, blobRefs, blobsPresent),
+        pull.drain()
+      )
+    }
+  } else {
+    watchPeers()
+    watchDrafts()
+    watchMessages(root)
+  }
 
   let ret = html()
-  ret.ready = ready 
+  //ret.ready = ready 
   return ret
 }
 
