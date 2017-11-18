@@ -67,13 +67,13 @@ function getProfileData(ssb, config, feed, avatar, profile) {
     pull.map( kv => kv.value.content.revisionRoot || kv.key),
     pull.collect( (err, results) => {
       if (err) return console.error(err)
-      if (results.length<1) return console.error('No about message found')
+      if (results.length<1) return console.warn('No about message found')
       profile.set(results[0])
     })
   )
   getAvatar(ssb, feed, feed, (err, result) => {
-    if (err) console.error(err)
-    if (!result.image) return
+    if (err) return console.error(err)
+    if (!result.image) return console.warn('No profile image found')
     avatar.set({
       name: result.name,
       imageUrl:`${config.blobsRoot}/${result.image}`
@@ -125,7 +125,7 @@ module.exports = function(config, cb) {
   let profile = config.profile = Value()
   if (!config.sbot.cms.kiosk && !window.frameElement) {
     me( feed => {
-      getProfileData(sbot(), config.blobsRoot, feed, avatar, profile)
+      getProfileData(sbot(), config, feed, avatar, profile)
     })
   }
 
@@ -312,13 +312,14 @@ module.exports = function(config, cb) {
       }
       console.log('FROM URL:', revRoot, rev)
       if (!revRoot || ref.isMsg(revRoot) || isDraft(revRoot)) {
-        let unsubscribe = revs.ready( (ready)=>{
+        let unsubscribe = revs.ready( ready => {
           if (ready) {
             if (rev && (ref.isMsg(rev) || isDraft(rev)) ) {
               revs.selection.set(rev)
             } else if (revRoot) {
              ssb.cms.getLatest(revRoot, {keys: true}, (err, kv) => {
                if (err) return console.error(err)
+               console.warn('aaa', err, kv)
                revs.selection.set(kv && kv.revision)
              })
             }
@@ -481,17 +482,16 @@ module.exports = function(config, cb) {
     // TODO: move this into its own file
     function FullscreenPreview(container) {
       let unsubscribe
+      let current
       return function update(key) {
-        //console.log('1 Rendering FS preview', key)
 
         function render() {
-          //console.log('2 Rendering FS preview', key)
-          //container.innerHTML = ''
           let oldChildren = [].slice.apply(container.children)
-          console.log('old screens', oldChildren)
-          ssb.cms.getReduced(key, (err, msg)=>{
-            //console.log('FS Preview: reduced', err, msg)
-            if (err) throw err  
+          ssb.cms.getReduced(key, (err, msg) => {
+            if (err) return console.error(err)  
+            let fingerprint = JSON.stringify(msg)
+            if (current === fingerprint) return
+            current = fingerprint
             let el = editor.renderPreviewEditor(msg, [key])
             container.appendChild(el)
             setTimeout( ()=>{
@@ -501,7 +501,6 @@ module.exports = function(config, cb) {
             }, 150)
           })
         }
-        //render()
 
         if (unsubscribe) unsubscribe()
         // TODO: it is not enough to just observe
@@ -517,12 +516,12 @@ module.exports = function(config, cb) {
         // degrading performace
         // We switch off realtime updates
         // in kiosk mode here
-        if (!config.sbot.cms.kiosk) {
-          unsubscribe = obs( kv => {
-            //console.log('FS preview: object changed', kv)
-            render()
-          })
-        }
+        //if (!config.sbot.cms.kiosk) {
+        unsubscribe = obs( kv => {
+          //console.log('FS preview: object changed', kv)
+          render()
+        })
+        //}
       }
     }
 
