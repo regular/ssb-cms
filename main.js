@@ -183,7 +183,9 @@ module.exports = function(config, cb) {
     })
 
     let uiContainer = h('.ui')
-    let fullscreenPreviewEl = h('.fullscreen-preview')
+    let fullscreenPreviewEl = h('.fullscreen-preview', {
+      classList: config.sbot.cms.kiosk ? ['kiosk'] : []
+    })
     document.body.appendChild(fullscreenPreviewEl)
     let fullscreenPreview = FullscreenPreview(fullscreenPreviewEl)
 
