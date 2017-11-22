@@ -1,8 +1,12 @@
 const test = require('tape')
 const pull = require('pull-stream')
-const s = require('../update-stream')
-const {includesAll, replace, append} = s
+const Updates = require('../update-stream')
+const {includesAll, replace, append} = Updates
 const {inspect} = require('util')
+
+function s(opts) {
+  return Updates([])(Object.assign({allowUntrusted: true}, opts))
+}
 
 test('includesAll', (t)=>{
   t.ok(includesAll(1, 1))
@@ -1398,6 +1402,100 @@ test('mxv(ns8), cg2(mxv), vec(mtx), ns8(vec)', (t)=>{
         ]
       )
       console.log(updates)
+      t.end()
+    })
+  )
+})
+
+
+test('Filter updates by untrusted feeds', (t)=>{
+  const kvs = [
+    { key: 'a', value: {
+        author: 'good',
+        content: {
+          text: 'hello'
+    } } },
+    { key: 'b', value: {
+        author: 'bad',
+        content: {
+          text: 'world'
+    } } }
+  ]
+  pull(
+    pull.values(kvs),
+    Updates(['good'])(),
+    pull.collect( (err, updates) => {
+      t.notOk(err)
+      t.equal(updates.length, 1)
+      t.deepEqual(updates[0].value.content, {
+        text: "hello"
+      })
+      t.deepEqual(heads(updates[0]), ['a'])
+      t.end()
+    })
+  )
+})
+
+test('Do not filter updates by untrusted feeds, if allowUntrusted is true', (t)=>{
+  const kvs = [
+    { key: 'a', value: {
+        author: 'good',
+        content: {
+          text: 'hello'
+    } } },
+    { key: 'b', value: {
+        author: 'bad',
+        content: {
+          text: 'world'
+    } } }
+  ]
+  pull(
+    pull.values(kvs),
+    Updates(['good'])({allowUntrusted: true}),
+    pull.collect( (err, updates) => {
+      t.notOk(err)
+      t.equal(updates.length, 2)
+      t.deepEqual(updates[0].value.content, {
+        text: "hello"
+      })
+      t.deepEqual(updates[1].value.content, {
+        text: "world"
+      })
+      t.end()
+    })
+  )
+})
+
+test('new a (bad), rev a1 (good)', (t)=>{
+  const kvs = [
+    { key: 'a', value: {
+        author: 'bad',
+        content: {
+          text: 'hello'
+    } } },
+    { key: 'a1', value: {
+        author: 'good',
+        content: {
+          revisionRoot: 'a',
+          revisionBranch: 'a',
+          text: 'world'
+    } } }
+  ]
+  pull(
+    pull.values(kvs),
+    Updates(['good'])(),
+    pull.collect( (err, updates) => {
+      t.notOk(err)
+      t.equals(updates.length, 1)
+
+      t.equal(updates[0].key, 'a')
+      t.deepEqual(updates[0].value.content, {
+        revisionRoot: 'a',
+        revisionBranch: 'a',
+        text: "world"
+      })
+      t.deepEqual(heads(updates[0]), ['a1'])
+
       t.end()
     })
   )

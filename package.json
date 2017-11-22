@@ -44,6 +44,7 @@
     "pull-pushable": "^2.1.1",
     "pull-ric": "^0.1.0",
     "pull-stream": "^3.6.0",
+    "pull-tee": "^2.0.1",
     "raf": "^3.3.2",
     "setimmediate": "^1.0.5",
     "ssb-avatar": "^0.2.0",

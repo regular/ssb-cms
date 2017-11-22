@@ -61,7 +61,7 @@ function updateObservableMessages(container, opts, cb) {
       } else console.error('Request to delete non-existing child', key)
       return
     } else if (kv.type === 'revert') {
-      if (kv.remove !== currentRevisions[kv.key]) throw new Error('revert to inknow revision')
+      if (kv.remove !== currentRevisions[kv.key]) throw new Error('revert to unknow revision')
       kv.revision = previousRevisions[kv.key]
     }
 

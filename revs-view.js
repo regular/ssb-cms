@@ -16,7 +16,7 @@ const lru = require('hashlru')
 const {isDraft, arr} = require('./util')
 const SortStream = require('./sort-stream')
 
-module.exports = function(ssb, drafts, me, blobsRoot) {
+module.exports = function(ssb, drafts, me, blobsRoot, trusted_keys) {
 
   let getAvatar = memo({cache: lru(50)}, function (id, cb) {
     ssbAvatar(ssb, me, id, (err, about)=>{
@@ -79,7 +79,9 @@ module.exports = function(ssb, drafts, me, blobsRoot) {
         style: {
           'background-image': computed([authorAvatarUrl], (u)=>`url("${u}")`)
         }
-      }),
+      }, [
+        ...(trusted_keys.includes(feedId) ? [h('span.trusted')] : [])
+      ]),
       h('span.author', authorName),
       h('span.timestamp', htime(new Date(entry.value.timestamp))),
       h('span.node', 

@@ -1,7 +1,7 @@
 const pull = require('pull-stream')
 
 const {arr} = require('./util')
-const updateStream = require('./update-stream')
+const updateStream = require('./update-stream')() // no trusted keys
 const DB = require('./db')
 
 function insert(key, kv, entries, pos) {
@@ -53,6 +53,7 @@ module.exports = function(ssb, drafts) {
       updateStream({
         live: true,
         sync: true,
+        allowUntrusted: true,
         allRevisions: true,
         bufferUntilSync: false
       }),

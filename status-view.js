@@ -15,15 +15,16 @@ const bus = require('./bus')
 
 const pull = require('pull-stream')
 const cat = require('pull-cat')
+const tee = require('pull-tee')
 const prettyBytes = require('pretty-bytes')
-const updates = require('./update-stream')
+const Updates = require('./update-stream')
 const config = require('./cms-config')
 const {isDraft} = require('./util')
 const Blobs = require('./blobs')
 
 let updateAvailable = Value(false)
 
-module.exports = function(ssb, drafts, root, view) {
+module.exports = function(ssb, drafts, root, view, trusted_keys) {
   let sbotConnect = Value(true)
 
   let isSynced = Value()
@@ -103,6 +104,22 @@ module.exports = function(ssb, drafts, root, view) {
     ])
   )
 
+  let untrustedObs = MutantDict()
+  view.appendChild(
+    h('section.untrusted', [
+      h('h2', 'Revisions that need to be signed off'),
+      h('table', computed([untrustedObs], msgs  => {
+        return Object.keys(msgs).map( k => {
+          let kv = msgs[k]
+          let content = kv.value && kv.value.content 
+          return h('tr', [
+            h('td', h('a', {href: `#${k}`}, (content && `${content.type || 'no type'} ${content.name || 'no name'}`) || 'no name')),
+            h('td', `${kv.value.author}`)
+          ])
+        })
+      }))
+    ])
+  )
   let forkedObjectsObs = MutantDict()
   view.appendChild(
     h('section.forks', [
@@ -273,6 +290,27 @@ module.exports = function(ssb, drafts, root, view) {
     )
   }
 
+  function Untrusted() {
+    let untrustedMessages = {}
+    let sync = false
+    return pull.through( kv => {
+      if (kv.sync) {
+        untrustedObs.set(untrustedMessages)
+        sync = true
+        return
+      }
+      let key = kv.key
+      if (trusted_keys.includes(kv.value.author)) {
+        delete untrustedMessages[key]
+      } else {
+        untrustedMessages[key] = kv
+      }
+      if (sync) {
+        untrustedObs.set(untrustedMessages)
+      }
+    })
+  }
+
   function watchMessages(root) {
     let synced = false
 
@@ -308,7 +346,14 @@ module.exports = function(ssb, drafts, root, view) {
         values: true
       }),
       pull.through( kv => revision(kv.key, true) ),
-      updates({sync: true, bufferUntilSync: true}),
+      tee(
+        pull(
+          Updates(trusted_keys)({sync: true, allRevisions: true, bufferUntilSync: false}),
+          Untrusted(),
+          pull.drain()
+        )
+      ),
+      Updates(trusted_keys)({sync: true, bufferUntilSync: true}),
       pull.through( AutoUpdate() ),
       Blobs(ssb, blobs, blobBytes, blobRefs, blobsPresent),
       pull.filter( x => {

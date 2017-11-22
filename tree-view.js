@@ -14,12 +14,12 @@ const resolve = require('mutant/resolve')
 const pull = require('pull-stream')
 const ref = require('ssb-ref')
 
-const updates = require('./update-stream')
+const updates = require('./update-stream')() // no trusted keys
 const {updateObservableMessages} = require('./message-cache')
 const {isDraft} = require('./util')
 const config = require('./cms-config')
 
-module.exports = function(ssb, drafts, root) {
+module.exports = function(ssb, drafts, root, trusted_keys) {
 
   let selection = Value()
   let ready = Value(false)
@@ -101,6 +101,7 @@ module.exports = function(ssb, drafts, root) {
             ]),
             when(node.unsaved, h('span', {title: 'draft'}, '✎')),
             when(node.forked, h('span', {title: 'conflicting updates, plese merge'}, '⑃')),
+            when(computed([node.msg], v => trusted_keys.includes(v.author)), h('span.trusted', {title: 'Signed-off'})),
             //when(node.incomplete, h('span', {title: 'incomplete history'}, '⚠')),
             h('span.buttons', [
               h('button.id', {
@@ -122,7 +123,12 @@ module.exports = function(ssb, drafts, root) {
     let drain
     pull(
       ssb.cms.branches(root, {live: true, sync: true}),
-      updates({live: true, sync: true, bufferUntilSync: true}),
+      updates({
+        allowUntrusted: true,
+        live: true,
+        sync: true,
+        bufferUntilSync: true
+      }),
       pull.filter( x=>{
         if (x.sync) syncedCb(null)
         return !x.sync

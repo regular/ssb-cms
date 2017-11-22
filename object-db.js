@@ -6,7 +6,7 @@ const ProxyDict = require('mutant/proxy-dict')
 const Value = require('mutant/value')
 const MutantArray = require('mutant/array')
 const ProxyCollection = require('mutant/proxy-collection')
-const updatesStream = require('./update-stream')
+const UpdatesStream = require('./update-stream')
 const {cacheAndIndex} = require('./message-cache')
 const ric = require('pull-ric')
 const batch = require('pull-batch')
@@ -45,7 +45,8 @@ function CachedGetter(defaultMaxAge, current, processValue) {
 }
 
 
-module.exports = function(ssb, drafts, root) {
+module.exports = function(ssb, drafts, root, trusted_keys) {
+  const updatesStream = UpdatesStream(trusted_keys)
 
   const _getChildren = CachedGetter(
     MAXAGE,
@@ -171,12 +172,12 @@ module.exports = function(ssb, drafts, root) {
         }
         return true
       }),
-      updatesStream({live: true, sync: true, bufferUntilSync: true}),
+      updatesStream({live: true, sync: true/*, bufferUntilSync: true*/}),
       pull.filter( x => {
         if (x.sync) {
           console.warn('flushcb')
           synced = true
-          flushCBs()
+          setImmediate(flushCBs)
         }
         return !x.sync
       }),

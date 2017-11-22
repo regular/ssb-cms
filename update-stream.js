@@ -113,7 +113,7 @@ function sortHeads(heads) {
   })
 }
 
-module.exports = function updates(opts) {
+function updates(opts) {
   opts = opts || {}
   let children = {}
   let ignore = []
@@ -373,6 +373,24 @@ module.exports = function updates(opts) {
   return through
 }
 
+module.exports = function(trusted_keys) {
+  trusted_keys = trusted_keys || []
+  console.warn(`List of trusted keys contains ${trusted_keys.length} entries`)
+  return function(opts) {
+    opts = opts || {}
+    return pull(
+      updates(opts),
+      pull.filter( kv => {
+        if (kv.sync) return true
+        if (opts.allowUntrusted) return true
+        return trusted_keys.includes(kv.value.author)
+      })
+    )
+  }
+}
+
+// for testing
 module.exports.includesAll = includesAll
 module.exports.replace = replace
 module.exports.append = append
+

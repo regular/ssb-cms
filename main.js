@@ -81,7 +81,7 @@ function getProfileData(ssb, config, feed, avatar, profile) {
   })
 }
 
-module.exports = function(config, cb) {
+module.exports = function(config, trusted_keys, cb) {
   const root = config.sbot.cms && config.sbot.cms.root
   if (!root) throw new Error('Please specify a root node in your config. See ssb-cms README.md for details.')
 
@@ -138,7 +138,7 @@ module.exports = function(config, cb) {
     if (!ssb.cms.getReduced) {
       console.warn('Decorating ssb.cms with objectdb methods.')
       const ObjectDB = require('./object-db')
-      Object.assign(ssb.cms, ObjectDB(ssb, drafts, root), {update})
+      Object.assign(ssb.cms, ObjectDB(ssb, drafts, root, trusted_keys), {update})
     } else {
       console.warn('Not decorating ssb.cms with objectdb methods.')
     }
@@ -286,14 +286,14 @@ module.exports = function(config, cb) {
     let status
     // save us the effort of message traversal and blob enumeration
     if (!window.frameElement) {
-      status = Status(ssb, drafts, root, statusView)
+      status = Status(ssb, drafts, root, statusView, trusted_keys)
       menubar.querySelector('.middle').appendChild(status)
     }
 
-    const tree = Tree(ssb, drafts, root)
+    const tree = Tree(ssb, drafts, root, trusted_keys)
     treeColumn.appendChild(tree)
 
-    const revs = Revs(ssb, drafts, me(), config.blobsRoot)
+    const revs = Revs(ssb, drafts, me(), config.blobsRoot, trusted_keys)
     revisionsColumn.appendChild(h('.revs-container', revs))
 
     let isNewDraft = computed([tree.selection], isDraft)
@@ -322,6 +322,7 @@ module.exports = function(config, cb) {
       if (!revRoot || ref.isMsg(revRoot) || isDraft(revRoot)) {
         let unsubscribe = revs.ready( ready => {
           if (ready) {
+            unsubscribe()
             if (rev && (ref.isMsg(rev) || isDraft(rev)) ) {
               revs.selection.set(rev)
             } else if (revRoot) {
@@ -331,7 +332,6 @@ module.exports = function(config, cb) {
                revs.selection.set(kv && kv.revision)
              })
             }
-            unsubscribe()
           }
         })
         revs.root.set(revRoot)
@@ -519,17 +519,12 @@ module.exports = function(config, cb) {
           render()
         })
 
-        // TODO: this is a quickfix
-        // stations were rendered multiple times
-        // degrading performace
-        // We switch off realtime updates
-        // in kiosk mode here
-        //if (!config.sbot.cms.kiosk) {
-        unsubscribe = obs( kv => {
-          //console.log('FS preview: object changed', kv)
-          render()
-        })
-        //}
+        if (obs) {
+          unsubscribe = obs( kv => {
+            //console.log('FS preview: object changed', kv)
+            render()
+          })
+        }
       }
     }
 
