@@ -348,7 +348,7 @@ module.exports = function(ssb, drafts, root, view, trusted_keys) {
       pull.through( kv => revision(kv.key, true) ),
       tee(
         pull(
-          Updates(trusted_keys)({sync: true, allRevisions: true, bufferUntilSync: false}),
+          Updates(trusted_keys)({sync: true, allowUntrusted: true, bufferUntilSync: true}),
           Untrusted(),
           pull.drain()
         )
