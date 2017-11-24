@@ -151,6 +151,11 @@ module.exports = function(trusted_keys) {
               })
             }
           } else {
+            if (isDraft(kv.key)) {
+              // if this is a draft, the same revision draft might already
+              // be in the array
+              slot.revisions = slot.revisions.filter( kv => kv.key !== key )
+            }
             slot.revisions.push(kv)
           }
           if (doBuffer) return
