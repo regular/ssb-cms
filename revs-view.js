@@ -16,6 +16,18 @@ const lru = require('hashlru')
 const {isDraft, arr} = require('./util')
 const SortStream = require('./sort-stream')
 
+function markHeads(entries) {
+  const o = {}
+  entries.forEach( e => {
+    e.isHead = true
+    o[e.key] = e
+  })
+  entries.forEach( e => {
+    let revBranch = e.value.content && e.value.content.revisionBranch
+    if (revBranch && o[revBranch]) o[revBranch].isHead = false
+  })
+}
+
 module.exports = function(ssb, drafts, me, blobsRoot, trusted_keys) {
 
   let getAvatar = memo({cache: lru(50)}, function (id, cb) {
@@ -54,7 +66,7 @@ module.exports = function(ssb, drafts, me, blobsRoot, trusted_keys) {
       return { 'ev-click': send( e => handler.apply(e, args) ) }
     }
 
-    let feedId = isDraft(entry.id) ? me : entry.value.author
+    let feedId = isDraft(entry.key) ? me : entry.value.author
     let authorAvatarUrl = Value(null, {defaultValue: ""})
     let authorName = Value(null, {defaultValue: feedId.substr(0,6)})
     getAvatar(feedId, (err, avatar) =>{
@@ -63,7 +75,7 @@ module.exports = function(ssb, drafts, me, blobsRoot, trusted_keys) {
       authorName.set(avatar.name)
     })
 
-    return h(`div.rev${isDraft(entry.key) ? '.draft' : ''}`, {
+    return h(`div.rev${isDraft(entry.key) ? '.draft' : ''}${entry.isHead ? '.head' : ''}`, {
       classList: computed([selection], sel => sel === entry.key ? ['selected'] : []),
       'ev-click': e => {
         document.location.hash = `#${root()}:${entry.key}`
@@ -85,7 +97,7 @@ module.exports = function(ssb, drafts, me, blobsRoot, trusted_keys) {
       ),
       ...(isDraft(entry.key) ? [h('span', {title: 'draft'}, '✎')] : []),
       h('span.buttons', [
-        ...(isDraft(entry.id) ? [h('button.discard', _click(discardDraft, [entry]), 'discard' )] : [])
+        ...(isDraft(entry.key) ? [h('button.discard', _click(discardDraft, [entry]), 'discard' )] : [])
       ])
     ])
   }
@@ -108,6 +120,7 @@ module.exports = function(ssb, drafts, me, blobsRoot, trusted_keys) {
           return syncCb(null, entries)
         }
         entries = _entries
+        markHeads(entries)
         if (synced) {
           mutantArray.set(entries)
           if (selectedLatest) {
@@ -178,6 +191,17 @@ module.exports.css = ()=> `
     flex-wrap: wrap;
     max-height: 32px;
     align-content: flex-start;
+  }
+  .rev.head {
+    border-width: 2px;
+    border-style: dotted;
+    border-color: rgba(0,0,0,0.1);
+    background: #e0e0ff;
+    margin-right: -1.2em;
+  }
+  .rev.head .node::after {
+    content: "⚈";
+    margin-left: .5em;
   }
   .rev.selected {
     color: #111110;
