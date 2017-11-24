@@ -123,11 +123,12 @@ module.exports = function(ssb, drafts, me, blobsRoot, trusted_keys) {
         sync: true,
         allowUntrusted: true,
         allRevisions: true,
-        bufferUntilSync: false
+        bufferUntilSync: true
       }),
       drain = pull.drain( kv =>{
         if (kv.sync) {
           synced = true
+          markHeads(entries)
           mutantArray.set(entries)
           return syncCb(null, entries)
         }
