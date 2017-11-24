@@ -13,8 +13,9 @@ const ssbAvatar = require('ssb-avatar')
 const memo = require('asyncmemo')
 const lru = require('hashlru')
 
+const DB = require('./db')
+const UpdateStream = require('./update-stream')
 const {isDraft, arr} = require('./util')
-const SortStream = require('./sort-stream')
 
 function markHeads(entries) {
   const o = {}
@@ -29,6 +30,8 @@ function markHeads(entries) {
 }
 
 module.exports = function(ssb, drafts, me, blobsRoot, trusted_keys) {
+  const db = DB(ssb, drafts)
+  const updateStream = UpdateStream([])
 
   let getAvatar = memo({cache: lru(50)}, function (id, cb) {
     ssbAvatar(ssb, me, id, (err, about)=>{
@@ -102,7 +105,6 @@ module.exports = function(ssb, drafts, me, blobsRoot, trusted_keys) {
     ])
   }
 
-  let sortStream = SortStream(ssb, drafts)
   let mutantArray = MutantArray()
   let selectedLatest = false
 
@@ -112,16 +114,26 @@ module.exports = function(ssb, drafts, me, blobsRoot, trusted_keys) {
     let entries
     let synced = false
     pull(
-      sortStream(id),
-      drain = pull.drain( _entries =>{
-        if (_entries.sync) {
+      db.revisions(id, {
+        live: true,
+        sync: true
+      }),
+      updateStream({
+        live: true,
+        sync: true,
+        allowUntrusted: true,
+        allRevisions: true,
+        bufferUntilSync: false
+      }),
+      drain = pull.drain( kv =>{
+        if (kv.sync) {
           synced = true
           mutantArray.set(entries)
           return syncCb(null, entries)
         }
-        entries = _entries
-        markHeads(entries)
+        entries = kv.revisions
         if (synced) {
+          markHeads(entries)
           mutantArray.set(entries)
           if (selectedLatest) {
             selection.set('latest')
