@@ -45,7 +45,7 @@ function updateObservableMessages(container, opts, cb) {
   if (!makeObservable) throw new Error('You need to pass makeObservable')
   if (!updateObservable) throw new Error('You need to pass updateObservable')
 
-  let currentRevisions = {} // needed to implement revert, because update-stream doesn't gice as the revision we revert to
+  let currentRevisions = {} // needed to implement revert, because update-stream doesn't give as the revision we revert to
   let previousRevisions = {}
 
   let ret = pull.drain( kv => {
