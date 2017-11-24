@@ -63,21 +63,15 @@ module.exports = function(ssb, drafts, me, blobsRoot, trusted_keys) {
       authorName.set(avatar.name)
     })
 
-    return h('div', {
-      classList: computed([selection, isDraft(entry.id)], (sel, draft) => {
-        //console.log('sel', sel)
-        let cl = ['rev']
-        if (sel === entry.id) cl.push('selected')
-        if (draft) cl.push('draft')
-        return cl
-      }),
-      'ev-click': function(e) {
-        document.location.hash = `#${root()}:${entry.id}`
+    return h(`div.rev${isDraft(entry.key) ? '.draft' : ''}`, {
+      classList: computed([selection], sel => sel === entry.key ? ['selected'] : []),
+      'ev-click': e => {
+        document.location.hash = `#${root()}:${entry.key}`
       }
     }, [
       h('div.avatar', {
         style: {
-          'background-image': computed([authorAvatarUrl], (u)=>`url("${u}")`)
+          'background-image': computed([authorAvatarUrl], u => `url("${u}")`)
         }
       }, [
         ...(trusted_keys.includes(feedId) ? [h('span.trusted')] : [])
@@ -87,12 +81,11 @@ module.exports = function(ssb, drafts, me, blobsRoot, trusted_keys) {
       h('span.node', 
         ((entry.value.content && entry.value.content.revisionBranch) ? 
         entry.value.content.revisionBranch.substr(0,6) + ' → ' : '⤜') +
-        entry.id.substr(0,6)
+        entry.key.substr(0,6)
       ),
-      when(isDraft(entry.id), h('span', {title: 'draft'}, '✎')),
-      // TODO when(entry.forked, h('span', {title: 'conflicting updates, plese merge'}, '⑃')),
+      ...(isDraft(entry.key) ? [h('span', {title: 'draft'}, '✎')] : []),
       h('span.buttons', [
-        when(isDraft(entry.id), h('button.discard', _click(discardDraft, [entry]), 'discard' ))
+        ...(isDraft(entry.id) ? [h('button.discard', _click(discardDraft, [entry]), 'discard' )] : [])
       ])
     ])
   }
@@ -102,7 +95,7 @@ module.exports = function(ssb, drafts, me, blobsRoot, trusted_keys) {
   let selectedLatest = false
 
   function streamRevisions(id, syncCb) {
-    //console.log('streaming sorted revisions of', id)
+    //console.log('streaming revisions of', id)
     let drain
     let entries
     let synced = false
@@ -121,15 +114,14 @@ module.exports = function(ssb, drafts, me, blobsRoot, trusted_keys) {
             selection.set('latest')
           }
         }
-      }, (err)=>{
-        if (err) throw err
-        console.log('stream ended', err)
+      }, err =>{
+        if (err) console.error('Revisions stream ends  with error', err)
       })
     )
     return drain.abort
   }
 
-  let containerEl = h('erevs', MutantMap(mutantArray, html))
+  let containerEl = h('revs', MutantMap(mutantArray, html))
   let abort
 
   selection( id => {
@@ -143,27 +135,9 @@ module.exports = function(ssb, drafts, me, blobsRoot, trusted_keys) {
     console.log('rev selected', id)
   })
 
-  /*
-  mutantArray( ma => {
-    console.log('MA changed, selection is', selection())
-    if (isDraft(selection())) {
-      // maybe the draft was replaced after piblishing?
-      let newSel = ma.find( node => node.value.content && node.value.content['from-draft'] === selection())
-      if (newSel) {
-        console.log('draft was replaced by', newSel)
-        selection.set(newSel.revision)
-      }
-    }
-    //if (selectedLatest) {
-     // selection.set('latest')
-    //}
-  })
-  */
-
   root( id => {
     if (currRoot === id) {
-      ready.set(true)
-      return
+      return ready.set(true)
     }
     //console.log('NEW rev root', id)
     currRoot = id
@@ -176,9 +150,9 @@ module.exports = function(ssb, drafts, me, blobsRoot, trusted_keys) {
     mutantArray.clear()
     if (!id) return
 
-    abort = streamRevisions(id, (err, entries)=>{
-      if (err) throw err
-      console.log('revisions synced')
+    abort = streamRevisions(id, err => {
+      if (err) console.error('streaming revisions failed with error', err)
+      else console.log('revisions synced')
       ready.set(true)
     })
   })
