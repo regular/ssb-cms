@@ -9,7 +9,6 @@ const ProxyCollection = require('mutant/proxy-collection')
 const UpdatesStream = require('./update-stream')
 const {cacheAndIndex} = require('./message-cache')
 const ric = require('pull-ric')
-const batch = require('pull-batch')
 const config = require('./cms-config')
 
 // in kisok mode we use a maxAge of 2 minutes per default
@@ -17,7 +16,7 @@ const config = require('./cms-config')
 const MAXAGE = config.sbot.cms.kiosk ? 120000 : 5000
 
 // Oberservables for "objects" (mutable ssb messages).
-// Wwarning: all messages are kept in memory, avoid mutliple instances
+// Wwarning: all revisions are kept in memory
 
 function CachedGetter(defaultMaxAge, current, processValue) {
   let cache = {}
@@ -105,7 +104,7 @@ module.exports = function(ssb, drafts, root, trusted_keys) {
     let syncCount = 2
 
     function flushCBs() {
-      // NOTE: no callbacks might be pushed
+      // NOTE: new callbacks might be pushed
       // while we process the queue
       while(cbs.length) {
         let {cb, opts, key, type, proxy} = cbs.shift()
@@ -131,7 +130,7 @@ module.exports = function(ssb, drafts, root, trusted_keys) {
           }
           cb(null, value)
         }
-        //console.log(`Seeing ${type} proxy`, obs)
+        console.log(`Setting ${type} proxy`, key)
         if (obs) proxy.set(obs)
       }
     }
@@ -152,16 +151,6 @@ module.exports = function(ssb, drafts, root, trusted_keys) {
           values: true
         })
       ]),
-      //batch(100),
-      /*
-      pull.asyncMap( (x, cb) => {
-        setTimeout( () => cb(null, x), 10)
-      }),
-      pull.through( arr => {
-        console.warn(arr.length)
-      }),
-      pull.flatten(),
-      */
       // in kiosk mode, we need fast startup and smooth
       // animations, in CMS mode, we need immediate, fresh data
       // right from the start
