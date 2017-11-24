@@ -3,7 +3,7 @@ const pull = require('pull-stream')
 const many = require('pull-many')
 const {isDraft} = require('./util')
 
-module.exports = function(ssb, drafts, root) {
+module.exports = function(ssb, drafts) {
 
   function getMessageOrDraft(id, cb) {
     //console.log('getting', id)

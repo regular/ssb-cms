@@ -21,7 +21,7 @@ const drafts = {
 ssbClient(keys, config, (err, ssb)=>{
   if (err) return console.error(err)
 
-  let db = DB(ssb, drafts, root)
+  let db = DB(ssb, drafts)
   pull(
     db.branches(branch),
     pull.filter( kv => kv.value.content.revisionRoot === revRoot ),

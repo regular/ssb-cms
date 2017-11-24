@@ -52,7 +52,7 @@ function getOrCreateSbotClient(config, sbot, drafts, root) {
       cb(err)
       throw err
     }
-    ssb.cms = DB(ssb, drafts, root)
+    ssb.cms = DB(ssb, drafts)
     window.ssb = ssb // for child iframes to share
     sbot.set(ssb)
   })
