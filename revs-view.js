@@ -49,8 +49,8 @@ module.exports = function(ssb, drafts, me, blobsRoot, trusted_keys) {
   let ready = Value(false)
 
   function discardDraft(node) {
-    drafts.remove(node.id, (err)=>{
-      if (err) throw err
+    drafts.remove(node.key, err => {
+      if (err) return console.error('Unable to delete draft', node.key, err)
       let hash = document.location.hash
       if (!isDraft(hash.substr(1))) { 
         if (hash.indexOf(':') !== -1) {
@@ -154,7 +154,7 @@ module.exports = function(ssb, drafts, me, blobsRoot, trusted_keys) {
     selectedLatest = false
     if (id === 'latest') {
       if (mutantArray.getLength() > 0) {
-        selection.set(mutantArray.get(mutantArray.getLength()-1).id)
+        selection.set(mutantArray.get(0).key)
       } else selection.set(null)
       selectedLatest = true
     }
