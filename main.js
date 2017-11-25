@@ -327,8 +327,7 @@ module.exports = function(config, trusted_keys, cb) {
               revs.selection.set(rev)
             } else if (revRoot) {
              ssb.cms.getLatest(revRoot, {keys: true}, (err, kv) => {
-               if (err) return console.error(err)
-               console.warn('aaa', err, kv)
+               if (err) return console.error('Error while getting latest revision of message referred to in URL', err)
                revs.selection.set(kv && kv.revision)
              })
             }
@@ -350,7 +349,10 @@ module.exports = function(config, trusted_keys, cb) {
             })
           } else {
             ssb.cms.getLatest(revRoot, (err, value) => {
-              if (err) throw err  // TODO
+              if (err) {
+                console.error('Error while getting latest revision of message referred to in URL to load into editor', err)
+                return loadIntoEditor('')
+              }
               let msgString = JSON.stringify(value, null, 2)
               loadIntoEditor(msgString)
             })
