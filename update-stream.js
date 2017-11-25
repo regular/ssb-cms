@@ -35,7 +35,7 @@ module.exports = function(trusted_keys) {
     let drain
 
     const out = pushable(true, function (err) {
-      if (err !== true) console.error('out stream closed by client!', err)
+      if (err) console.error('out stream closed by client!', err)
       drain.abort(err)
     })
 
@@ -94,10 +94,10 @@ module.exports = function(trusted_keys) {
           // too old
           if (newestTrusted && newestTrusted.value.timestamp > kv.value.timestamp) return
           // not trusted
-          if (!opts.allowUntrusted && !trusted_keys.includes(kv.value.author)) return links(kv.value, recurse)
+          if (!isDraft(kv.key) && !opts.allowUntrusted && !trusted_keys.includes(kv.value.author)) return links(kv.value, recurse)
           newestTrusted = kv
         }
-        if (opts.allowUntrusted || trusted_keys.includes(kv.value.author)) return kv
+        if (isDraft(kv.key) || opts.allowUntrusted || trusted_keys.includes(kv.value.author)) return kv
         links(kv.value, recurse)
         //console.log('trusted',kv,newestTrusted)
         return newestTrusted
@@ -143,10 +143,13 @@ module.exports = function(trusted_keys) {
           }
 
           if (kv.type === 'del') {
-            slot.revisions = slot.revisions.filter( kv => kv.key !== key )
+            const r = slot.revisions.find( kv => kv.key === key )
+            //console.warn('deletion in slot', slot, r)
+            slot.revisions = slot.revisions.filter( kv => kv !== r )
             if (slot.revisions.length === 0) {
               return push({
                 key: slot.key,
+                value: r.value,
                 type: 'del'
               })
             }

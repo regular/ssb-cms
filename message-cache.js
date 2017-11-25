@@ -86,8 +86,7 @@ function updateObservableMessages(container, opts, cb) {
 
     updateObservable(child, kv)
   }, cb || (err => {
-    if (err) throw err
-    console.log('stream ended', err)
+    if (err) console.error('updateObservableMessages: stream ended', err)
   }))
  
   return ret
