@@ -19,7 +19,6 @@ module.exports = function(ssb, opts) {
   const tag = opts.tag || 'div.text'
 
   return function render(value, kp) {
-    console.log('TEXT render', value, kp)
     if (!value) return console.error('rendering null')
     if (typeof kp === 'undefined') throw new Error('text renderer: no keypath!')
     const docLang = document.getElementsByTagName('html')[0].getAttribute('lang')
@@ -116,7 +115,6 @@ module.exports = function(ssb, opts) {
 
       function saveAndCloseEditor() {
         if (!editing()) return
-        console.log('Text editor: updating', kp)
         ssb.cms.update([...kp], value, err => {
           if (err) return console.error('unable to update', err)
           closeEditor()
