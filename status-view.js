@@ -498,7 +498,7 @@ module.exports = function(ssb, drafts, root, view, trusted_keys) {
           values: true
         }),
         pull.through( AutoUpdate() ),
-        updates({sync: true, bufferUntilSync: true}),
+        Updates()({sync: true, bufferUntilSync: true}),
         Blobs(ssb, blobs, blobBytes, blobRefs, blobsPresent),
         pull.drain()
       )
