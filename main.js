@@ -626,10 +626,12 @@ module.exports.css = function() {
   .fullscreen-preview {
     background-color: #1a1a1a;
     position: absolute;
+    z-index: 0;
   }
   .ui {
     position: absolute;
     width: 100%;
+    z-index: 1;
   }
   .menubar {
     font-size: 14px;
