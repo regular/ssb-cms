@@ -506,6 +506,17 @@ module.exports = function(config, trusted_keys, cb) {
             container.appendChild(el)
             setTimeout( ()=>{
               oldChildren.forEach( e => {
+                // hack to enable woraround for chrome issue 234779 
+                let videos = [].slice.apply(e.querySelectorAll('video'))
+                videos.forEach( v => {
+                  let event = new UIEvent('release-video', {
+                    view: window,
+                    bubbles: false,
+                    cancelable: true
+                  })
+                  let cancelled = !v.dispatchEvent(event)
+                })
+                /// end hack
                 e.remove()
               })
             }, 150)
