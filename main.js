@@ -503,8 +503,11 @@ module.exports = function(config, trusted_keys, cb) {
             if (current === fingerprint) return
             current = fingerprint
             let el = editor.renderPreviewEditor(msg, [key])
+            el.style['z-index'] = -1
+
             container.appendChild(el)
             setTimeout( ()=>{
+              el.style['z-index'] = 0
               oldChildren.forEach( e => {
                 // hack to enable woraround for chrome issue 234779 
                 let videos = [].slice.apply(e.querySelectorAll('video'))
