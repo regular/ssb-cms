@@ -1,6 +1,7 @@
 require('setimmediate')
 const h = require('mutant/html-element')
 const ho = require('hyperobj')
+const qs = require('qs')
 const Value = require('mutant/value')
 const computed = require('mutant/computed')
 const pull = require('pull-stream')
@@ -49,7 +50,6 @@ function getOrCreateSbotClient(config, sbot, drafts, root) {
       Then restart sbot and reload this page. Hopefully you won't see this message again.
 
       </pre>`
-      cb(err)
       throw err
     }
     ssb.cms = DB(ssb, drafts)
@@ -309,8 +309,13 @@ module.exports = function(config, trusted_keys, cb) {
 
     function setSelectionFromURL(newURL) {
       let revRoot = null, rev = null
+      let query = {}
       if (newURL.indexOf('#') !== -1) {
         let fragment = newURL.substr(newURL.indexOf('#') + 1)
+        
+        // handle queryString
+        ;[fragment, query] = fragment.split('?') 
+        if (query) query = qs.parse(query)
         if (fragment.indexOf(':') !== -1) {
           [revRoot, rev] = fragment.split(':')
         } else {
@@ -360,7 +365,7 @@ module.exports = function(config, trusted_keys, cb) {
         } else loadIntoEditor('')
 
         if (revRoot) {
-          fullscreenPreview(revRoot)
+          fullscreenPreview(revRoot, query)
         }
       }
     }
@@ -493,8 +498,9 @@ module.exports = function(config, trusted_keys, cb) {
     function FullscreenPreview(container) {
       let unsubscribe
       let current
-      return function update(key) {
-
+      return function update(key, opts) {
+        opts = opts || {}
+        console.warn('FS PREVIEW OPTIONS', opts)
         function render() {
           let oldChildren = [].slice.apply(container.children)
           ssb.cms.getReduced(key, (err, msg) => {
@@ -522,7 +528,7 @@ module.exports = function(config, trusted_keys, cb) {
                 /// end hack
                 e.remove()
               })
-            }, 150)
+            }, /*Number(opts['screen-flip-delay'] || 150)*/ 3000)
           })
         }
 
