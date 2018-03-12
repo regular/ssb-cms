@@ -426,7 +426,7 @@ module.exports = function(ssb, drafts, root, view, trusted_keys) {
     let currentCodeBlobUrl = document.location.href.replace(document.location.hash, '')
     if (/#$/.test(currentCodeBlobUrl)) currentCodeBlobUrl = currentCodeBlobUrl.slice(0, -1)
     console.log('currentCodeBlobUrl', currentCodeBlobUrl)
-    let author, sequence
+    let author, sequence, branch
     let updateUrl = null
     let synced = false
     return function(kv) {
@@ -446,10 +446,12 @@ module.exports = function(ssb, drafts, root, view, trusted_keys) {
           console.warn('Found currently running client code message', kv.key)
           author = kv.value.author
           sequence = kv.value.sequence
-          version.set(`${sequence} (${kv.key.substr(1,6)})`)
-        } else if (author && sequence) {
-          if (kv.value.author === author && kv.value.sequence > sequence) {
-            console.error(`Found newer client version! old seq: ${sequence}, new seq: ${kv.value.sequence}`)
+          branch = (kv.value.content && kv.value.content.codeBranch) || 'master'
+          version.set(`${branch} ${sequence} (${kv.key.substr(1,6)})`)
+        } else if (author && sequence && branch) {
+          const b = (kv.value.content && kv.value.content.codeBranch) || 'master'
+          if (b == branch && kv.value.author === author && kv.value.sequence > sequence) {
+            console.warn(`Found newer client version! old seq: ${sequence}, new seq: ${kv.value.sequence}`)
             updateUrl = newCodeBlobUrl
             if (synced) {
               updateAvailable.set(true)
