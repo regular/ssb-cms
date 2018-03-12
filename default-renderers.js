@@ -11,12 +11,14 @@ const filter = require('hyperobj-tree/filter')
 const tag = require('hyperobj-tree/tag')
 
 const profile = require('./renderers/profile-renderer')
+const code = require('./renderers/code-renderer')
 
 module.exports = function(config) {
   return [
     value => value === null ? h('span.null', 'null') : undefined,
     value => typeof value === 'undefined' ? h('span.undefined', 'undefined') : undefined,
     profile(),
+    code(),
     source(),
     array(),
     properties(),
