@@ -300,7 +300,7 @@ module.exports = function(ssb, drafts, root, view, trusted_keys) {
         return
       }
       let key = kv.key
-      if (trusted_keys.includes(kv.value.author)) {
+      if (!trusted_keys || trusted_keys.includes(kv.value.author)) {
         delete untrustedMessages[key]
       } else {
         untrustedMessages[key] = kv

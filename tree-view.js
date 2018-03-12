@@ -101,7 +101,7 @@ module.exports = function(ssb, drafts, root, trusted_keys) {
             ]),
             when(node.unsaved, h('span', {title: 'draft'}, '✎')),
             when(node.forked, h('span', {title: 'conflicting updates, plese merge'}, '⑃')),
-            when(computed([node.msg], v => trusted_keys.includes(v.author)), h('span.trusted', {title: 'Signed-off'})),
+            when(computed([node.msg], v => !trusted_keys || trusted_keys.includes(v.author)), h('span.trusted', {title: 'Signed-off'})),
             //when(node.incomplete, h('span', {title: 'incomplete history'}, '⚠')),
             h('span.buttons', [
               h('button.id', {
