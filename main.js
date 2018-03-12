@@ -528,7 +528,7 @@ module.exports = function(config, trusted_keys, cb) {
                 /// end hack
                 e.remove()
               })
-            }, /*Number(opts['screen-flip-delay'] || 150)*/ 3000)
+            }, Number(opts['screen-flip-delay'] || 150))
           })
         }
 
