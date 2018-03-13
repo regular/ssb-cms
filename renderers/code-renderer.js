@@ -36,9 +36,9 @@ function makeConfigHash(conf) {
 
 module.exports = function() {
   return function(value, kp) {
-    if (!(value.content && value.content.type === 'client-update')) return
+    const t = value.content && value.content.type
+    if (t !== 'client-update' && t !== 'webapp') return
     const c = value.content
-
     
     console.log('CONFIG', makeConfigHash(config))
 
