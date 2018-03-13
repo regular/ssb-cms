@@ -307,7 +307,9 @@ module.exports = function(config, trusted_keys, cb) {
       saveButton.disabled = !isPublishable
     })
 
+
     function setSelectionFromURL(newURL) {
+
       let revRoot = null, rev = null
       let query = {}
       if (newURL.indexOf('#') !== -1) {
@@ -315,7 +317,11 @@ module.exports = function(config, trusted_keys, cb) {
         
         // handle queryString
         ;[fragment, query] = fragment.split('?') 
-        if (query) query = qs.parse(query)
+        if (query) {
+          query = qs.parse(query)
+          const modifiedUrl = document.location.href.replace(/#.*$/, '#' + fragment)
+          history.replaceState({}, '', modifiedUrl)
+        }
         if (fragment.indexOf(':') !== -1) {
           [revRoot, rev] = fragment.split(':')
         } else {
@@ -369,6 +375,7 @@ module.exports = function(config, trusted_keys, cb) {
         }
       }
     }
+
   
     tree.ready( (ready)=>{
       if (ready) {
@@ -512,6 +519,12 @@ module.exports = function(config, trusted_keys, cb) {
             el.style['z-index'] = -1
 
             container.appendChild(el)
+            const outClass = opts['transition-out-class']
+            if (outClass) {
+              oldChildren.forEach( e => {
+                e.classList.add(outClass)
+              })
+            }
             setTimeout( ()=>{
               el.style['z-index'] = 0
               oldChildren.forEach( e => {
