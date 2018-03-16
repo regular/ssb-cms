@@ -40,7 +40,11 @@ module.exports = function(ssb, drafts, root, view, trusted_keys) {
   let blobsPresent = Value(0)
   let blobBytes = Value(0)
 
-  let version = Value('dev')
+  let version = Value('-')
+  if (config.versions && config.versions.webapp) {
+    const v = config.versions.webapp
+    version.set( `${v.sequence || ''} ${v.codeBranch} (${v.codeMessage.substr(0,4)})`)
+  }
 
   //let ready = computed([isSynced, blobRefs, blobsPresent], (s, r, p) => s && r === p)
 
@@ -48,8 +52,10 @@ module.exports = function(ssb, drafts, root, view, trusted_keys) {
   let peerCount = Value()
   let draftsMessage = Value("")
 
-  let remoteUrl = window.location.href.replace(/#.*$/,'').replace('127.0.0.1', config.sbot.host || '127.0.0.1') + '#' +
-    window.localStorage['electroparty-config']
+  let remoteUrl = window.location.href
+    .replace(/#.*$/, '')
+    .replace('127.0.0.1', config.sbot.host || '127.0.0.1') +
+    `#${config.urlEncodedConfig}`
 
   view.appendChild(
     h('section.remote-access', [

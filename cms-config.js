@@ -1,8 +1,9 @@
 const fs = require('fs')
-const getConfig = require('ssb-electroparty/config.js') // .js is intentional
+const Config = require('ssb-electroparty/config.js') // .js is intentional
 
 module.exports = (function () {
-  const {keys, sbotConfig, manifest} = getConfig()
+  const {keys, sbotConfig, manifest, versions} = Config()
+  const urlEncodedConfig = Config.urlEncodeConfig(keys, sbotConfig, manifest, versions)
   console.log('sbot config', sbotConfig)
   console.log('our pubkey', keys.public)
   console.log('sbot address', sbotConfig.wsAddress)
@@ -11,7 +12,9 @@ module.exports = (function () {
     keys,
     sbot: sbotConfig,
     manifest,
+    versions,
     sbotAddress: sbotConfig.wsAddress,
-    blobsRoot
+    blobsRoot,
+    urlEncodedConfig
   }
 })()
