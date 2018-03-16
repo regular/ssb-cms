@@ -426,7 +426,7 @@ module.exports = function(ssb, drafts, root, view, trusted_keys) {
     let currentCodeBlobUrl = document.location.href.replace(document.location.hash, '')
     if (/#$/.test(currentCodeBlobUrl)) currentCodeBlobUrl = currentCodeBlobUrl.slice(0, -1)
     console.log('currentCodeBlobUrl', currentCodeBlobUrl)
-    let author, sequence, branch
+    let author, sequence, branch, appId
     let updateUrl = null
     let synced = false
     return function(kv) {
@@ -439,7 +439,7 @@ module.exports = function(ssb, drafts, root, view, trusted_keys) {
         }
         return
       }
-      if (kv.value.content && kv.value.content.type === 'client-update') {
+      if (trusted_keys.includes(kv.value.author) && kv.value.content && kv.value.content.type === 'webapp') {
         let newCodeBlobUrl = `${config.blobsRoot}/${kv.value.content.code}`
         //console.log('newCodeBlobUrl', newCodeBlobUrl)
         if (currentCodeBlobUrl === newCodeBlobUrl) {
@@ -447,10 +447,12 @@ module.exports = function(ssb, drafts, root, view, trusted_keys) {
           author = kv.value.author
           sequence = kv.value.sequence
           branch = (kv.value.content && kv.value.content.codeBranch) || 'master'
+          appId = (kv.value.content && kv.value.content.appId)
           version.set(`${branch} ${sequence} (${kv.key.substr(1,6)})`)
-        } else if (author && sequence && branch) {
+        } else if (author && sequence && branch && appId) {
           const b = (kv.value.content && kv.value.content.codeBranch) || 'master'
-          if (b == branch && kv.value.author === author && kv.value.sequence > sequence) {
+          const ai = (kv.value.content && kv.value.content.appId) || ''
+          if ( (!appId || ai == appId) && b == branch && kv.value.author === author && kv.value.sequence > sequence) {
             console.warn(`Found newer client version! old seq: ${sequence}, new seq: ${kv.value.sequence}`)
             updateUrl = newCodeBlobUrl
             if (synced) {
@@ -482,7 +484,7 @@ module.exports = function(ssb, drafts, root, view, trusted_keys) {
         ssb.messagesByType({
           live: true,
           sync: true,
-          type: 'client-update',
+          type: 'webapp',
           keys: true,
           values: true
         }),
