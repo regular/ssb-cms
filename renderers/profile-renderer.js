@@ -1,6 +1,6 @@
 const h = require('mutant/html-element')
 
-module.exports = function() {
+module.exports = function(ssb) {
   return function(value, kp) {
     if (!(value.content && value.content.type === 'about')) return
     let c = value.content

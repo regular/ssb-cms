@@ -13,12 +13,12 @@ const tag = require('hyperobj-tree/tag')
 const profile = require('./renderers/profile-renderer')
 const code = require('./renderers/code-renderer')
 
-module.exports = function(config) {
+module.exports = function(config, ssb) {
   return [
     value => value === null ? h('span.null', 'null') : undefined,
     value => typeof value === 'undefined' ? h('span.undefined', 'undefined') : undefined,
-    profile(),
-    code(),
+    profile(ssb),
+    code(ssb),
     source(),
     array(),
     properties(),

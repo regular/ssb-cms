@@ -20,7 +20,7 @@ module.exports = function(parent, ssb, config) {
       if (value === null) return h('span.null', '[null]')
     },
     customRender(ssb),
-    ...require('./default-renderers')(config)
+    ...require('./default-renderers')(config, ssb)
   )
 
   let toolbar, container, jsonContainer, previewContainer

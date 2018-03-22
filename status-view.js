@@ -21,6 +21,7 @@ const Updates = require('./update-stream')
 const config = require('./cms-config')
 const {isDraft} = require('./util')
 const Blobs = require('./blobs')
+const AutoUpdate = require('./auto-update')
 
 let updateAvailable = Value(false)
 
@@ -195,10 +196,12 @@ module.exports = function(ssb, drafts, root, view, trusted_keys) {
       ]),
       h('span', {
         style: {
-          display: computed( [updateAvailable], ua => ua ? 'inline' : 'none' )
+          display: computed( [updateAvailable], ua => ua  ? 'inline' : 'none' )
         }
       }, [
-        h('span', 'Update available!')
+        h('a', {
+          href: computed([updateAvailable], ua => ua || '')
+        }, 'Update available!')
       ]),
       h('span', [
         'Sbot:',
@@ -359,8 +362,8 @@ module.exports = function(ssb, drafts, root, view, trusted_keys) {
           pull.drain()
         )
       ),
+      AutoUpdate( newUrl => updateAvailable.set(newUrl) ),
       Updates(trusted_keys)({sync: true, bufferUntilSync: true}),
-      pull.through( AutoUpdate() ),
       Blobs(ssb, blobs, blobBytes, blobRefs, blobsPresent),
       pull.filter( x => {
         if (x.sync) {
@@ -428,47 +431,6 @@ module.exports = function(ssb, drafts, root, view, trusted_keys) {
     )
   }
 
-  function AutoUpdate() {
-    let currentCodeBlobUrl = document.location.href.replace(document.location.hash, '')
-    if (/#$/.test(currentCodeBlobUrl)) currentCodeBlobUrl = currentCodeBlobUrl.slice(0, -1)
-    console.log('currentCodeBlobUrl', currentCodeBlobUrl)
-    let author, sequence, branch, appId
-    let updateUrl = null
-    let synced = false
-    return function(kv) {
-      if (kv.sync) {
-        synced = true
-        if (updateUrl) {
-          let hash = document.location.hash
-          console.error('*** Auto update!')
-          document.location.href = updateUrl + hash
-        }
-        return
-      }
-      if (trusted_keys.includes(kv.value.author) && kv.value.content && kv.value.content.type === 'webapp') {
-        let newCodeBlobUrl = `${config.blobsRoot}/${kv.value.content.code}`
-        //console.log('newCodeBlobUrl', newCodeBlobUrl)
-        if (currentCodeBlobUrl === newCodeBlobUrl) {
-          console.warn('Found currently running client code message', kv.key)
-          author = kv.value.author
-          sequence = kv.value.sequence
-          branch = (kv.value.content && kv.value.content.codeBranch) || 'master'
-          appId = (kv.value.content && kv.value.content.appId)
-          version.set(`${branch} ${sequence} (${kv.key.substr(1,6)})`)
-        } else if (author && sequence && branch && appId) {
-          const b = (kv.value.content && kv.value.content.codeBranch) || 'master'
-          const ai = (kv.value.content && kv.value.content.appId) || ''
-          if ( (!appId || ai == appId) && b == branch && kv.value.author === author && kv.value.sequence > sequence) {
-            console.warn(`Found newer client version! old seq: ${sequence}, new seq: ${kv.value.sequence}`)
-            updateUrl = newCodeBlobUrl
-            if (synced) {
-              updateAvailable.set(true)
-            }
-          }
-        }
-      }
-    }
-  }
 
   // inside frames, we dont do anything
   if (window.frameElement) {
@@ -494,7 +456,7 @@ module.exports = function(ssb, drafts, root, view, trusted_keys) {
           keys: true,
           values: true
         }),
-        pull.through( AutoUpdate() ),
+        AutoUpdate( newUrl => updateAvailable.set(newUrl) ),
         pull.drain()
       )
     } else {
@@ -507,7 +469,7 @@ module.exports = function(ssb, drafts, root, view, trusted_keys) {
           keys: true,
           values: true
         }),
-        pull.through( AutoUpdate() ),
+        AutoUpdate( newUrl => updateAvailable.set(newUrl) ),
         Updates()({sync: true, bufferUntilSync: true}),
         Blobs(ssb, blobs, blobBytes, blobRefs, blobsPresent),
         pull.drain()
