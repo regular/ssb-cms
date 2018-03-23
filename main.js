@@ -92,7 +92,9 @@ module.exports = function(config, trusted_keys, cb) {
     if (window && window.require) {
       if (!config.sbot.allowBrowserZoom) {
         // to disable pinch zoom feature on electron
+        // jshint -W069
         const webFrame = window['require']('electron').webFrame // it's written like this so browserify doesnt feel like it has to do something
+        // jshint +W069
         webFrame.setVisualZoomLevelLimits(1, 1)
         webFrame.setLayoutZoomLevelLimits(0, 0)
       }
@@ -166,10 +168,10 @@ module.exports = function(config, trusted_keys, cb) {
       {
         key: 'status',
         value: { label: 'Status' }
-      }, {
+      }, /*{
         key: 'activity',
         value: { label: 'Activity' }
-      }, {
+      },*/ {
         key: 'content',
         value: { label: 'Content'}
       }],
@@ -390,6 +392,14 @@ module.exports = function(config, trusted_keys, cb) {
 
     window.addEventListener('hashchange', (e)=>{
       console.log('HASH CHANGE')
+      if (
+        e.newURL.includes('#') &&
+        !e.newURL.includes('#%') &&
+        !e.newURL.includes('#draft')
+      ) {
+        console.warn('Fragment is not a messageid. This is probably due to upgrading to a new webapp version with the same code blob (but different branch, author or appId). We force a page reload')
+        document.location.reload()
+      }
       menubar.activate('content')
       setSelectionFromURL(e.newURL)
     })
