@@ -209,7 +209,13 @@ module.exports = function(config, trusted_keys, cb) {
     let contentView, statusView
     uiContainer.appendChild(
       contentView = h('.columns', [
-        treeColumn = h('.col.treeview'),
+        treeColumn = h('.col.treeview', [
+          h('.tree-tools', [
+            h('span.show-hidden-button', {
+              'ev-click': ()=>treeColumn.classList.toggle('show-hidden')
+            }, 'Show hidden')
+          ])
+        ]),
         revisionsColumn = h('.col.revisions'),
         h('.col.editor-col', [
           editorContainer = h('.editor-container'),
@@ -830,6 +836,21 @@ module.exports.css = function() {
   }
   .tag.color7 {
     background: #859900;
+  }
+  .tree-tools {
+    padding: 4px 10px;
+    box-shadow: 0px 1px 1px lightgray;
+    font-size: 50%;
+  }
+  .tree-tools .show-hidden-button {
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 3px;
+    background: lightgray;
+  }
+  .show-hidden .tree-tools .show-hidden-button {
+    background: blue;
+    color: lightgray;
   }
   `
 }

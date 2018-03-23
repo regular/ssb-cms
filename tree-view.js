@@ -75,10 +75,11 @@ module.exports = function(ssb, drafts, root, trusted_keys) {
 
     return h('li', [
       h('div', {
-        classList: computed([node.open, isDraft(node.id)], (open, draft) => {
+        classList: computed([node.open, isDraft(node.id), node.label], (open, draft, label) => {
           let l = ['branch']
           if (open) l.push('open')
           if (draft) l.push('draft')
+          if (label.length && label[0] == '.') l.push('hidden')
           return l
         })
       }, [
@@ -322,6 +323,14 @@ module.exports.css = ()=>  `
     display: inline-flex;
     flex-wrap: nowrap;
     justify-content: flex-end;
+  }
+
+  .branch.hidden {
+    display: none;
+  }
+  .show-hidden .branch.hidden {
+    display: block;
+    opacity: 0.7;
   }
   
   .branch>.branch-header button.add {
