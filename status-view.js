@@ -41,11 +41,6 @@ module.exports = function(ssb, drafts, root, view, trusted_keys) {
   let blobsPresent = Value(0)
   let blobBytes = Value(0)
 
-  let version = Value('-')
-  if (config.versions && config.versions.webapp) {
-    const v = config.versions.webapp
-    version.set( `${v.sequence || ''} ${v.codeBranch} (${v.codeMessage.substr(0,4)})`)
-  }
 
   //let ready = computed([isSynced, blobRefs, blobsPresent], (s, r, p) => s && r === p)
 
@@ -58,12 +53,14 @@ module.exports = function(ssb, drafts, root, view, trusted_keys) {
     .replace('127.0.0.1', config.sbot.host || '127.0.0.1') +
     `#${config.urlEncodedConfig}`
 
+  /*
   view.appendChild(
     h('section.remote-access', [
       h('h2', 'Remote access'),
       h('a', {href: remoteUrl, target: '_blank'}, remoteUrl)
     ])
   )
+  */
 
   let draftsMutantDict = MutantDict()
   let openDraft = Value('')
@@ -189,19 +186,24 @@ module.exports = function(ssb, drafts, root, view, trusted_keys) {
   )
 
   function html() {
+    const version =  (config.versions && config.versions.webapp) || {}
+
     return h('span.status', [
       h('span', [
-        h('span', 'Version:'),
-        h('span', version)
+        'Version: ',
+        h('a.version', {
+          href: version.codeMessage ? `#${version.codeMessage}` : ''
+        }, `${(version.author||'unknown').substr(0,4)}-${version.sequence || 'n/a'}`),
+        ` (${version.codeBranch || 'unknown'})`
       ]),
       h('span', {
         style: {
           display: computed( [updateAvailable], ua => ua  ? 'inline' : 'none' )
         }
       }, [
-        h('a', {
+        h('a.update', {
           href: computed([updateAvailable], ua => ua || '')
-        }, 'Update available!')
+        }, 'Update now')
       ]),
       h('span', [
         'Sbot:',
@@ -230,10 +232,12 @@ module.exports = function(ssb, drafts, root, view, trusted_keys) {
         'Forks:',
         h('span', forkCount)
       ]),
+      /*
       h('span', [
         'Incomplete:',
         h('span', incompleteCount)
       ]),
+      */
       h('span', [
         'Blobs:',
         h('span', [' ', blobsPresent, ' / ', blobRefs, ' (', computed([blobBytes], b => prettyBytes(b)), ')']),
@@ -500,6 +504,19 @@ module.exports.css = ()=>  `
   .menubar .status>span {
     width: 100px;
     padding-right: 5px;
+  }
+  .menubar .status a.version {
+    text-decoration: none;
+    color: darkcyan;
+  }
+  .menubar .status a.update {
+    text-decoration: none;
+    background: darkslateblue;
+    color: lightgray;
+    padding: 0px 5px;
+  }
+  .menubar .status a.update:hover {
+    background: darkblue;
   }
   .statusView {
     overflow: scroll;
