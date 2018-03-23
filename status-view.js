@@ -208,7 +208,14 @@ module.exports = function(ssb, drafts, root, view, trusted_keys) {
       h('span', [
         'Sbot:',
         when(computed([sbotConnect], p => !p), h('span', {title: 'lost connection to backend'}, '⚠')),
-        when(sbotConnect, h('span', {style:{color:'green'}}, '✓'))
+        when(sbotConnect, h('span', {
+          style:{color:'green'},
+          'ev-click': e => {
+            if (e.altKey) {
+              ssb.control.stop()
+            }
+          }}, '✓'
+        ))
       ]),
       h('span', [
         'Peers:',
@@ -509,7 +516,7 @@ module.exports.css = ()=>  `
     text-decoration: none;
     color: darkcyan;
   }
-  .menubar .status a.update {
+  .menubar .status a.update, a.stopSbot {
     text-decoration: none;
     background: darkslateblue;
     color: lightgray;
