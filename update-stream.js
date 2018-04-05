@@ -170,7 +170,7 @@ module.exports = function(isTrustedKey) {
             if (slot.revisions.length === 0) {
               return push({
                 key: slot.key,
-                value: r.value,
+                //value: r.value,
                 type: 'del'
               })
             }
