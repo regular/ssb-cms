@@ -25,8 +25,8 @@ function breakTie(a, b) {
   )
 }
 
-module.exports = function(trusted_keys) {
-  trusted_keys = trusted_keys || []
+module.exports = function(isTrustedKey) {
+  if (!isTrustedKey) isTrustedKey = ()=>false
 
   return function updates(opts) {
     opts = opts || {}
@@ -91,13 +91,34 @@ module.exports = function(trusted_keys) {
         function recurse(key) {
           let kv = revs[key]
           if (!kv) return
+          
           // too old
-          if (newestTrusted && newestTrusted.value.timestamp > kv.value.timestamp) return
+          if (
+            newestTrusted &&
+            newestTrusted.value.timestamp > kv.value.timestamp
+          ) {
+            return
+          }
+          
           // not trusted
-          if (!isDraft(kv.key) && !opts.allowUntrusted && !trusted_keys.includes(kv.value.author)) return links(kv.value, recurse)
+          if (
+            !isDraft(kv.key) &&
+            !opts.allowUntrusted &&
+            !isTrustedKey(kv.value.author)
+          ) {
+            return links(kv.value, recurse)
+          }
+          
           newestTrusted = kv
         }
-        if (isDraft(kv.key) || opts.allowUntrusted || trusted_keys.includes(kv.value.author)) return kv
+
+        if (
+          isDraft(kv.key) ||
+          opts.allowUntrusted ||
+          isTrustedKey(kv.value.author)
+        ) {
+          return kv
+        }
         links(kv.value, recurse)
         //console.log('trusted',kv,newestTrusted)
         return newestTrusted

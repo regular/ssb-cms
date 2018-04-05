@@ -23,7 +23,7 @@ test('new a (bad), rev a1 (good)', (t)=>{
   let cache
   pull(
     pull.values(kvs),
-    Updates(['good'])(),
+    Updates(k => k == 'good')(),
     cache = cacheAndIndex()
   )
   setImmediate( ()=> {
@@ -58,7 +58,7 @@ test('new a (good), rev a1 (bad)', (t)=>{
   let cache
   pull(
     pull.values(kvs),
-    Updates(['good'])(),
+    Updates(k=> k == 'good')(),
     cache = cacheAndIndex()
   )
   setImmediate( ()=> {

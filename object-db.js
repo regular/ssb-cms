@@ -44,8 +44,8 @@ function CachedGetter(defaultMaxAge, current, processValue) {
 }
 
 
-module.exports = function(ssb, drafts, root, trusted_keys) {
-  const updatesStream = UpdatesStream(trusted_keys)
+module.exports = function(ssb, drafts, root, isTrustedKey) {
+  const updatesStream = UpdatesStream(isTrustedKey)
 
   const _getChildren = CachedGetter(
     MAXAGE,

@@ -29,7 +29,7 @@ function markHeads(entries) {
   })
 }
 
-module.exports = function(ssb, drafts, me, blobsRoot, trusted_keys) {
+module.exports = function(ssb, drafts, me, blobsRoot, isTrustedKey) {
   const db = DB(ssb, drafts)
   const updateStream = UpdateStream([])
 
@@ -89,7 +89,7 @@ module.exports = function(ssb, drafts, me, blobsRoot, trusted_keys) {
           'background-image': computed([authorAvatarUrl], u => `url("${u}")`)
         }
       }, [
-        ...((!trusted_keys || trusted_keys.includes(feedId)) ? [h('span.trusted')] : [])
+        ...(isTrustedKey(feedId) ? [h('span.trusted')] : [])
       ]),
       h('span.author', authorName),
       h('span.timestamp', htime(new Date(entry.value.timestamp))),

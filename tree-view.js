@@ -19,7 +19,7 @@ const {updateObservableMessages} = require('./message-cache')
 const {isDraft} = require('./util')
 const config = require('./cms-config')
 
-module.exports = function(ssb, drafts, root, trusted_keys) {
+module.exports = function(ssb, drafts, root, isTrustedKey) {
 
   let selection = Value()
   let ready = Value(false)
@@ -102,7 +102,7 @@ module.exports = function(ssb, drafts, root, trusted_keys) {
             ]),
             when(node.unsaved, h('span', {title: 'draft'}, '✎')),
             when(node.forked, h('span', {title: 'conflicting updates, plese merge'}, '⑃')),
-            when(computed([node.msg], v => !trusted_keys || trusted_keys.includes(v.author)), h('span.trusted', {title: 'Signed-off'})),
+            when(computed([node.msg], v => isTrustedKey(v.author)), h('span.trusted', {title: 'Signed by trusted author'})),
             //when(node.incomplete, h('span', {title: 'incomplete history'}, '⚠')),
             h('span.buttons', [
               h('button.id', {

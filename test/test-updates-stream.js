@@ -4,7 +4,7 @@ const Updates = require('../update-stream')
 const {inspect} = require('util')
 
 function s(opts) {
-  return Updates([])(Object.assign({allowUntrusted: true}, opts))
+  return Updates()(Object.assign({allowUntrusted: true}, opts))
 }
 
 function heads(u) {return u.heads.reverse().map(kv=>kv.key)}
@@ -478,7 +478,7 @@ test('draft-a2, new a, rev a1, del draft-a2', (t)=>{
   )
 })
 
-test('draft-a1, del draft-a1, new a', (t)=>{
+test.only('draft-a1, del draft-a1, new a', (t)=>{
   const kvs = [
     { key: 'draft-a1', value: {
         content: {
@@ -506,6 +506,9 @@ test('draft-a1, del draft-a1, new a', (t)=>{
       })
       t.equal(updates[0].unsaved, true)
       t.deepEqual(heads(updates[0]), ['draft-a1'])
+
+      console.log('updates[1]', updates[1])
+      t.equal(updates[1].type, 'del')
 
       t.notOk(updates[1].value)
 
@@ -1446,7 +1449,7 @@ test('Filter updates by untrusted feeds', (t)=>{
   ]
   pull(
     pull.values(kvs),
-    Updates(['good'])(),
+    Updates(k=> k == 'good')(),
     pull.collect( (err, updates) => {
       t.notOk(err)
       t.equal(updates.length, 1)
@@ -1474,7 +1477,7 @@ test('Do not filter updates by untrusted feeds, if allowUntrusted is true', (t)=
   ]
   pull(
     pull.values(kvs),
-    Updates(['good'])({allowUntrusted: true}),
+    Updates(k=> k == 'good')({allowUntrusted: true}),
     pull.collect( (err, updates) => {
       t.notOk(err)
       t.equal(updates.length, 2)
@@ -1506,7 +1509,7 @@ test('new a (bad), rev a1 (good)', (t)=>{
   ]
   pull(
     pull.values(kvs),
-    Updates(['good'])(),
+    Updates(k=> k == 'good')(),
     pull.collect( (err, updates) => {
       t.notOk(err)
       t.equals(updates.length, 1)

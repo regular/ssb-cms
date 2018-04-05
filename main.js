@@ -81,7 +81,8 @@ function getProfileData(ssb, config, feed, avatar, profile) {
   })
 }
 
-module.exports = function(config, trusted_keys, cb) {
+module.exports = function(config, isTrustedKey, cb) {
+  if (!isTrustedKey) isTrustedKey = ()=>false
   const root = config.sbot.cms && config.sbot.cms.root
   if (!root) throw new Error('Please specify a root node in your config. See ssb-cms README.md for details.')
 
@@ -140,7 +141,7 @@ module.exports = function(config, trusted_keys, cb) {
     if (!ssb.cms.getReduced) {
       console.warn('Decorating ssb.cms with objectdb methods.')
       const ObjectDB = require('./object-db')
-      Object.assign(ssb.cms, ObjectDB(ssb, drafts, root, trusted_keys), {update})
+      Object.assign(ssb.cms, ObjectDB(ssb, drafts, root, isTrustedKey), {update})
     } else {
       console.warn('Not decorating ssb.cms with objectdb methods.')
     }
@@ -294,14 +295,14 @@ module.exports = function(config, trusted_keys, cb) {
     let status
     // save us the effort of message traversal and blob enumeration
     if (!window.frameElement) {
-      status = Status(ssb, drafts, root, statusView, trusted_keys)
+      status = Status(ssb, drafts, root, statusView, isTrustedKey)
       menubar.querySelector('.middle').appendChild(status)
     }
 
-    const tree = Tree(ssb, drafts, root, trusted_keys)
+    const tree = Tree(ssb, drafts, root, isTrustedKey)
     treeColumn.appendChild(tree)
 
-    const revs = Revs(ssb, drafts, me(), config.blobsRoot, trusted_keys)
+    const revs = Revs(ssb, drafts, me(), config.blobsRoot, isTrustedKey)
     revisionsColumn.appendChild(h('.revs-container', revs))
 
     let isNewDraft = computed([tree.selection], isDraft)

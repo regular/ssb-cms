@@ -25,7 +25,7 @@ const AutoUpdate = require('./auto-update')
 
 let updateAvailable = Value(false)
 
-module.exports = function(ssb, drafts, root, view, trusted_keys) {
+module.exports = function(ssb, drafts, root, view, isTrustedKey) {
   let sbotConnect = Value(true)
 
   let isSynced = Value()
@@ -320,7 +320,7 @@ module.exports = function(ssb, drafts, root, view, trusted_keys) {
         return
       }
       let key = kv.key
-      if (!trusted_keys || trusted_keys.includes(kv.value.author)) {
+      if (isTrustedKey(kv.value.author)) {
         delete untrustedMessages[key]
       } else {
         untrustedMessages[key] = kv
@@ -368,13 +368,13 @@ module.exports = function(ssb, drafts, root, view, trusted_keys) {
       pull.through( kv => revision(kv.key, true) ),
       tee(
         pull(
-          Updates(trusted_keys)({sync: true, allowUntrusted: true, bufferUntilSync: true}),
+          Updates(isTrustedKey)({sync: true, allowUntrusted: true, bufferUntilSync: true}),
           Untrusted(),
           pull.drain()
         )
       ),
       AutoUpdate( newUrl => updateAvailable.set(newUrl) ),
-      Updates(trusted_keys)({sync: true, bufferUntilSync: true}),
+      Updates(isTrustedKey)({sync: true, bufferUntilSync: true}),
       Blobs(ssb, blobs, blobBytes, blobRefs, blobsPresent),
       pull.filter( x => {
         if (x.sync) {
