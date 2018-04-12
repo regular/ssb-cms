@@ -15,17 +15,17 @@ Collaboratively maintaining a database of content requires manipulating and orga
 - right: the post as json in a code editor (CodeMirror)
 
 ### Root
-One message is declared the `root` message in `config.cms.root`. WHen the application starts, it displays children of the root message as top-level nodes. With this config option, you can `chroot` clients into a subtree. TODO: toggle visibility of 1st level branches
+One message is declared the `root` message in `config.cms.root`. When the application starts, it displays children of the root message as top-level nodes. With this config option, you can `chroot` clients into a subtree. TODO: toggle visibility of 1st level branches
 
 ### Tree view
 Nodes in the tree have expand/collapse triangles.
 
 ### Revisions
-TODO: froks/merges are displayed as a "subway chart" (as in `git lola`).
+TODO: forks/merges are displayed as a "subway chart" (as in `git lola`).
 They show the time stamp (human time), the author's avatar and name and a dot representing the "commit" (a bit like github's fork graph, but vertically).
 
 ## Diffs
-TODO: When two revisions are selected in the middle column, a diff of the two onjects is displayed.
+TODO: When two revisions are selected in the middle column, a diff of the two objects is displayed.
 
 ### Editor
 The editor supports syntax highlighting JSON linting.
@@ -37,9 +37,9 @@ Files that are dropped onto the editor are added as blobs and their hash is inse
 TODO: There's a status bar at the top that shows various tiny progress bars (like in Adobe Lightroom) for long-running async processes: sbot syncing, indexing, blob upload (may take long when sbot is remote)
 
 ### Drafts
-Add and Clone buttons in the tree add a draft for a new message. The draft is an ssb message content object stored in IndexDB (via level.js). There can by an unlimited number of drafts. They are displayed in the tree and revision views, clearly marked as draft. A draft may contain invalid JSON. If it is selected in the tree it is loaded into the editor, like any other message and can be modified. Any modification is immediately stored in IndexDB. If the "Publish" button is pressed and hte message is valid JSON, it is published to ssb.
+Add and Clone buttons in the tree add a draft for a new message. The draft is an ssb message content object stored in IndexDB (via level.js). There can by an unlimited number of drafts. They are displayed in the tree and revision views, clearly marked as draft. A draft may contain invalid JSON. If it is selected in the tree it is loaded into the editor, like any other message and can be modified. Any modification is immediately stored in IndexDB. If the "Publish" button is pressed and the message is valid JSON, it is published to ssb.
 
-> NOTE: Currently properties outside the `content` property are ignored when publishing. THe `content` part is passed to `sbot.publish`. The` branch` and `revisionRoot` proerties entered by the user are also ignored and overwritten by values corresponding to the position of the draft in the tree/revision history. (TODO/WIP what about `root` and `revisionBranch`?)
+> NOTE: Currently properties outside the `content` property are ignored when publishing. The `content` part is passed to `sbot.publish`. The` branch` and `revisionRoot` proerties entered by the user are also ignored and overwritten by values corresponding to the position of the draft in the tree/revision history. (TODO/WIP what about `root` and `revisionBranch`?)
 
 Changing the text of a non-draft message in the editor automatically creates a new draft based off of the currently selected revision. (after the first keystroke, the draft is selected instead of the revision it is based on)
 
@@ -52,7 +52,7 @@ TODO: clicking (long pressing?) a node id in the tree turns the id into an input
 TODO (low priority) same for images/icons.
 
 ### Validators
-TODO: Before publishing the editor's content, make sure it actually differs from the lates revision and the content is valid json and satisfies a schema or validation function.
+TODO: Before publishing the editor's content, make sure it actually differs from the latest revision and the content is valid json and satisfies a schema or validation function.
 
 ### Renderers
 Renderers are composable Javascript functions that follow the `hyperobj`
@@ -62,7 +62,7 @@ related Nodes). They also provide and add event handlers to the HTML
 elements they return.
 
 Renderers can be used to implement in-place editing of content. (e.g. content-editable divs, images are drag-targets). On creation, a renderer receives the ssb api, so it can access the network/database.
-TODO: A set of standard renderers are provided for `content.type` `post` and `about` messages. User can provide their own rendering functions to render custom content-tyes.
+TODO: A set of standard renderers are provided for `content.type` `post` and `about` messages. User can provide their own rendering functions to render custom content-types.
 
 Renderers either occupy the space of the editor (tabbed UI), or they render the entire view port _behind_ the ssb-cms UI. By pressing Shift-Tab, users can  switch between three modes:
 
@@ -78,9 +78,9 @@ TODO (low priority): Instead of the three column layout (or in addition to it), 
 - @alice comments on %My_cat: "Nice cat!"
 
 ### Software updates
-You can deploy an ssb-cms based cms client using a blob. This allows you to update your client code alongside your content. When the client detects that it has been loaded from a blob (the current address is a blob-uRL), it looks for messages of type `client-update` that are newer than the one that referes the blob that is currently loaded into the browser. Only updates from the same ssb feed are accepted. ("newer" here means: higher sequence number). If such an update is found during the startup-phase, the client will reload itself from that new blob. TODO: describe deplyment details.
+You can deploy an ssb-cms based cms client using a blob. This allows you to update your client code alongside your content. When the client detects that it has been loaded from a blob (the current address is a blob-URL), it looks for messages of type `client-update` that are newer than the one that refers the blob that is currently loaded into the browser. Only updates from the same ssb feed are accepted. ("newer" here means: higher sequence number). If such an update is found during the startup-phase, the client will reload itself from that new blob. TODO: describe deployment details.
 
-## Installtion
+## Installation
 
 You need [`git-ssb`](https://www.npmjs.com/package/git-ssb) and an instance of [`scuttlebot`](https://www.npmjs.com/package/scuttlebot) running.
 
@@ -91,9 +91,9 @@ npm i
 ```
 ## Configure
 
-You have to specify an `ssb_appname` to run `ssb-cms`. The appname basically is the name of a directory in your home dorectory that contains a `conf` file which specifies the configuration for `ssb-client`. Among other things, it defines an appKey (`in caps.shs`). When you change the appKey from its default value, you are basically in a parallel universe (ssb-wise at least), so this is ideal for exerimenting.
+You have to specify an `ssb_appname` to run `ssb-cms`. The appname basically is the name of a directory in your home directory that contains a `conf` file which specifies the configuration for `ssb-client`. Among other things, it defines an appKey (`in caps.shs`). When you change the appKey from its default value, you are basically in a parallel universe (ssb-wise at least), so this is ideal for experimenting.
 
-While it is possible to connect to the main (social) ssb network with ssb-cms, I encouraged you to use an alterantive ssb network. I have set up a pub that you can use.
+While it is possible to connect to the main (social) ssb network with ssb-cms, I encourage you to use an alternative ssb network. I have set up a pub that you can use.
 
 Copy this into a file at `~/.ssb-cms/config`
 
@@ -149,11 +149,11 @@ If the invite fails anyway, let me know!
 ssb_appname=ssb-cms npm start
 ```
 
-This loads the configuration file at `~/.ssb-cms/config` and runs a web-server. Copy the URL to your borwser to get started. A bit of expectation management: It will fail. Keep reading!
+This loads the configuration file at `~/.ssb-cms/config` and runs a web-server. Copy the URL to your browser to get started. A bit of expectation management: It will fail. Keep reading!
 
 ## Authenticate
 
-`ssb-cms` is a "lite client", i.e. it solely consists of client-side code and communicates with sbot directly, without any custom back-end. However, sbot does not receive commands from unautorized parties just like that. You need to create a key pair, store the private key and instruct `sbot` to listen to commands issued by your public key.
+`ssb-cms` is a "lite client", i.e. it solely consists of client-side code and communicates with sbot directly, without any custom back-end. However, sbot does not receive commands from unauthorized parties just like that. You need to create a key pair, store the private key and instruct `sbot` to listen to commands issued by your public key.
 
 The key pair was created when you first loaded the page. The public key should be displayed on screen, along with instructions of what to do: Insert the public key into `~/.ssb-cms/config`, into the `master` array. Stop and restart `sbot` to load the new config, then reload the page. This time the a connection to sbot should be established.
 
