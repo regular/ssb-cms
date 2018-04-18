@@ -10,29 +10,25 @@ function cacheAndIndex(opts) {
   opts = opts || {}
   let branches = {}
   let messages = {}
-  let ret
-
-  pull(
-    ret = updateObservableMessages(null, {
-      makeObservable: kv => {
-        let d = MutantDict(kv)
-        messages[kv.key] = d
-        return d
-      },
-      updateObservable: (child, kv) => {
-        child.set(kv)
-      },
-      getContainer: kv => {
-        let {key, value} = kv
-        let branch = value.content && value.content.branch || 'ROOTS'
-        let mutantArray = branches[branch]
-        if (!mutantArray) {
-          mutantArray = branches[branch] = MutantArray()
-        }
-        return mutantArray
+  let ret = updateObservableMessages(null, {
+    makeObservable: kv => {
+      let d = MutantDict(kv)
+      messages[kv.key] = d
+      return d
+    },
+    updateObservable: (child, kv) => {
+      child.set(kv)
+    },
+    getContainer: kv => {
+      let {key, value} = kv
+      let branch = value.content && value.content.branch || 'ROOTS'
+      let mutantArray = branches[branch]
+      if (!mutantArray) {
+        mutantArray = branches[branch] = MutantArray()
       }
-    })
-  )
+      return mutantArray
+    }
+  })
   ret.getChildrenObservable = parentId => branches[parentId]
   ret.getMessageObservable = msgId => messages[msgId]
   return ret
