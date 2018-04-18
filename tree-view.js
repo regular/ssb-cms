@@ -229,6 +229,7 @@ module.exports = function(ssb, drafts, root, isTrustedKey) {
       if (err) return console.error(err)
       let treeNodeId = msg.content && msg.content.revisionRoot || id
       ancestors(msg, [], (err, nodePath)=>{
+        if (err) return console.error(err)
         nodePath.push(treeNodeId)
         ensureVisible(nodePath, ()=>{
           treeView.querySelectorAll('.treeView .selected').forEach( el => el.classList.remove('selected') )
