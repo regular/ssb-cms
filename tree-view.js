@@ -79,7 +79,7 @@ module.exports = function(ssb, drafts, root, isTrustedKey) {
           let l = ['branch']
           if (open) l.push('open')
           if (draft) l.push('draft')
-          if (label.length && label[0] == '.') l.push('hidden')
+          if (label && label.length && label[0] == '.') l.push('hidden')
           return l
         })
       }, [
