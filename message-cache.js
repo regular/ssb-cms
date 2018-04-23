@@ -3,6 +3,7 @@
 const pull = require('pull-stream')
 const MutantDict = require('mutant/dict')
 const MutantArray = require('mutant/array')
+const {isDraft} = require('./util')
 
 // TODO: this does not account for messages changing branches!
 
@@ -21,6 +22,17 @@ function cacheAndIndex(opts) {
     },
     getContainer: kv => {
       let {key, value} = kv
+      if (!value) {
+        let container
+        // we need to do an exhaustive search 
+        Object.keys(branches).forEach(k=>{
+          const mutantArray = branches[k]
+          let child = mutantArray.find( x=> x.id === key )
+          if (child) container = mutantArray
+        })
+        if (!container) console.warn('getContainer: unable to find deleted child', kv)
+        return container
+      }
       let branch = value.content && value.content.branch || 'ROOTS'
       let mutantArray = branches[branch]
       if (!mutantArray) {
@@ -45,6 +57,11 @@ function updateObservableMessages(container, opts, cb) {
   let previousRevisions = {}
 
   let ret = pull.drain( kv => {
+    if (isDraft(kv.key) && kv.type === 'del') {
+      // the draft is already gone, because we delete it in
+      // response to publishing a message with fromDraft property
+      return
+    }
     let mutantArray = container || opts.getContainer(kv)
     let {key, value} = kv
     // do we have a child for that revRoot yet?
